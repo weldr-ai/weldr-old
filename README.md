@@ -87,6 +87,7 @@ Weldr is a chat-native AI coding platform. You talk; agents produce a working co
 - bun >= 10.20.0
 - PostgreSQL
 - Redis
+- Docker (for MinIO local storage)
 - Git
 
 ### Installation
@@ -104,11 +105,30 @@ cd weldr
 bun install
 ```
 
-3. Set up environment variables:
+3. Start local S3 storage (MinIO):
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+This starts MinIO on:
+- API: `http://localhost:9000`
+- Console: `http://localhost:9001` (login: minioadmin/minioadmin)
+
+4. Set up environment variables:
 
 Create a `.env` file in the root directory:
 
 ```env
+# Mode Configuration
+WELDR_MODE=local
+
+# S3-Compatible Storage (MinIO for local)
+S3_ENDPOINT=http://localhost:9000
+S3_ACCESS_KEY_ID=minioadmin
+S3_SECRET_ACCESS_KEY=minioadmin
+S3_REGION=us-east-1
+
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/weldr
 
@@ -126,16 +146,19 @@ GEMINI_API_KEY=your-key
 
 # Agent URL
 AGENT_URL=http://localhost:8080
+
+# Project ID (optional, for running agent in single-project mode)
+# PROJECT_ID=your-project-id
 ```
 
-4. Set up the database:
+5. Set up the database:
 
 ```bash
 bun db:push
 bun db:seed
 ```
 
-5. Start development servers:
+6. Start development servers:
 
 ```bash
 bun dev
@@ -144,5 +167,15 @@ bun dev
 This will start:
 - Agent server on `http://localhost:8080`
 - Web application on `http://localhost:3000`
+
+### Storage Architecture
+
+Weldr uses S3-compatible storage for project files:
+- **Local development**: MinIO (included in `docker-compose.dev.yml`)
+- **Cloud deployment**: Tigris (on Fly.io)
+
+The storage holds AgentFS database files (`.db`) which contain all project state:
+- `branches/{branchId}.db` - Active branch state
+- `snapshots/{versionId}.db` - Version snapshots
 
 For more detailed setup instructions and contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).

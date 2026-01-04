@@ -1,18 +1,22 @@
 import { promises as fs } from "node:fs";
+import path from "node:path";
 
-import { and, db, eq } from "@weldr/db";
+import {
+  agentFSExists,
+  createSnapshotService,
+  createStorageBackend,
+  openAgentFS,
+  syncAgentFSToDisk,
+} from "@weldr/agent-storage";
+import { db, eq } from "@weldr/db";
 import { branches, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 import {
   BRANCH_STATE_FILE,
   type BranchState,
   getBranchDir,
-  isLocalMode,
-  WORKSPACE_BASE,
 } from "@weldr/shared/state";
 
-import { runCommand } from "./commands";
-import { resolveScriptPath } from "./constants";
 import { Git } from "./git";
 
 export async function loadState(): Promise<BranchState> {
@@ -33,130 +37,20 @@ export async function saveState(state: BranchState): Promise<void> {
   await fs.rename(tmpFile, BRANCH_STATE_FILE);
 }
 
+/**
+ * Ensure branch directory exists with AgentFS initialized.
+ * Works the same in local and cloud mode - always syncs with S3.
+ */
 export async function ensureBranchDir(
   branchId: string,
   projectId: string,
 ): Promise<{
   branchDir: string;
-  status: "created" | "reused";
+  status: "created" | "reused" | "forked";
 }> {
-  const logger = Logger.get();
+  const logger = Logger.get({ branchId, projectId });
 
-  logger.info("Ensuring branch directory exists", {
-    extra: { branchId, projectId },
-  });
-
-  // In local mode, use git worktrees instead of S3 sync
-  if (isLocalMode()) {
-    return await ensureBranchDirLocal(branchId, projectId);
-  }
-
-  // Cloud mode: use existing S3 sync approach
-  const result = await runCommand(
-    resolveScriptPath("create-branch-dir.sh"),
-    [branchId, projectId],
-    {
-      env: {
-        ...process.env,
-        WORKSPACE_BASE: WORKSPACE_BASE,
-        MAX_VOLUME_USAGE_PERCENT: process.env.MAX_VOLUME_USAGE_PERCENT || "85",
-        TARGET_VOLUME_USAGE_PERCENT:
-          process.env.TARGET_VOLUME_USAGE_PERCENT || "70",
-      },
-    },
-  );
-
-  if (!result.success) {
-    logger.error("Failed to ensure branch directory", {
-      extra: {
-        branchId,
-        projectId,
-        exitCode: result.exitCode,
-        stderr: result.stderr,
-        stdout: result.stdout,
-      },
-    });
-    throw new Error(`Failed to ensure branch directory: ${result.stderr}`);
-  }
-
-  const output = result.stdout;
-  const statusMatch = output.match(/STATUS=(\w+)/);
-  const dirMatch = output.match(/BRANCH_DIR=(.+)/);
-
-  const status = statusMatch?.[1] as "created" | "reused" | undefined;
-  const branchDir = dirMatch?.[1]?.trim();
-
-  if (!status || !branchDir) {
-    logger.error("Failed to parse branch directory output", {
-      extra: { branchId, projectId, stdout: output },
-    });
-    throw new Error("Failed to parse branch directory output");
-  }
-
-  logger.info("Branch directory ensured", {
-    extra: { branchId, projectId, branchDir, status },
-  });
-
-  // If directory was reused, sync from S3 to get latest changes
-  if (status === "reused") {
-    logger.info("Directory reused, syncing from S3", {
-      extra: { branchId, projectId },
-    });
-
-    try {
-      const syncResult = await syncBranchFromS3(branchId, projectId);
-
-      if (syncResult.success) {
-        if (syncResult.skipped) {
-          logger.info("Sync from S3 skipped (bucket not found or empty)", {
-            extra: { branchId, projectId, reason: syncResult.reason },
-          });
-        } else {
-          logger.info("Successfully synced branch from S3", {
-            extra: { branchId, projectId },
-          });
-        }
-      } else {
-        logger.warn(
-          "Failed to sync from S3 (non-critical, continuing with local files)",
-          {
-            extra: { branchId, projectId },
-          },
-        );
-      }
-    } catch (syncError) {
-      logger.warn(
-        "Error syncing from S3 (non-critical, continuing with local files)",
-        {
-          extra: {
-            branchId,
-            projectId,
-            error:
-              syncError instanceof Error
-                ? syncError.message
-                : String(syncError),
-          },
-        },
-      );
-    }
-  }
-
-  return { branchDir, status };
-}
-
-/**
- * Ensure branch directory exists in local mode using git worktrees.
- * For main branch: uses main repository directory directly.
- * For feature branches: creates git worktree from commit hash.
- */
-async function ensureBranchDirLocal(
-  branchId: string,
-  projectId: string,
-): Promise<{
-  branchDir: string;
-  status: "created" | "reused";
-}> {
-  const logger = Logger.get();
+  logger.info("Ensuring branch directory exists");
 
   // Get branch information from database
   const branch = await db.query.branches.findFirst({
@@ -173,207 +67,230 @@ async function ensureBranchDirLocal(
     throw new Error(`Branch not found: ${branchId}`);
   }
 
-  // Get main branch ID for the project
-  const mainBranch = await db.query.branches.findFirst({
-    where: and(eq(branches.projectId, projectId), eq(branches.isMain, true)),
-    columns: {
-      id: true,
-    },
-  });
-
-  if (!mainBranch) {
-    throw new Error(`Main branch not found for project: ${projectId}`);
-  }
-
-  const mainBranchId = mainBranch.id;
   const branchDir = getBranchDir(projectId, branchId);
 
-  // For main branch: use main repository directory directly
-  if (branch.isMain) {
-    logger.info("Main branch: using main repository directory", {
-      extra: { branchId, branchDir },
-    });
+  // Check if AgentFS database already exists locally
+  const agentfsExists = await agentFSExists(branchDir);
 
-    // Ensure main repository exists
-    await Git.ensureMainRepo(projectId, mainBranchId);
+  if (agentfsExists) {
+    logger.info("Branch directory already exists", { extra: { branchDir } });
 
-    // Check if directory already exists
-    const exists = await fs
-      .access(branchDir)
-      .then(() => true)
-      .catch(() => false);
+    // Always try to sync from S3 to ensure we have latest
+    await syncBranchFromStorage(branchId, projectId);
 
-    return {
-      branchDir,
-      status: exists ? "reused" : "created",
-    };
-  }
-
-  // For feature branches: create git worktree from commit hash
-  if (!branch.forkedFromVersionId) {
-    throw new Error(
-      `Feature branch ${branchId} must have a forkedFromVersionId`,
-    );
-  }
-
-  // Get the commit hash from the forked version
-  const forkedVersion = await db.query.versions.findFirst({
-    where: eq(versions.id, branch.forkedFromVersionId),
-    columns: {
-      commitHash: true,
-    },
-  });
-
-  if (!forkedVersion || !forkedVersion.commitHash) {
-    throw new Error(
-      `Forked version ${branch.forkedFromVersionId} does not have a commit hash`,
-    );
-  }
-
-  logger.info("Feature branch: creating git worktree", {
-    extra: { branchId, commitHash: forkedVersion.commitHash },
-  });
-
-  // Check if worktree already exists
-  const worktreeExists = await fs
-    .access(branchDir)
-    .then(() => true)
-    .catch(() => false);
-
-  if (worktreeExists) {
-    logger.info("Worktree already exists", { extra: { branchDir } });
     return { branchDir, status: "reused" };
   }
 
-  // Create worktree from commit hash with branch name
-  await Git.createWorktree(
-    projectId,
-    mainBranchId,
-    branchId,
-    forkedVersion.commitHash,
-    branch.name,
-  );
+  // Create branch directory
+  await fs.mkdir(branchDir, { recursive: true });
 
-  logger.info("Worktree created", {
-    extra: { branchDir, branchName: branch.name },
-  });
+  // Handle forked branches - use snapshot service
+  if (branch.forkedFromVersionId && !branch.isMain) {
+    logger.info("Creating branch from fork point", {
+      extra: { forkedFromVersionId: branch.forkedFromVersionId },
+    });
+
+    return await createBranchFromFork(
+      projectId,
+      branchId,
+      branch.forkedFromVersionId,
+      branchDir,
+    );
+  }
+
+  // Main branch or new branch without fork point
+  // Try to restore from S3 first, otherwise initialize empty
+  logger.info("Initializing branch", { extra: { branchDir } });
+
+  const syncResult = await syncBranchFromStorage(branchId, projectId);
+
+  if (syncResult.skipped) {
+    // No data in S3, initialize empty AgentFS
+    const agent = await openAgentFS(branchDir);
+    await agent.close();
+  }
+
+  // Initialize Git repository if needed
+  if (!(await Git.hasGitRepository(branchDir))) {
+    await Git.initRepository(projectId, branchId, branchDir);
+  }
 
   return { branchDir, status: "created" };
 }
 
-export async function syncBranchToS3(
-  branchId: string,
+/**
+ * Create a branch from a version fork point.
+ * Uses AgentFS snapshot to restore files from the forked version.
+ */
+async function createBranchFromFork(
   projectId: string,
-): Promise<{ success: boolean; bucketName?: string }> {
-  const logger = Logger.get();
+  branchId: string,
+  forkedFromVersionId: string,
+  branchDir: string,
+): Promise<{
+  branchDir: string;
+  status: "forked";
+}> {
+  const logger = Logger.get({ branchId, forkedFromVersionId });
 
-  logger.info("Syncing branch to S3", {
-    extra: { branchId, projectId },
+  // Get the forked version's data
+  const forkedVersion = await db.query.versions.findFirst({
+    where: eq(versions.id, forkedFromVersionId),
+    columns: {
+      commitHash: true,
+      snapshotPath: true,
+    },
   });
 
-  // Default S3 endpoint based on NODE_ENV
-  const defaultS3Endpoint =
-    process.env.NODE_ENV === "production"
-      ? "https://fly.storage.tigris.dev"
-      : "https://t3.storage.dev";
+  if (!forkedVersion) {
+    throw new Error(`Forked version not found: ${forkedFromVersionId}`);
+  }
 
-  const result = await runCommand(
-    resolveScriptPath("sync-to-s3.sh"),
-    [branchId, projectId],
-    {
-      env: {
-        ...process.env,
-        WORKSPACE_BASE: WORKSPACE_BASE,
-        S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID || "",
-        S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY || "",
-        S3_ENDPOINT: process.env.S3_ENDPOINT || defaultS3Endpoint,
-        S3_REGION: process.env.S3_REGION || "auto",
-      },
-    },
-  );
+  // Try to restore from AgentFS snapshot if available
+  if (forkedVersion.snapshotPath) {
+    logger.info("Restoring from AgentFS snapshot", {
+      extra: { snapshotPath: forkedVersion.snapshotPath },
+    });
 
-  if (!result.success) {
-    logger.error("Failed to sync branch to S3", {
-      extra: {
-        branchId,
-        projectId,
-        exitCode: result.exitCode,
-        stderr: result.stderr,
-        stdout: result.stdout,
-      },
+    const snapshotService = createSnapshotService(projectId);
+
+    try {
+      await snapshotService.forkFromVersion(forkedFromVersionId, branchId);
+
+      // Download the forked database to local disk
+      await syncBranchFromStorage(branchId, projectId);
+
+      // Sync files from AgentFS to disk
+      const agent = await openAgentFS(branchDir);
+      const { synced, errors } = await syncAgentFSToDisk(agent, branchDir);
+      await agent.close();
+
+      logger.info("Files synced from snapshot", {
+        extra: { synced, errorCount: errors.length },
+      });
+    } catch (error) {
+      logger.warn("Failed to restore from snapshot, initializing empty", {
+        extra: {
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+
+      // Initialize empty AgentFS if snapshot restore fails
+      const agent = await openAgentFS(branchDir);
+      await agent.close();
+    }
+  } else {
+    // No snapshot available, initialize empty AgentFS
+    logger.info("No snapshot available, initializing empty AgentFS");
+    const agent = await openAgentFS(branchDir);
+    await agent.close();
+  }
+
+  // Initialize Git repository
+  if (!(await Git.hasGitRepository(branchDir))) {
+    await Git.initRepository(projectId, branchId, branchDir);
+  }
+
+  logger.info("Branch forked successfully", {
+    extra: { branchDir, forkedFromVersionId },
+  });
+
+  return { branchDir, status: "forked" };
+}
+
+/**
+ * Sync branch to S3 storage.
+ * Uploads the AgentFS database file.
+ * Works the same in local (MinIO) and cloud (Tigris) modes.
+ */
+export async function syncBranchToStorage(
+  branchId: string,
+  projectId: string,
+): Promise<{ success: boolean }> {
+  const logger = Logger.get({ branchId, projectId });
+
+  logger.info("Syncing branch to storage");
+
+  try {
+    const branchDir = getBranchDir(projectId, branchId);
+    const agentfsPath = path.join(branchDir, "agent.db");
+
+    // Check if AgentFS database exists
+    try {
+      await fs.access(agentfsPath);
+    } catch {
+      logger.info("No AgentFS database to sync");
+      return { success: true };
+    }
+
+    // Read the local AgentFS database
+    const agentfsData = await fs.readFile(agentfsPath);
+
+    // Upload to S3
+    const backend = createStorageBackend(projectId);
+    await backend.write(`branches/${branchId}.db`, agentfsData);
+
+    logger.info("Branch synced to storage successfully");
+    return { success: true };
+  } catch (error) {
+    logger.error("Failed to sync branch to storage", {
+      extra: { error: error instanceof Error ? error.message : String(error) },
     });
     return { success: false };
   }
-
-  const bucketMatch = result.stdout.match(/BUCKET_NAME=(.+)/);
-  const bucketName = bucketMatch?.[1]?.trim();
-
-  logger.info("Branch synced to S3 successfully", {
-    extra: { branchId, projectId, bucketName },
-  });
-
-  return { success: true, bucketName };
 }
 
-export async function syncBranchFromS3(
+/**
+ * Sync branch from S3 storage.
+ * Downloads the AgentFS database file and syncs to disk.
+ * Works the same in local (MinIO) and cloud (Tigris) modes.
+ */
+export async function syncBranchFromStorage(
   branchId: string,
   projectId: string,
-): Promise<{ success: boolean; skipped: boolean; reason?: string }> {
-  const logger = Logger.get();
+): Promise<{ success: boolean; skipped: boolean }> {
+  const logger = Logger.get({ branchId, projectId });
 
-  logger.info("Syncing branch from S3", {
-    extra: { branchId, projectId },
-  });
+  logger.info("Syncing branch from storage");
 
-  // Default S3 endpoint based on NODE_ENV
-  const defaultS3Endpoint =
-    process.env.NODE_ENV === "production"
-      ? "https://fly.storage.tigris.dev"
-      : "https://t3.storage.dev";
+  try {
+    const branchDir = getBranchDir(projectId, branchId);
+    const agentfsPath = path.join(branchDir, "agent.db");
 
-  const result = await runCommand(
-    resolveScriptPath("sync-from-s3.sh"),
-    [branchId, projectId],
-    {
-      env: {
-        ...process.env,
-        WORKSPACE_BASE: WORKSPACE_BASE,
-        S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID || "",
-        S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY || "",
-        S3_ENDPOINT: process.env.S3_ENDPOINT || defaultS3Endpoint,
-        S3_REGION: process.env.S3_REGION || "auto",
-      },
-    },
-  );
+    // Ensure branch directory exists
+    await fs.mkdir(branchDir, { recursive: true });
 
-  if (!result.success) {
-    logger.error("Failed to sync branch from S3", {
-      extra: {
-        branchId,
-        projectId,
-        exitCode: result.exitCode,
-        stderr: result.stderr,
-        stdout: result.stdout,
-      },
+    // Download from S3
+    const backend = createStorageBackend(projectId);
+    const cloudPath = `branches/${branchId}.db`;
+
+    const exists = await backend.exists(cloudPath);
+    if (!exists) {
+      logger.info("No data found in storage for branch");
+      return { success: true, skipped: true };
+    }
+
+    const agentfsData = await backend.read(cloudPath);
+    await fs.writeFile(agentfsPath, agentfsData);
+
+    // Sync files from AgentFS to disk
+    const agent = await openAgentFS(branchDir);
+    const { synced, errors } = await syncAgentFSToDisk(agent, branchDir);
+    await agent.close();
+
+    logger.info("Branch synced from storage successfully", {
+      extra: { synced, errorCount: errors.length },
+    });
+
+    return { success: true, skipped: false };
+  } catch (error) {
+    logger.error("Failed to sync branch from storage", {
+      extra: { error: error instanceof Error ? error.message : String(error) },
     });
     return { success: false, skipped: false };
   }
-
-  const statusMatch = result.stdout.match(/SYNC_STATUS=(\w+)/);
-  const status = statusMatch?.[1];
-
-  if (status === "skipped") {
-    const reasonMatch = result.stdout.match(/REASON=(\w+)/);
-    const reason = reasonMatch?.[1];
-    logger.info("Sync from S3 skipped", {
-      extra: { branchId, projectId, reason },
-    });
-    return { success: true, skipped: true, reason };
-  }
-
-  logger.info("Branch synced from S3 successfully", {
-    extra: { branchId, projectId },
-  });
-
-  return { success: true, skipped: false };
 }
+
+// Keep old function names as aliases for backward compatibility
+export const syncBranchToCloud = syncBranchToStorage;
+export const syncBranchFromCloud = syncBranchFromStorage;

@@ -8,7 +8,6 @@ import {
   type DevServerMetadata,
   type DevServersState,
   getBranchDir,
-  trackProjectActivity,
 } from "@weldr/shared/state";
 
 // Port range: 9000-9009 (10 ports total)
@@ -320,9 +319,6 @@ export async function startDevServer(
   // Detect framework and get command
   const branchDir = getBranchDir(projectId, branchId);
   const { command, cwd } = detectFramework(branchDir);
-
-  // Track project activity
-  await trackProjectActivity(projectId, branchId);
 
   console.log(`Detected framework: ${command} in ${cwd}, port: ${port}`);
 

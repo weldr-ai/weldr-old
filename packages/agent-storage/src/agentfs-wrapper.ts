@@ -1,0 +1,174 @@
+import type { Dirent } from "node:fs";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { AgentFS } from "agentfs-sdk";
+
+import type { SyncResult } from "./types";
+
+export type AgentFSInstance = Awaited<ReturnType<typeof AgentFS.open>>;
+
+/**
+ * Open or create an AgentFS instance for a branch
+ */
+export async function openAgentFS(branchDir: string): Promise<AgentFSInstance> {
+  const agentfsPath = path.join(branchDir, "agent.db");
+
+  // Ensure branch directory exists
+  await fs.mkdir(branchDir, { recursive: true });
+
+  // Open AgentFS
+  const agent = await AgentFS.open({ path: agentfsPath });
+
+  return agent;
+}
+
+/**
+ * Sync files from AgentFS filesystem to actual disk
+ * Used after restoring a snapshot to update the working directory
+ */
+export async function syncAgentFSToDisk(
+  agent: AgentFSInstance,
+  branchDir: string,
+  options?: { exclude?: string[] },
+): Promise<SyncResult> {
+  const exclude = new Set(
+    options?.exclude || ["agent.db", ".git", "node_modules"],
+  );
+  let synced = 0;
+  const errors: string[] = [];
+
+  async function syncDir(agentPath: string, diskPath: string) {
+    let entries: string[];
+    try {
+      entries = await agent.fs.readdir(agentPath);
+    } catch {
+      // Directory doesn't exist in AgentFS
+      return;
+    }
+
+    for (const entry of entries) {
+      const entryAgentPath = path.posix.join(agentPath, entry);
+      const entryDiskPath = path.join(diskPath, entry);
+
+      // Skip excluded paths
+      if (exclude.has(entry)) continue;
+
+      try {
+        const stat = await agent.fs.stat(entryAgentPath);
+
+        if (stat.isDirectory()) {
+          await fs.mkdir(entryDiskPath, { recursive: true });
+          await syncDir(entryAgentPath, entryDiskPath);
+        } else {
+          const content = await agent.fs.readFile(entryAgentPath);
+          await fs.mkdir(path.dirname(entryDiskPath), { recursive: true });
+          await fs.writeFile(entryDiskPath, content);
+          synced++;
+        }
+      } catch (err) {
+        errors.push(
+          `Failed to sync ${entryAgentPath}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+  }
+
+  await syncDir("/", branchDir);
+
+  return { synced, errors };
+}
+
+/**
+ * Sync files from disk to AgentFS filesystem
+ * Used to capture changes made to the working directory
+ */
+export async function syncDiskToAgentFS(
+  agent: AgentFSInstance,
+  branchDir: string,
+  options?: { exclude?: string[] },
+): Promise<SyncResult> {
+  const exclude = new Set(
+    options?.exclude || [
+      "agent.db",
+      ".git",
+      "node_modules",
+      ".next",
+      "dist",
+      "build",
+      ".turbo",
+      ".cache",
+      "tmp",
+      "coverage",
+      ".nyc_output",
+      "out",
+      ".output",
+      ".nitro",
+      ".vercel",
+      ".react-router",
+      ".vscode",
+      ".idea",
+      ".DS_Store",
+    ],
+  );
+  let synced = 0;
+  const errors: string[] = [];
+
+  async function syncDir(diskPath: string, agentPath: string) {
+    let entries: Dirent[];
+    try {
+      entries = (await fs.readdir(diskPath, {
+        withFileTypes: true,
+      })) as Dirent[];
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      // Convert entry name to string (handles Buffer case)
+      const entryName = String(entry.name);
+
+      // Skip excluded paths
+      if (exclude.has(entryName)) continue;
+
+      const entryDiskPath = path.join(diskPath, entryName);
+      const entryAgentPath = path.posix.join(agentPath, entryName);
+
+      if (entry.isDirectory()) {
+        await syncDir(entryDiskPath, entryAgentPath);
+      } else if (entry.isFile()) {
+        try {
+          const content = await fs.readFile(entryDiskPath);
+          await agent.fs.writeFile(entryAgentPath, content);
+          synced++;
+        } catch (err) {
+          errors.push(
+            `Failed to sync ${entryDiskPath}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      }
+    }
+  }
+
+  await syncDir(branchDir, "/");
+
+  return { synced, errors };
+}
+
+/**
+ * Get the AgentFS database path for a branch
+ */
+export function getAgentFSPath(branchDir: string): string {
+  return path.join(branchDir, "agent.db");
+}
+
+/**
+ * Check if an AgentFS database exists for a branch
+ */
+export async function agentFSExists(branchDir: string): Promise<boolean> {
+  try {
+    await fs.access(getAgentFSPath(branchDir));
+    return true;
+  } catch {
+    return false;
+  }
+}

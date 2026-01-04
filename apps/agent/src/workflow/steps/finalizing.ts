@@ -1,12 +1,17 @@
+import {
+  createSnapshotService,
+  openAgentFS,
+  syncDiskToAgentFS,
+} from "@weldr/agent-storage";
 import { db, eq } from "@weldr/db";
 import { versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
-import { isLocalMode } from "@weldr/shared/state";
+import { getBranchDir, isCloudMode } from "@weldr/shared/state";
 
-import { syncBranchToS3 } from "@/lib/branch-state";
+import { syncBranchToStorage } from "@/lib/branch-state";
 import { build } from "@/lib/build";
+import { Git } from "@/lib/git";
 import { stream } from "@/lib/stream-utils";
-import { createSnapshot } from "@/lib/tigris";
 import { createStep } from "../engine";
 
 export const finalizingStep = createStep({
@@ -14,6 +19,7 @@ export const finalizingStep = createStep({
   execute: async ({ context }) => {
     const project = context.get("project");
     const branch = context.get("branch");
+    const user = context.get("user");
 
     const logger = Logger.get({
       projectId: project.id,
@@ -23,141 +29,100 @@ export const finalizingStep = createStep({
     logger.info("Starting finalize step");
 
     try {
-      // In local mode, skip build and just mark as completed
-      // Dev servers are managed by the web app on-demand
-      if (isLocalMode()) {
-        logger.info("Local mode: skipping build");
+      const branchDir = getBranchDir(project.id, branch.id);
 
-        // Mark version as completed
-        await db
-          .update(versions)
-          .set({
-            status: "completed",
-          })
-          .where(eq(versions.id, branch.headVersion.id));
+      // 1. Sync disk changes to AgentFS filesystem
+      logger.info("Syncing disk changes to AgentFS");
+      const agent = await openAgentFS(branchDir);
+      const { synced, errors } = await syncDiskToAgentFS(agent, branchDir);
+      await agent.close();
 
-        logger.info("Version marked as completed");
-
-        const updatedVersion = {
-          ...branch.headVersion,
-          status: "completed" as const,
-        };
-
-        context.set("branch", { ...branch, headVersion: updatedVersion });
-
-        await stream(branch.headVersion.chatId, {
-          type: "update_branch",
-          data: {
-            ...branch,
-            headVersion: updatedVersion,
-          },
-        });
-
-        logger.info("Finalize step completed successfully (local mode)");
-        return;
-      }
-
-      // Cloud mode: create snapshot, build, and upload to Tigris
-      const bucketName = `project-${project.id}-branch-${branch.id}`;
-      const snapshotName = branch.headVersion.id;
-
-      logger.info("Creating Tigris snapshot", {
-        extra: { bucketName, snapshotName },
+      logger.info("Disk synced to AgentFS", {
+        extra: { synced, errorCount: errors.length },
       });
 
-      // Use project-specific credentials from environment variables
-      // These are provided per project and do not require master admin keys
-      const credentials = {
-        accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
-        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
-      };
+      // 2. Create git commit (user-facing history)
+      logger.info("Creating git commit");
 
-      if (!credentials.accessKeyId || !credentials.secretAccessKey) {
-        throw new Error(
-          "S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY are required for snapshot creation",
+      const commitMessage = branch.headVersion.message
+        ? `${branch.headVersion.message}${branch.headVersion.description ? `\n\n${branch.headVersion.description}` : ""}`
+        : `Version #${branch.headVersion.sequenceNumber}`;
+
+      let commitHash: string | null = null;
+      try {
+        commitHash = await Git.commit(
+          commitMessage,
+          {
+            name: user?.name || "Weldr",
+            email: user?.email || "agent@weldr.dev",
+          },
+          branchDir,
         );
+        logger.info("Git commit created", { extra: { commitHash } });
+      } catch (error) {
+        logger.warn("Failed to create git commit (may have no changes)", {
+          extra: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        });
       }
 
-      const snapshotVersion = await createSnapshot(
-        bucketName,
-        snapshotName,
-        credentials,
+      // 3. Sync branch to S3 storage (works for both local MinIO and cloud Tigris)
+      logger.info("Syncing branch to storage");
+      await syncBranchToStorage(branch.id, project.id);
+
+      // 4. Create AgentFS snapshot (copy .db file in S3)
+      logger.info("Creating AgentFS snapshot");
+
+      const snapshotService = createSnapshotService(project.id);
+      const snapshotPath = await snapshotService.createSnapshot(
+        branch.id,
+        branch.headVersion.id,
       );
 
-      logger.info("Tigris snapshot created", {
-        extra: { snapshotVersion },
-      });
+      logger.info("Snapshot created", { extra: { snapshotPath } });
 
-      // Sync branch directory to S3 as backup
-      logger.info("Syncing branch directory to S3", {
-        extra: { branchId: branch.id, projectId: project.id },
-      });
+      // 5. Cloud mode only: build for Fly.io deployment
+      if (isCloudMode()) {
+        logger.info("Building version artifact", {
+          extra: { versionId: branch.headVersion.id },
+        });
 
-      try {
-        const syncResult = await syncBranchToS3(branch.id, project.id);
-        if (syncResult.success) {
-          logger.info("Branch directory synced to S3 successfully", {
-            extra: { bucketName: syncResult.bucketName },
+        const buildResult = await build({
+          projectId: project.id,
+          branchId: branch.id,
+          versionId: branch.headVersion.id,
+        });
+
+        if (buildResult.success) {
+          logger.info("Version artifact built successfully", {
+            extra: { versionId: branch.headVersion.id },
           });
         } else {
-          logger.warn(
-            "Failed to sync branch directory to S3 (non-critical, continuing)",
-            {
-              extra: { branchId: branch.id, projectId: project.id },
-            },
-          );
+          logger.warn("Failed to build version artifact (non-critical)", {
+            extra: { versionId: branch.headVersion.id },
+          });
         }
-      } catch (syncError) {
-        logger.warn(
-          "Error syncing branch directory to S3 (non-critical, continuing)",
-          {
-            extra: {
-              branchId: branch.id,
-              projectId: project.id,
-              error:
-                syncError instanceof Error
-                  ? syncError.message
-                  : String(syncError),
-            },
-          },
-        );
       }
 
-      // Build the version artifact
-      logger.info("Building version artifact", {
-        extra: { versionId: branch.headVersion.id },
-      });
-
-      const buildResult = await build({
-        projectId: project.id,
-        branchId: branch.id,
-        versionId: branch.headVersion.id,
-      });
-
-      if (buildResult.success) {
-        logger.info("Version artifact built successfully", {
-          extra: { versionId: branch.headVersion.id },
-        });
-      } else {
-        logger.error("Failed to build version artifact", {
-          extra: { versionId: branch.headVersion.id },
-        });
-      }
-
+      // 6. Update database with both references
       await db
         .update(versions)
         .set({
           status: "completed",
-          bucketSnapshotVersion: snapshotVersion,
+          commitHash,
+          snapshotPath,
         })
         .where(eq(versions.id, branch.headVersion.id));
 
       logger.info("Version marked as completed");
 
+      // 7. Update context and notify clients
       const updatedVersion = {
         ...branch.headVersion,
         status: "completed" as const,
-        bucketSnapshotVersion: snapshotVersion,
+        commitHash,
+        snapshotPath,
       };
 
       context.set("branch", { ...branch, headVersion: updatedVersion });

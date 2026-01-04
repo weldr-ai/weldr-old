@@ -2,7 +2,6 @@ import { TRPCError } from "@trpc/server";
 import type { Edge } from "@xyflow/react";
 import { notFound, redirect } from "next/navigation";
 
-import { trackProjectActivity } from "@weldr/shared/state";
 import type { NodeType } from "@weldr/shared/types";
 
 import { ProjectView } from "@/components/projects/project-view";
@@ -26,8 +25,6 @@ export default async function ProjectPage({
       versionId,
     });
     const integrationTemplates = await api.integrationTemplates.list();
-
-    await trackProjectActivity(projectId, branch.id);
 
     const versionToUse = branch.selectedVersion ?? branch.headVersion;
     const versionDeclarations = getVersionDeclarations(versionToUse);

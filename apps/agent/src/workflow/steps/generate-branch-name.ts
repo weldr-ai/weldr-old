@@ -1,7 +1,7 @@
 import { db, eq } from "@weldr/db";
 import { branches } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir, isLocalMode } from "@weldr/shared/state";
+import { getBranchDir } from "@weldr/shared/state";
 
 import { generateBranchName } from "@/ai/utils/generate-branch-name";
 import { getMessages } from "@/ai/utils/get-messages";
@@ -56,8 +56,8 @@ export const generateBranchNameStep = createStep({
         return;
       }
 
-      // Rename the git branch in local mode
-      if (isLocalMode() && oldBranchName) {
+      // Rename the git branch
+      if (oldBranchName) {
         try {
           const branchDir = getBranchDir(project.id, branch.id);
           await Git.renameBranch(oldBranchName, newBranchName, branchDir);

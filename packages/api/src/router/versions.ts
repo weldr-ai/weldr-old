@@ -12,8 +12,6 @@ import {
   versionDeclarations,
   versions,
 } from "@weldr/db/schema";
-import { isLocalMode } from "@weldr/shared/state";
-import { Tigris } from "@weldr/shared/tigris";
 import type {
   AssistantMessage,
   ChatMessage,
@@ -203,17 +201,11 @@ export const versionRouter = {
 
           if (content.length === 0) continue;
 
-          // Get attachment URLs
-          const attachmentsWithUrls = await Promise.all(
-            message.attachments.map(async (attachment) => ({
-              name: attachment.name,
-              url: await Tigris.object.getSignedUrl(
-                // biome-ignore lint/style/noNonNullAssertion: reason
-                process.env.GENERAL_BUCKET!,
-                attachment.key,
-              ),
-            })),
-          );
+          // For attachments, just return the key - the client can handle URL generation
+          const attachmentsWithUrls = message.attachments.map((attachment) => ({
+            name: attachment.name,
+            url: `/api/attachments/${attachment.key}`,
+          }));
 
           results.push({
             ...message,
@@ -320,39 +312,12 @@ export const versionRouter = {
         });
       }
 
-      // In local mode, require commitHash for git revert
-      // In cloud mode, require bucketSnapshotVersion for Tigris snapshot revert
-      if (isLocalMode()) {
-        if (!version.commitHash) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message:
-              "Version does not have a commit hash. Cannot revert in local mode without a commit hash.",
-          });
-        }
-      } else {
-        if (!version.bucketSnapshotVersion) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Version does not have a snapshot",
-          });
-        }
-      }
-
-      // In cloud mode, revert Tigris snapshot first
-      let newSnapshotVersion: string | undefined;
-      if (!isLocalMode()) {
-        // We already checked that bucketSnapshotVersion exists above
-        if (!version.bucketSnapshotVersion) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Version does not have a snapshot",
-          });
-        }
-        newSnapshotVersion = await Tigris.bucket.snapshot.revert(
-          `project-${input.projectId}-branch-${version.branch.id}`,
-          version.bucketSnapshotVersion,
-        );
+      // Require snapshotPath for revert (same for both local and cloud modes)
+      if (!version.snapshotPath) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Version does not have a snapshot. Cannot revert.",
+        });
       }
 
       const revertedVersion = await db.transaction(async (tx) => {
@@ -391,8 +356,7 @@ export const versionRouter = {
             sequenceNumber: version.sequenceNumber + 1,
             projectId: input.projectId,
             userId: ctx.session.user.id,
-            // Only set bucketSnapshotVersion in cloud mode
-            bucketSnapshotVersion: newSnapshotVersion,
+            snapshotPath: version.snapshotPath,
             kind: "revert",
             revertedVersionId: version.id,
             message: `revert: revert to #${version.sequenceNumber} ${version.message}`,
@@ -450,9 +414,13 @@ export const versionRouter = {
         return revertedVersion;
       });
 
+      // Call agent to perform the actual revert (restore snapshot + git commit)
       let commitHash: string | undefined;
       try {
-        const result = await callAgentProxy<{ commitHash: string }>(
+        const result = await callAgentProxy<{
+          commitHash: string;
+          snapshotPath: string;
+        }>(
           "/revert",
           {
             projectId: input.projectId,
@@ -476,46 +444,26 @@ export const versionRouter = {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
 
-        if (isLocalMode()) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `Failed to perform git revert: ${errorMessage}`,
-          });
-        } else {
+        // Cleanup on failure
+        try {
+          await db
+            .update(branches)
+            .set({ headVersionId: version.branch.headVersionId })
+            .where(eq(branches.id, version.branch.id));
+
+          await db.delete(versions).where(eq(versions.id, revertedVersion.id));
+
+          await db.delete(chats).where(eq(chats.id, revertedVersion.chatId));
+        } catch (cleanupError) {
           console.error(
-            "Failed to sync workspace and commit after snapshot revert:",
-            error,
+            "Failed to cleanup after revert failure:",
+            cleanupError,
           );
-
-          try {
-            await db
-              .update(branches)
-              .set({ headVersionId: version.branch.headVersionId })
-              .where(eq(branches.id, version.branch.id));
-
-            await db
-              .delete(versions)
-              .where(eq(versions.id, revertedVersion.id));
-
-            await db.delete(chats).where(eq(chats.id, revertedVersion.chatId));
-          } catch (cleanupError) {
-            console.error(
-              "Failed to cleanup after revert failure:",
-              cleanupError,
-            );
-          }
-
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `Failed to perform git revert: ${errorMessage}`,
-          });
         }
-      }
 
-      if (isLocalMode() && !commitHash) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Git revert completed but no commit hash was returned",
+          message: `Failed to perform revert: ${errorMessage}`,
         });
       }
 

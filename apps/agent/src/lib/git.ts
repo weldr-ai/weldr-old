@@ -3,7 +3,10 @@ import path from "node:path";
 import simpleGit from "simple-git";
 
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir, isLocalMode, WORKSPACE_BASE } from "@weldr/shared/state";
+import {
+  getBranchDir,
+  getMainRepoPath as getMainRepoPathFromState,
+} from "@weldr/shared/state";
 
 const TRUNK_BRANCH = "main";
 
@@ -20,8 +23,8 @@ export namespace Git {
 
   /**
    * Initialize repo on TRUNK_BRANCH with an initial empty commit.
-   * @param projectId - The project ID (required in local mode if branchDir not provided)
-   * @param branchId - The branch ID (required in local mode if branchDir not provided)
+   * @param projectId - The project ID (required if branchDir not provided)
+   * @param branchId - The branch ID (required if branchDir not provided)
    * @param branchDir - The branch directory path (optional, will be calculated if not provided)
    */
   export async function initRepository(
@@ -31,13 +34,11 @@ export namespace Git {
   ): Promise<string> {
     const repoPath =
       branchDir ??
-      (isLocalMode() && projectId && branchId
-        ? getBranchDir(projectId, branchId)
-        : undefined);
+      (projectId && branchId ? getBranchDir(projectId, branchId) : undefined);
 
     if (!repoPath) {
       throw new Error(
-        "initRepository requires either branchDir or both projectId and branchId in local mode",
+        "initRepository requires either branchDir or both projectId and branchId",
       );
     }
 
@@ -324,6 +325,7 @@ export namespace Git {
 
   /**
    * Get the main git repository path from project ID and main branch ID.
+   * Unified structure for both local and cloud modes.
    * @param projectId - The project ID
    * @param mainBranchId - The main branch ID
    * @returns The path to the main git repository
@@ -332,15 +334,12 @@ export namespace Git {
     projectId: string,
     mainBranchId: string,
   ): string {
-    if (isLocalMode()) {
-      return path.join(WORKSPACE_BASE, projectId, mainBranchId);
-    }
-    // Cloud mode: flat structure with just branchId (one project per machine)
-    return path.join(WORKSPACE_BASE, mainBranchId);
+    return getMainRepoPathFromState(projectId, mainBranchId);
   }
 
   /**
    * Get the branch workspace path.
+   * Unified structure for both local and cloud modes.
    * @param projectId - The project ID
    * @param branchId - The branch ID
    * @returns The path to the branch workspace
@@ -349,11 +348,7 @@ export namespace Git {
     projectId: string,
     branchId: string,
   ): string {
-    if (isLocalMode()) {
-      return path.join(WORKSPACE_BASE, projectId, branchId);
-    }
-    // Cloud mode: flat structure with just branchId (one project per machine)
-    return path.join(WORKSPACE_BASE, branchId);
+    return getBranchDir(projectId, branchId);
   }
 
   /**

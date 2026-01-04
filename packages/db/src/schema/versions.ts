@@ -43,7 +43,7 @@ export const versions = pgTable(
       (() => versions.id) as unknown as () => AnyPgColumn,
       { onDelete: "set null" },
     ),
-    bucketSnapshotVersion: text("bucket_snapshot_version"),
+    snapshotPath: text("snapshot_path"),
     kind: text("kind")
       .$type<"checkpoint" | "integration" | "revert">()
       .notNull()

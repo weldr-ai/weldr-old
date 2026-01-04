@@ -4,7 +4,6 @@ import z from "zod";
 import { and, desc, eq, type SQL } from "@weldr/db";
 import { branches, versions } from "@weldr/db/schema";
 import { nanoid } from "@weldr/shared/nanoid";
-import { Tigris } from "@weldr/shared/tigris";
 import type {
   AssistantMessage,
   ChatMessage,
@@ -49,25 +48,11 @@ export const branchRouter = {
         });
       }
 
-      // Check if running in local mode
-      const isLocalMode =
-        process.env.WELDR_MODE?.toLowerCase() === "local" ||
-        (process.env.WELDR_MODE === undefined &&
-          process.env.NODE_ENV === "development");
-
-      // In local mode, only require commit hash (not bucket snapshot)
-      // In cloud mode, require both bucket snapshot and commit hash
-      if (!isLocalMode && !forkedVersion.bucketSnapshotVersion) {
+      // Require snapshotPath for forking (same for both local and cloud modes)
+      if (!forkedVersion.snapshotPath) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Source version does not have a snapshot",
-        });
-      }
-
-      if (!forkedVersion.commitHash) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Source version does not have a commit hash",
         });
       }
 
@@ -99,37 +84,8 @@ export const branchRouter = {
 
       const branchId = nanoid();
 
-      // In local mode, skip Tigris bucket fork
-      // In cloud mode, create bucket fork
-      if (!isLocalMode) {
-        if (!forkedVersion.bucketSnapshotVersion) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Source version does not have a snapshot",
-          });
-        }
-
-        const sourceBucket = `project-${input.projectId}-branch-${forkedVersion.branchId}`;
-        const forkBucket = `project-${input.projectId}-branch-${branchId}`;
-
-        try {
-          await Tigris.bucket.fork(
-            sourceBucket,
-            forkBucket,
-            forkedVersion.bucketSnapshotVersion,
-          );
-        } catch (error) {
-          try {
-            await Tigris.bucket.delete(forkBucket);
-          } catch (cleanupError) {
-            console.error(
-              "Failed to cleanup bucket after branch creation error:",
-              cleanupError,
-            );
-          }
-          throw error;
-        }
-      }
+      // Branch creation no longer needs to fork Tigris buckets
+      // The agent will handle snapshot restoration when the branch is first accessed
 
       const [branch] = await ctx.db
         .insert(branches)
@@ -271,16 +227,11 @@ export const branchRouter = {
 
           if (content.length === 0) continue;
 
-          const attachmentsWithUrls = await Promise.all(
-            message.attachments.map(async (attachment) => ({
-              name: attachment.name,
-              url: await Tigris.object.getSignedUrl(
-                // biome-ignore lint/style/noNonNullAssertion: reason
-                process.env.GENERAL_BUCKET!,
-                attachment.key,
-              ),
-            })),
-          );
+          // Return attachment URL path - client can handle URL generation
+          const attachmentsWithUrls = message.attachments.map((attachment) => ({
+            name: attachment.name,
+            url: `/api/attachments/${attachment.key}`,
+          }));
 
           results.push({
             ...message,

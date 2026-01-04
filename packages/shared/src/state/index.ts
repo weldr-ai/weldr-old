@@ -1,14 +1,5 @@
 // Workspace utilities
 
-// Active projects
-export {
-  type ActiveProject,
-  type ActiveProjectsState,
-  getActiveProjectIds,
-  loadActiveProjects,
-  saveActiveProjects,
-  trackProjectActivity,
-} from "./active-projects";
 // Branch state
 export {
   BRANCH_STATE_FILE,

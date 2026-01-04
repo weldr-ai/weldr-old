@@ -2,7 +2,7 @@
 # Weldr Agent Application
 #   • Alpine Linux base (minimal footprint)
 #   • Node.js + Bun
-#   • Local SSD storage with rclone S3 sync
+#   • AgentFS (SQLite) + S3 SDK storage
 #   • Turborepo pruned build
 #   • AMD64 architecture
 # ───────────────────────────────────────────
@@ -11,14 +11,12 @@
 # Version definitions
 # ───────────────────────────────────────────
 ARG NODE_VERSION=22
-ARG RCLONE_VERSION=1.71.2
 ARG BUN_VERSION=1.3.5
 ARG TURBO_VERSION=2.6.0
 
 FROM node:${NODE_VERSION}-alpine AS base
 
 # Redeclare ARGs for use in this stage
-ARG RCLONE_VERSION
 ARG BUN_VERSION
 
 # ───────────────────────────────────────────
@@ -29,22 +27,12 @@ RUN --mount=type=cache,target=/var/cache/apk,sharing=locked \
   bash \
   ca-certificates \
   curl \
-  unzip \
   tree \
   git \
   ripgrep \
   jq \
   dumb-init && \
   rm -rf /tmp/* /var/tmp/*
-
-# ───────────────────────────────────────────
-# Install rclone (AMD64)
-# ───────────────────────────────────────────
-RUN curl -fsSL "https://github.com/rclone/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}-linux-amd64.zip" -o /tmp/rclone.zip && \
-  unzip -q /tmp/rclone.zip -d /tmp && \
-  mv "/tmp/rclone-v${RCLONE_VERSION}-linux-amd64/rclone" /usr/local/bin/rclone && \
-  chmod +x /usr/local/bin/rclone && \
-  rm -rf /tmp/rclone*
 
 # ───────────────────────────────────────────
 # Install Bun
@@ -132,13 +120,6 @@ FROM base AS runner
 # Set production environment
 ENV NODE_ENV=production \
   PORT=8080
-
-# Copy branch management scripts
-COPY --from=builder /app/apps/agent/scripts/sync-to-s3.sh /usr/local/bin/sync-to-s3.sh
-COPY --from=builder /app/apps/agent/scripts/sync-from-s3.sh /usr/local/bin/sync-from-s3.sh
-COPY --from=builder /app/apps/agent/scripts/create-branch-dir.sh /usr/local/bin/create-branch-dir.sh
-COPY --from=builder /app/apps/agent/scripts/cleanup-lru.sh /usr/local/bin/cleanup-lru.sh
-RUN chmod +x /usr/local/bin/*.sh
 
 # Copy production artifacts and dependencies
 COPY --from=installer /app/apps/agent/dist ./dist
