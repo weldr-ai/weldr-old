@@ -7,6 +7,7 @@ import {
   WorkflowIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createContext, useContext, useRef, useState } from "react";
 
 import type { RouterOutputs } from "@weldr/api";
@@ -111,6 +112,7 @@ export function Timeline({
 
 export function TimelineContent({ className }: { className?: string }) {
   const { open, branch } = useTimelineContext();
+  const router = useRouter();
   const [highlightedVersionId, setHighlightedVersionId] = useState<
     string | null
   >(null);
@@ -223,11 +225,17 @@ export function TimelineContent({ className }: { className?: string }) {
                   <HoverCard openDelay={0} closeDelay={0}>
                     <HoverCardTrigger
                       className={cn(
-                        "grid grid-cols-[auto_2.5rem_3rem_1fr] items-center gap-2 rounded-md px-2 py-1 hover:bg-accent",
+                        "grid cursor-pointer grid-cols-[auto_2.5rem_3rem_1fr] items-center gap-2 rounded-md px-2 py-1 hover:bg-accent",
                         {
                           "bg-primary/30 hover:bg-primary/40": isCurrentVersion,
                         },
                       )}
+                      onClick={() => {
+                        const url = branch.isMain
+                          ? `/projects/${version.projectId}?versionId=${version.id}`
+                          : `/projects/${version.projectId}/branches/${version.branchId}?versionId=${version.id}`;
+                        router.push(url);
+                      }}
                     >
                       <div className="relative flex h-full items-center justify-center">
                         <div

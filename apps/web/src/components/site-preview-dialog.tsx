@@ -12,7 +12,7 @@ import {
   ShieldXIcon,
   SmartphoneIcon,
 } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Badge } from "@weldr/ui/components/badge";
@@ -59,21 +59,24 @@ export function SitePreviewDialog({
     projectId: string;
     branchId?: string;
   }>();
+  const searchParams = useSearchParams();
+  const versionId = searchParams.get("versionId") ?? undefined;
 
   const branch = queryClient.getQueryData(
     trpc.branches.byIdOrMain.queryKey({
       id: branchId,
       projectId,
+      versionId,
     }),
   );
 
-  const headVersion = branch?.headVersion;
+  const versionToUse = branch?.selectedVersion ?? branch?.headVersion;
   const [currentPath, setCurrentPath] = useState("");
 
   const baseUrl = url
     ? url
-    : headVersion?.id && projectId && branch?.id
-      ? getPreviewUrl(headVersion.id, projectId, branch.id)
+    : versionToUse?.id && projectId && branch?.id
+      ? getPreviewUrl(versionToUse.id, projectId, branch.id)
       : "";
 
   useEffect(() => {
