@@ -1,7 +1,7 @@
 {
   "name": "weldr-monorepo",
   "private": true,
-  "packageManager": "pnpm@10.20.0",
+  "packageManager": "bun@1.3.5",
   "repository": {
     "type": "git",
     "url": "https://github.com/weldr-ai/weldr.git"
@@ -10,21 +10,25 @@
   "engines": {
     "node": ">=22"
   },
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "tooling/*"
+  ],
   "scripts": {
     "build": "turbo build",
     "typecheck": "turbo typecheck",
     "clean": "rm -rf .turbo node_modules",
     "clean:ws": "turbo clean",
-    "commit": "git-cz",
-    "db:check": "pnpm -F @weldr/db check",
-    "db:generate": "pnpm -F @weldr/db generate",
-    "db:migrate": "pnpm -F @weldr/db migrate",
-    "db:migrate:drop": "pnpm -F @weldr/db migrate:drop",
-    "db:pull": "pnpm -F @weldr/db pull",
-    "db:push": "pnpm -F @weldr/db push",
-    "db:studio": "pnpm -F @weldr/db studio",
-    "db:seed": "pnpm -F @weldr/db seed",
-    "db:up": "pnpm -F @weldr/db up",
+    "db:check": "bun run --cwd packages/db check",
+    "db:generate": "bun run --cwd packages/db generate",
+    "db:migrate": "bun run --cwd packages/db migrate",
+    "db:migrate:drop": "bun run --cwd packages/db migrate:drop",
+    "db:pull": "bun run --cwd packages/db pull",
+    "db:push": "bun run --cwd packages/db push",
+    "db:studio": "bun run --cwd packages/db studio",
+    "db:seed": "bun run --cwd packages/db seed",
+    "db:up": "bun run --cwd packages/db up",
     "dev": "turbo dev",
     "check": "biome check",
     "check:fix": "biome check --diagnostic-level=warn --write",
@@ -33,31 +37,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.1.1",
-    "@commitlint/cli": "^19.3.0",
-    "@commitlint/config-conventional": "^19.2.2",
-    "@commitlint/cz-commitlint": "^19.2.0",
-    "@ianvs/prettier-plugin-sort-imports": "^4.2.1",
     "@turbo/gen": "^1.13.3",
     "@weldr/tsconfig": "workspace:*",
-    "commitizen": "^4.3.0",
-    "inquirer": "^9.2.22",
     "turbo": "^2.6.0",
     "typescript": "^5.7.2"
-  },
-  "config": {
-    "commitizen": {
-      "path": "@commitlint/cz-commitlint"
-    }
-  },
-  "pnpm": {
-    "ignoredBuiltDependencies": [
-      "@swc/core",
-      "better-sqlite3",
-      "core-js-pure",
-      "sharp"
-    ],
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
   }
 }

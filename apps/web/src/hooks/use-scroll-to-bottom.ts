@@ -4,7 +4,7 @@ import type { ChatMessage } from "@weldr/shared/types";
 
 export function useScrollToBottom<T extends HTMLElement>(
   messages: ChatMessage[],
-): [RefObject<T>, RefObject<T>] {
+): [RefObject<T | null>, RefObject<T | null>] {
   const containerRef = useRef<T>(null);
   const endRef = useRef<T>(null);
 

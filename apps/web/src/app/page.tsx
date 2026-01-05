@@ -14,7 +14,7 @@ import { CreateProjectForm } from "@/components/projects/create-project-form";
 import { getActiveSubscription } from "@/lib/actions/get-active-subscription";
 import { api } from "@/lib/trpc/server";
 
-export default async function Home(): Promise<JSX.Element> {
+export default async function Home() {
   const session = await auth.api.getSession({ headers: await headers() });
   const sessions = session
     ? await auth.api.listSessions({ headers: await headers() })

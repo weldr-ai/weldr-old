@@ -32,7 +32,7 @@ export function CreateIntegrationDialog({
   environmentVariables,
 }: {
   integrationTemplate: RouterOutputs["integrationTemplates"]["byId"];
-  integration?: RouterOutputs["projects"]["byId"]["integrations"][number];
+  integration?: RouterOutputs["integrations"]["list"][number];
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);

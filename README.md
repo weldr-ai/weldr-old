@@ -84,7 +84,7 @@ Weldr is a chat-native AI coding platform. You talk; agents produce a working co
 ### Prerequisites
 
 - Node.js >= 22
-- pnpm >= 10.20.0
+- bun >= 10.20.0
 - PostgreSQL
 - Redis
 - Git
@@ -101,7 +101,7 @@ cd weldr
 2. Install dependencies:
 
 ```bash
-pnpm install
+bun install
 ```
 
 3. Set up environment variables:
@@ -131,14 +131,14 @@ AGENT_URL=http://localhost:8080
 4. Set up the database:
 
 ```bash
-pnpm db:push
-pnpm db:seed
+bun db:push
+bun db:seed
 ```
 
 5. Start development servers:
 
 ```bash
-pnpm dev
+bun dev
 ```
 
 This will start:

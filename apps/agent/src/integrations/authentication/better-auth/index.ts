@@ -147,9 +147,9 @@ export const dummyTable = pgTable("dummy_table", {
 
       // Generate schema
       const generateSchemaResult = await runCommand(
-        "pnpm",
+        "bun",
         [
-          "dlx",
+          "x",
           "@better-auth/cli@latest",
           "generate",
           "--config",

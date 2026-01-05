@@ -154,7 +154,10 @@ export function processChildren(children: React.ReactNode): React.ReactNode {
       return processReferences(child);
     }
     // For React elements with children, recursively process them
-    if (React.isValidElement(child) && child.props?.children) {
+    if (
+      React.isValidElement<{ children?: React.ReactNode }>(child) &&
+      child.props.children
+    ) {
       return React.cloneElement(child, {
         ...child.props,
         children: processChildren(child.props.children),

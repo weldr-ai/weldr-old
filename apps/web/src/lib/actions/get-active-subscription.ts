@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 
-import { auth } from "@weldr/auth";
+import { auth, type Subscription } from "@weldr/auth";
 
-export async function getActiveSubscription() {
+export async function getActiveSubscription(): Promise<Subscription | null> {
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session) {

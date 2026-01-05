@@ -97,13 +97,13 @@ src/schema/
 ### Creating Migrations
 ```bash
 # Generate migration from schema changes
-pnpm db:generate
+bun db:generate
 
 # Apply migrations to database
-pnpm db:migrate
+bun db:migrate
 
 # Push schema directly (development only)
-pnpm db:push
+bun db:push
 ```
 
 ### Migration Best Practices

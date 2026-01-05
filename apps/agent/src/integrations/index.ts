@@ -7,5 +7,5 @@ export type {
 } from "./types";
 // Export utilities
 export { combineResults } from "./utils/combine-results";
-export { installPackages, runPnpmScript } from "./utils/packages";
+export { installPackages, runBunScript } from "./utils/packages";
 export { writeEnvironmentVariables } from "./utils/write-env";

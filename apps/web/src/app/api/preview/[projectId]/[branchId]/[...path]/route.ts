@@ -15,70 +15,60 @@ export async function GET(
   request: NextRequest,
   {
     params,
-  }: { params: { projectId: string; branchId: string; path: string[] } },
+  }: {
+    params: Promise<{ projectId: string; branchId: string; path: string[] }>;
+  },
 ) {
-  return handlePreviewRequest(
-    request,
-    params.projectId,
-    params.branchId,
-    params.path,
-  );
+  const { projectId, branchId, path } = await params;
+  return handlePreviewRequest(request, projectId, branchId, path);
 }
 
 export async function POST(
   request: NextRequest,
   {
     params,
-  }: { params: { projectId: string; branchId: string; path: string[] } },
+  }: {
+    params: Promise<{ projectId: string; branchId: string; path: string[] }>;
+  },
 ) {
-  return handlePreviewRequest(
-    request,
-    params.projectId,
-    params.branchId,
-    params.path,
-  );
+  const { projectId, branchId, path } = await params;
+  return handlePreviewRequest(request, projectId, branchId, path);
 }
 
 export async function PUT(
   request: NextRequest,
   {
     params,
-  }: { params: { projectId: string; branchId: string; path: string[] } },
+  }: {
+    params: Promise<{ projectId: string; branchId: string; path: string[] }>;
+  },
 ) {
-  return handlePreviewRequest(
-    request,
-    params.projectId,
-    params.branchId,
-    params.path,
-  );
+  const { projectId, branchId, path } = await params;
+  return handlePreviewRequest(request, projectId, branchId, path);
 }
 
 export async function DELETE(
   request: NextRequest,
   {
     params,
-  }: { params: { projectId: string; branchId: string; path: string[] } },
+  }: {
+    params: Promise<{ projectId: string; branchId: string; path: string[] }>;
+  },
 ) {
-  return handlePreviewRequest(
-    request,
-    params.projectId,
-    params.branchId,
-    params.path,
-  );
+  const { projectId, branchId, path } = await params;
+  return handlePreviewRequest(request, projectId, branchId, path);
 }
 
 export async function PATCH(
   request: NextRequest,
   {
     params,
-  }: { params: { projectId: string; branchId: string; path: string[] } },
+  }: {
+    params: Promise<{ projectId: string; branchId: string; path: string[] }>;
+  },
 ) {
-  return handlePreviewRequest(
-    request,
-    params.projectId,
-    params.branchId,
-    params.path,
-  );
+  const { projectId, branchId, path } = await params;
+  return handlePreviewRequest(request, projectId, branchId, path);
 }
 
 async function handlePreviewRequest(

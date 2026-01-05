@@ -7,7 +7,7 @@ import { isLocalMode } from "@weldr/shared/state";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { projectId: string; branchId: string } },
+  { params }: { params: Promise<{ projectId: string; branchId: string }> },
 ) {
   try {
     const { projectId, branchId } = await params;

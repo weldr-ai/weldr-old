@@ -45,7 +45,7 @@ export function MainDropdownMenu({
 }: {
   side?: "bottom" | "top" | "left" | "right";
   className?: string;
-}): JSX.Element {
+}) {
   const router = useRouter();
   const { data: session } = authClient.useSession();
   const { setCommandCenterView, setCommandCenterOpen, setAccountSettingsOpen } =

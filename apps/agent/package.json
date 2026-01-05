@@ -2,7 +2,7 @@
   "name": "@weldr/agent",
   "type": "module",
   "scripts": {
-    "dev": "pnpm with-env tsx watch --clear-screen=false src/index.ts",
+    "dev": "bun with-env tsx watch --clear-screen=false src/index.ts",
     "build": "tsdown",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false",

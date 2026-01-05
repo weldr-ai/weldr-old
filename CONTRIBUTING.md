@@ -7,7 +7,7 @@ Thank you for your interest in contributing to Weldr! This document provides gui
 ### Prerequisites
 
 - Node.js >= 22
-- pnpm >= 10.20.0
+- bun >= 10.20.0
 - PostgreSQL
 - Redis
 - Git
@@ -26,7 +26,7 @@ cd weldr
 2. Install dependencies:
 
 ```bash
-pnpm install
+bun install
 ```
 
 3. Set up environment variables:
@@ -56,14 +56,14 @@ AGENT_URL=http://localhost:8080
 4. Set up the database:
 
 ```bash
-pnpm db:migrate
-pnpm db:seed
+bun db:migrate
+bun db:seed
 ```
 
 5. Start development servers:
 
 ```bash
-pnpm dev
+bun dev
 ```
 
 This will start:
@@ -75,7 +75,7 @@ This will start:
 Weldr uses Biome for code formatting and linting. Code style is automatically enforced through Biome's configuration. Before committing, run:
 
 ```bash
-pnpm check:fix
+bun check:fix
 ```
 
 This will automatically format your code and fix any linting issues according to the project's Biome configuration.
@@ -93,14 +93,14 @@ git checkout -b feat/your-feature-name
 3. **Run checks** before committing:
 
 ```bash
-pnpm typecheck
-pnpm check:fix
+bun typecheck
+bun check:fix
 ```
 
 4. **Commit your changes** using conventional commits:
 
 ```bash
-pnpm commit
+bun commit
 ```
 
 Commit message format: `type(scope): description`

@@ -23,11 +23,7 @@ function getQueryClient() {
   return browserQueryClient;
 }
 
-export function QueryProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}): JSX.Element {
+export function QueryProvider({ children }: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
 
   return (

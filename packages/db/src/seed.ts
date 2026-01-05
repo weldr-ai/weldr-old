@@ -1,5 +1,5 @@
-import { argv } from "process";
-import { fileURLToPath } from "url";
+import { argv } from "node:process";
+import { fileURLToPath } from "node:url";
 
 import { seedAiModels } from "./scripts/seed-ai-models";
 import { seedProjectData } from "./scripts/seed-project-data";

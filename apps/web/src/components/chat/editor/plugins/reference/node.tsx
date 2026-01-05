@@ -87,7 +87,7 @@ export class ReferenceNode extends DecoratorNode<ReactNode> {
     return false;
   }
 
-  decorate(): JSX.Element {
+  decorate() {
     return <ReferenceBadge reference={this.__reference} />;
   }
 }

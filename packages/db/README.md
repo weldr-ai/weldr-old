@@ -126,19 +126,19 @@ await db.transaction(async (tx) => {
 ### Generate Migration
 
 ```bash
-pnpm db:generate
+bun db:generate
 ```
 
 ### Run Migrations
 
 ```bash
-pnpm db:migrate
+bun db:migrate
 ```
 
 ### Push Schema Changes
 
 ```bash
-pnpm db:push
+bun db:push
 ```
 
 ### Drizzle Studio
@@ -146,7 +146,7 @@ pnpm db:push
 Open Drizzle Studio to view and edit database:
 
 ```bash
-pnpm db:studio
+bun db:studio
 ```
 
 ## Type Safety

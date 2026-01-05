@@ -33,7 +33,7 @@ export async function installPackages(
         "sh",
         [
           "-c",
-          `pnpm add ${runtimeInstallCommand.join(" ")} -F @repo/${target}`,
+          `bun add ${runtimeInstallCommand.join(" ")} --cwd apps/${target}`,
         ],
         {
           cwd: branchDir,
@@ -48,7 +48,7 @@ export async function installPackages(
         "sh",
         [
           "-c",
-          `pnpm add -D ${developmentInstallCommand.join(" ")} -F @repo/${target}`,
+          `bun add -D ${developmentInstallCommand.join(" ")} --cwd apps/${target}`,
         ],
         {
           cwd: branchDir,
@@ -133,11 +133,11 @@ export async function updatePackageJsonScripts(
   }
 }
 
-export async function runPnpmScript(
+export async function runBunScript(
   script: string,
   branchDir: string,
 ): Promise<IntegrationCallbackResult> {
-  const result = await runCommand("pnpm", ["run", script], {
+  const result = await runCommand("bun", ["run", script], {
     cwd: branchDir,
   });
 

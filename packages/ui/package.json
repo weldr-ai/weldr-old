@@ -13,7 +13,7 @@
     "./icons": "./src/icons/index.ts"
   },
   "scripts": {
-    "add-component": "pnpm dlx shadcn-ui add",
+    "add-component": "bunx --bun shadcn@latest add",
     "clean": "git clean -xdf .turbo node_modules dist",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
@@ -58,9 +58,9 @@
     "json-schema": "^0.4.0",
     "lucide-react": "^0.503.0",
     "next-themes": "^0.3.0",
-    "react": "18.3.1",
+    "react": "^19.2.3",
     "react-day-picker": "^8.10.1",
-    "react-dom": "18.3.1",
+    "react-dom": "^19.2.3",
     "react-hook-form": "^7.56.1",
     "react-resizable-panels": "^2.1.9",
     "recharts": "^2.15.3",
@@ -74,8 +74,8 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.4",
     "@types/json-schema": "^7.0.15",
-    "@types/react": "^18.3.20",
-    "@types/react-dom": "^18.3.6",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
     "@weldr/tsconfig": "workspace:*",
     "tailwindcss": "^4.1.4",
     "typescript": "^5.8.3"

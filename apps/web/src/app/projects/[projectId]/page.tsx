@@ -16,7 +16,7 @@ export default async function ProjectPage({
 }: {
   params: Promise<{ projectId: string }>;
   searchParams: Promise<{ versionId?: string }>;
-}): Promise<JSX.Element | undefined> {
+}) {
   try {
     const { projectId } = await params;
     const { versionId } = await searchParams;

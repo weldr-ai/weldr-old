@@ -111,9 +111,8 @@ export const codingGuidelines = `<tech_stack>
   ├── .gitignore
   ├── .npmrc
   ├── biome.json
+  ├── bun.lockb
   ├── package.json
-  ├── pnpm-lock.yaml
-  ├── pnpm-workspace.yaml
   └── turbo.json
 </projects_structure_guidelines>
 

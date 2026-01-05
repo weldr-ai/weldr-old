@@ -341,7 +341,6 @@ async function processBaseFiles(workspaceDir: string): Promise<FileItem[]> {
     ".gitignore",
     ".npmrc",
     "biome.json",
-    "pnpm-workspace.yaml",
     "package.json",
     "turbo.json",
   ];

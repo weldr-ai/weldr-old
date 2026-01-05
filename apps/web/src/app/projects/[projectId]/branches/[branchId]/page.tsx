@@ -16,7 +16,7 @@ export default async function BranchPage({
 }: {
   params: Promise<{ projectId: string; branchId: string }>;
   searchParams: Promise<{ versionId?: string }>;
-}): Promise<JSX.Element | undefined> {
+}) {
   try {
     const { projectId, branchId } = await params;
     const { versionId } = await searchParams;

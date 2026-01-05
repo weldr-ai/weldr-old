@@ -101,7 +101,7 @@ A **user management and subscription system**:
 ### Prerequisites
 
 - Node.js 22+
-- pnpm
+- Bun
 - Redis (for agent communication)
 - PostgreSQL (via @weldr/db package)
 
@@ -113,11 +113,11 @@ See `.env.example` for required configuration.
 
 ```bash
 # Development
-pnpm dev
+bun dev
 
 # Production
-pnpm build
-pnpm start
+bun build
+bun start
 ```
 
 ### Integration with Weldr Platform

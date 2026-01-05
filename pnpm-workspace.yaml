@@ -1,8 +1,0 @@
-packages:
-  # Included directories
-  - apps/*
-  - packages/*
-  - tooling/*
-
-  # Excluded directories
-  - "!**/temp/**"

@@ -8,7 +8,7 @@ export default async function ProjectLayout({
   children,
 }: {
   children: React.ReactNode;
-}): Promise<JSX.Element> {
+}) {
   try {
     const projects = await api.projects.list();
 

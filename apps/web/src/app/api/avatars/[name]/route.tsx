@@ -11,7 +11,7 @@ export const config = {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { name: string } },
+  { params }: { params: Promise<{ name: string }> },
 ) {
   const { name } = await params;
   const maskID = nanoid();

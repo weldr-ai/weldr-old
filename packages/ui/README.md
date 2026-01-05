@@ -163,7 +163,7 @@ Components are styled with Tailwind CSS. You can customize them by:
 Use shadcn/ui CLI to add new components:
 
 ```bash
-pnpm add-component
+bun add-component
 ```
 
 Or manually add components following the shadcn/ui pattern.

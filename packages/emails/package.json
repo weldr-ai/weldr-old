@@ -14,13 +14,13 @@
   },
   "dependencies": {
     "@react-email/components": "0.0.28",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
     "react-email": "3.0.2"
   },
   "devDependencies": {
-    "@types/react": "^18.3.20",
-    "@types/react-dom": "^18.3.6",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
     "@weldr/tsconfig": "workspace:*",
     "tailwindcss": "3.4.17",
     "typescript": "^5.8.3"

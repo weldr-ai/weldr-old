@@ -74,7 +74,7 @@ export const listDirTool = createTool({
       "--noreport",
       // Exclude common large/unnecessary directories
       "-I",
-      "node_modules|.git|.next|dist|build|.turbo|out|pnpm-lock.yaml|bun.lockb",
+      "node_modules|.git|.next|dist|build|.turbo|out|bun.lockb",
     ];
 
     if (directoriesOnly) {

@@ -1,7 +1,7 @@
 # Weldr Monorepo Development Guidelines
 
 ## Project Overview
-Weldr is a TypeScript-based monorepo using pnpm workspaces, Turbo, and modern web technologies. The project consists of AI-powered web applications with a focus on code generation, project management, and integrations.
+Weldr is a TypeScript-based monorepo using bun workspaces, Turbo, and modern web technologies. The project consists of AI-powered web applications with a focus on code generation, project management, and integrations.
 
 ## Core Principles
 
@@ -169,7 +169,7 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 
 ### Core Technologies
 - **Runtime**: Node.js >= 20
-- **Package Manager**: pnpm 10.4.1
+- **Package Manager**: bun 1.3.5
 - **Build System**: Turbo
 - **Language**: TypeScript 5.7.2
 - **Linter/Formatter**: Biome 2.1.1
@@ -227,7 +227,7 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 - **ONLY add comments for very complex work** that requires explanation
 - **NEVER ADD** explanatory comments for simple operations:
   - ❌ `// Delete this because user requested`
-  - ❌ `// Making this true because user asked`  
+  - ❌ `// Making this true because user asked`
   - ❌ `// Process the request here`
   - ❌ `// Handle user input`
   - ❌ `// Implementation details`
@@ -250,25 +250,25 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 - Use conventional commits (enforced by commitizen)
 - Format: `type(scope): description`
 - Types: feat, fix, docs, style, refactor, test, chore
-- Run `pnpm commit` for guided commit creation
+- Run `bun commit` for guided commit creation
 
 ## Common Commands
 ```bash
 # Development
-pnpm dev          # Start all dev servers
-pnpm build        # Build all packages
-pnpm typecheck    # Run TypeScript type checking
-pnpm check:fix    # Fix linting issues
+bun dev          # Start all dev servers
+bun build        # Build all packages
+bun typecheck    # Run TypeScript type checking
+bun check:fix    # Fix linting issues
 
 # Database
-pnpm db:push      # Push schema changes
-pnpm db:generate  # Generate migrations
-pnpm db:migrate   # Run migrations
-pnpm db:studio    # Open Drizzle Studio
+bun db:push      # Push schema changes
+bun db:generate  # Generate migrations
+bun db:migrate   # Run migrations
+bun db:studio    # Open Drizzle Studio
 
 # Code Quality
-pnpm lint:staged  # Run linter on staged files
-pnpm commit       # Create conventional commit
+bun lint:staged  # Run linter on staged files
+bun commit       # Create conventional commit
 ```
 
 ## Anti-Patterns to Avoid

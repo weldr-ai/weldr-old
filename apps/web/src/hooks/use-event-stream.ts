@@ -6,6 +6,7 @@ import type { RouterOutputs } from "@weldr/api";
 import type {
   AssistantMessage,
   ChatMessage,
+  NodeType,
   SSEEvent,
   TStatus,
 } from "@weldr/shared/types";
@@ -330,7 +331,7 @@ export function useEventStream({
 
               const newNode = {
                 id: chunk.nodeId,
-                type: chunk.metadata.specs?.type,
+                type: chunk.metadata.specs?.type as NodeType,
                 position: chunk.position,
                 data: {
                   id: chunk.nodeId,

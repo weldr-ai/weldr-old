@@ -27,7 +27,7 @@ If applicable, add screenshots to help explain your problem.
 ## Environment
 - **OS**: [e.g. macOS 14.0, Ubuntu 22.04]
 - **Node.js Version**: [e.g. 22.0.0]
-- **pnpm Version**: [e.g. 10.20.0]
+- **Bun Version**: [e.g. 1.3.x]
 - **Weldr Version**: [e.g. 0.1.0]
 
 ## Additional Context

@@ -134,7 +134,7 @@ function detectFramework(branchDir: string): {
     if (webPackageJson.dependencies?.["@tanstack/react-start"]) {
       console.log("Detected TanStack Start framework");
       return {
-        command: "pnpm dev",
+        command: "bun dev",
         cwd: join(branchDir, "apps", "web"),
       };
     }
@@ -143,7 +143,7 @@ function detectFramework(branchDir: string): {
     if (webPackageJson.dependencies?.next) {
       console.log("Detected Next.js framework");
       return {
-        command: "pnpm dev",
+        command: "bun dev",
         cwd: join(branchDir, "apps", "web"),
       };
     }
@@ -153,7 +153,7 @@ function detectFramework(branchDir: string): {
   if (existsSync(serverPackageJsonPath)) {
     console.log("Detected server app structure");
     return {
-      command: "pnpm dev",
+      command: "bun dev",
       cwd: join(branchDir, "apps", "server"),
     };
   }
@@ -162,14 +162,14 @@ function detectFramework(branchDir: string): {
   if (existsSync(rootPackageJsonPath)) {
     console.log("Using root package.json");
     return {
-      command: "pnpm dev",
+      command: "bun dev",
       cwd: branchDir,
     };
   }
 
   console.warn("No package.json found, using fallback");
   return {
-    command: "pnpm dev",
+    command: "bun dev",
     cwd: branchDir,
   };
 }
@@ -329,7 +329,7 @@ export async function startDevServer(
   // Spawn dev server process
   try {
     const [cmd, ...args] = command.split(" ");
-    const childProcess = spawn(cmd ?? "pnpm", args, {
+    const childProcess = spawn(cmd ?? "bun", args, {
       cwd,
       env: {
         ...process.env,

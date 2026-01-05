@@ -123,7 +123,7 @@ The agent can recover from interruptions:
 
 ### Build & Deployment
 
-- **Build System**: Integrates with project build tools (pnpm, npm, etc.)
+- **Build System**: Integrates with project build tools (pnpm, bun, etc.)
 - **Snapshot Creation**: Creates Tigris snapshots for cloud deployments
 - **S3 Sync**: Syncs branch state to/from S3 for cloud persistence
 - **Dev Server Management**: Manages local development servers
@@ -169,7 +169,7 @@ The agent can recover from interruptions:
 ### Prerequisites
 
 - Node.js 22+
-- pnpm
+- bun
 - Redis (for streaming)
 - PostgreSQL (via @weldr/db package)
 - Git
@@ -182,11 +182,11 @@ See `.env.example` for required configuration.
 
 ```bash
 # Development
-pnpm dev
+bun dev
 
 # Production
-pnpm build
-pnpm start
+bun build
+bun start
 ```
 
 ### Local vs Cloud Mode

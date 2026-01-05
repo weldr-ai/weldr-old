@@ -12,8 +12,7 @@
 # ───────────────────────────────────────────
 ARG NODE_VERSION=22
 ARG RCLONE_VERSION=1.71.2
-ARG BUN_VERSION=1.3.1
-ARG PNPM_VERSION=10.20.0
+ARG BUN_VERSION=1.3.5
 ARG TURBO_VERSION=2.6.0
 
 FROM node:${NODE_VERSION}-alpine AS base
@@ -21,22 +20,21 @@ FROM node:${NODE_VERSION}-alpine AS base
 # Redeclare ARGs for use in this stage
 ARG RCLONE_VERSION
 ARG BUN_VERSION
-ARG PNPM_VERSION
 
 # ───────────────────────────────────────────
 # System dependencies
 # ───────────────────────────────────────────
 RUN --mount=type=cache,target=/var/cache/apk,sharing=locked \
   apk add --no-cache \
-    bash \
-    ca-certificates \
-    curl \
-    unzip \
-    tree \
-    git \
-    ripgrep \
-    jq \
-    dumb-init && \
+  bash \
+  ca-certificates \
+  curl \
+  unzip \
+  tree \
+  git \
+  ripgrep \
+  jq \
+  dumb-init && \
   rm -rf /tmp/* /var/tmp/*
 
 # ───────────────────────────────────────────
@@ -63,12 +61,6 @@ RUN git config --global user.name "weldr" && \
   git config --global user.email "noreply@weldr.ai" && \
   git config --global --add safe.directory /workspace && \
   git config --global init.defaultBranch main
-
-# ───────────────────────────────────────────
-# Enable pnpm
-# ───────────────────────────────────────────
-RUN corepack enable && \
-  corepack prepare pnpm@${PNPM_VERSION} --activate
 
 # ───────────────────────────────────────────
 # Builder stage - prune workspace
@@ -99,34 +91,33 @@ WORKDIR /app
 
 # Set environment variables
 ENV CI=true \
-    NODE_ENV=production \
-    PNPM_HOME=/root/.local/share/pnpm
+  NODE_ENV=production \
+  BUN_HOME=/root/.bun/install/cache
 
 # Copy pruned package.json files and lockfiles
 COPY --from=builder /app/out/json/ .
-COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=builder /app/out/bun.lockb ./bun.lockb
 COPY --from=builder /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 # Install all dependencies (needed for build) with cache mount
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-  pnpm install --frozen-lockfile --prod=false
+RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache \
+  bun install --frozen-lockfile
 
 # Copy source files
 COPY --from=builder /app/out/full/ .
 
 # Build the application
-RUN pnpm turbo build --filter=@weldr/agent
+RUN bun run turbo build --cwd apps/agent
 
 # Prune dev dependencies and install only production dependencies
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-  pnpm install --frozen-lockfile --prod --ignore-scripts && \
-  pnpm store prune
+RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache \
+  bun install --production --frozen-lockfile --ignore-scripts
 
 # Clean up unnecessary files
 RUN rm -rf \
   node_modules/@aws-sdk/client-iam \
   node_modules/ofetch \
-  /root/.pnpm-store \
+  /root/.bun/install/cache \
   /root/.cache \
   /root/.npm \
   /tmp/* \
@@ -140,7 +131,7 @@ FROM base AS runner
 
 # Set production environment
 ENV NODE_ENV=production \
-    PORT=8080
+  PORT=8080
 
 # Copy branch management scripts
 COPY --from=builder /app/apps/agent/scripts/sync-to-s3.sh /usr/local/bin/sync-to-s3.sh
@@ -158,31 +149,31 @@ COPY --from=installer /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 # Aggressive cleanup to reduce image size
 RUN find node_modules -type d \( \
-    -name ".cache" -o \
-    -name "__tests__" -o \
-    -name "test" -o \
-    -name "tests" -o \
-    -name ".turbo" \
+  -name ".cache" -o \
+  -name "__tests__" -o \
+  -name "test" -o \
+  -name "tests" -o \
+  -name ".turbo" \
   \) -exec rm -rf {} + 2>/dev/null || true && \
   find node_modules -type f \( \
-    -name "*.tsbuildinfo" -o \
-    -name "*.test.*" -o \
-    -name "*.spec.*" -o \
-    -name "*.md" -o \
-    -name "CHANGELOG*" -o \
-    -name "LICENSE*" -o \
-    -name "AUTHORS*" -o \
-    -name ".npmignore" -o \
-    -name ".gitignore" -o \
-    -name "*.map" ! -path "*/source-map/*" \
+  -name "*.tsbuildinfo" -o \
+  -name "*.test.*" -o \
+  -name "*.spec.*" -o \
+  -name "*.md" -o \
+  -name "CHANGELOG*" -o \
+  -name "LICENSE*" -o \
+  -name "AUTHORS*" -o \
+  -name ".npmignore" -o \
+  -name ".gitignore" -o \
+  -name "*.map" ! -path "*/source-map/*" \
   \) -delete 2>/dev/null || true && \
   rm -rf \
-    packages/*/node_modules \
-    packages/*/.turbo \
-    packages/*/tsconfig.tsbuildinfo \
-    /tmp/* \
-    /var/tmp/* \
-    2>/dev/null || true
+  packages/*/node_modules \
+  packages/*/.turbo \
+  packages/*/tsconfig.tsbuildinfo \
+  /tmp/* \
+  /var/tmp/* \
+  2>/dev/null || true
 
 # Set working directory
 WORKDIR /
