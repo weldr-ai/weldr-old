@@ -112,8 +112,8 @@ docker compose -f docker-compose.dev.yml up -d
 ```
 
 This starts MinIO on:
-- API: `http://localhost:9000`
-- Console: `http://localhost:9001` (login: minioadmin/minioadmin)
+- API: `http://localhost:19000`
+- Console: `http://localhost:19001` (login: minioadmin/minioadmin)
 
 4. Set up environment variables:
 
@@ -124,7 +124,7 @@ Create a `.env` file in the root directory:
 WELDR_MODE=local
 
 # S3-Compatible Storage (MinIO for local)
-S3_ENDPOINT=http://localhost:9000
+S3_ENDPOINT=http://localhost:19000
 S3_ACCESS_KEY_ID=minioadmin
 S3_SECRET_ACCESS_KEY=minioadmin
 S3_REGION=us-east-1

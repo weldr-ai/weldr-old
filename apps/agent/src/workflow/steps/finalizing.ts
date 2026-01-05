@@ -34,8 +34,15 @@ export const finalizingStep = createStep({
       // 1. Sync disk changes to AgentFS filesystem
       logger.info("Syncing disk changes to AgentFS");
       const agent = await openAgentFS(branchDir);
-      const { synced, errors } = await syncDiskToAgentFS(agent, branchDir);
-      await agent.close();
+      let synced: number;
+      let errors: string[];
+      try {
+        const result = await syncDiskToAgentFS(agent, branchDir);
+        synced = result.synced;
+        errors = result.errors;
+      } finally {
+        await agent.close();
+      }
 
       logger.info("Disk synced to AgentFS", {
         extra: { synced, errorCount: errors.length },

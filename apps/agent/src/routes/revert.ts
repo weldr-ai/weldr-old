@@ -91,7 +91,11 @@ router.openapi(route, async (c) => {
       where: and(eq(branches.id, branchId), eq(branches.projectId, projectId)),
     }),
     db.query.versions.findFirst({
-      where: eq(versions.id, versionId),
+      where: and(
+        eq(versions.id, versionId),
+        eq(versions.projectId, projectId),
+        eq(versions.userId, session.user.id),
+      ),
     }),
   ]);
 
@@ -133,8 +137,15 @@ router.openapi(route, async (c) => {
     logger.info("Syncing files from AgentFS to disk");
 
     const agent = await openAgentFS(branchDir);
-    const { synced, errors } = await syncAgentFSToDisk(agent, branchDir);
-    await agent.close();
+    let synced: number;
+    let errors: string[];
+    try {
+      const result = await syncAgentFSToDisk(agent, branchDir);
+      synced = result.synced;
+      errors = result.errors;
+    } finally {
+      await agent.close();
+    }
 
     logger.info("Files synced from snapshot", {
       extra: { synced, errorCount: errors.length },

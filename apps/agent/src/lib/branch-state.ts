@@ -76,7 +76,13 @@ export async function ensureBranchDir(
     logger.info("Branch directory already exists", { extra: { branchDir } });
 
     // Always try to sync from S3 to ensure we have latest
-    await syncBranchFromStorage(branchId, projectId);
+    const syncResult = await syncBranchFromStorage(branchId, projectId);
+
+    if (!syncResult.success) {
+      logger.warn(
+        "Failed to sync existing branch from storage, using local copy",
+      );
+    }
 
     return { branchDir, status: "reused" };
   }
@@ -104,8 +110,11 @@ export async function ensureBranchDir(
 
   const syncResult = await syncBranchFromStorage(branchId, projectId);
 
-  if (syncResult.skipped) {
-    // No data in S3, initialize empty AgentFS
+  if (syncResult.skipped || !syncResult.success) {
+    // No data in S3 or sync failed, initialize empty AgentFS
+    if (!syncResult.success) {
+      logger.warn("Failed to sync from storage, initializing empty AgentFS");
+    }
     const agent = await openAgentFS(branchDir);
     await agent.close();
   }
@@ -158,16 +167,23 @@ async function createBranchFromFork(
       await snapshotService.forkFromVersion(forkedFromVersionId, branchId);
 
       // Download the forked database to local disk
-      await syncBranchFromStorage(branchId, projectId);
+      const syncResult = await syncBranchFromStorage(branchId, projectId);
+
+      if (!syncResult.success) {
+        throw new Error("Failed to sync forked branch from storage");
+      }
 
       // Sync files from AgentFS to disk
       const agent = await openAgentFS(branchDir);
-      const { synced, errors } = await syncAgentFSToDisk(agent, branchDir);
-      await agent.close();
+      try {
+        const { synced, errors } = await syncAgentFSToDisk(agent, branchDir);
 
-      logger.info("Files synced from snapshot", {
-        extra: { synced, errorCount: errors.length },
-      });
+        logger.info("Files synced from snapshot", {
+          extra: { synced, errorCount: errors.length },
+        });
+      } finally {
+        await agent.close();
+      }
     } catch (error) {
       logger.warn("Failed to restore from snapshot, initializing empty", {
         extra: {
@@ -275,14 +291,17 @@ export async function syncBranchFromStorage(
 
     // Sync files from AgentFS to disk
     const agent = await openAgentFS(branchDir);
-    const { synced, errors } = await syncAgentFSToDisk(agent, branchDir);
-    await agent.close();
+    try {
+      const { synced, errors } = await syncAgentFSToDisk(agent, branchDir);
 
-    logger.info("Branch synced from storage successfully", {
-      extra: { synced, errorCount: errors.length },
-    });
+      logger.info("Branch synced from storage successfully", {
+        extra: { synced, errorCount: errors.length },
+      });
 
-    return { success: true, skipped: false };
+      return { success: true, skipped: false };
+    } finally {
+      await agent.close();
+    }
   } catch (error) {
     logger.error("Failed to sync branch from storage", {
       extra: { error: error instanceof Error ? error.message : String(error) },
