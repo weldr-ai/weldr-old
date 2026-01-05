@@ -6,8 +6,6 @@
  * - TanStack Router pages with loaders
  */
 
-import type { Task } from "@weldr/shared/types";
-
 export interface TestFixture {
   name: string;
   description: string;
@@ -18,11 +16,6 @@ export interface TestFixture {
     internal?: string[];
     external?: string[];
   };
-  /**
-   * Declaration tasks that would be created by the planner
-   * These simulate what the planner generates BEFORE the code is written
-   */
-  declarationTasks?: Task[];
 }
 
 export const fixtures: TestFixture[] = [
@@ -73,58 +66,6 @@ export default route;
       ],
       external: ["@orpc/server", "zod"],
     },
-    declarationTasks: [
-      {
-        id: 1,
-        type: "declaration",
-        operation: "create",
-        summary: "GET /users Endpoint",
-        description:
-          "Create a public endpoint to retrieve a list of all users ordered by creation date",
-        acceptanceCriteria: [
-          "Endpoint responds to GET requests at /users",
-          "Returns array of user objects",
-          "Users are ordered by creation date (newest first)",
-          "Endpoint is publicly accessible",
-          "Response follows selectUserSchema validation",
-          "Includes retry logic for resilience",
-        ],
-        subTasks: [
-          "Define OpenAPI route specification for GET /users",
-          "Create oRPC procedure with publicProcedure",
-          "Add database middleware",
-          "Add retry middleware with 3 attempts",
-          "Define output schema as array of users",
-          "Implement handler to query users ordered by createdAt desc",
-          "Export route as default export",
-        ],
-        filePath: "apps/server/src/routes/users/list.ts",
-        specs: {
-          type: "endpoint",
-          method: "get",
-          path: "/users",
-          summary: "Get users",
-          description: "Get list of users",
-          tags: ["Users"],
-          responses: {
-            "200": {
-              description: "List of users",
-              content: {
-                "application/json": {
-                  schema: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                    },
-                  },
-                },
-              },
-            },
-          },
-          protected: false,
-        },
-      },
-    ],
   },
 
   {
@@ -284,73 +225,6 @@ export type NewUser = typeof users.$inferInsert;
       internal: ["apps/server/src/db/schema/posts.ts"],
       external: ["drizzle-orm", "drizzle-orm/pg-core"],
     },
-    declarationTasks: [
-      {
-        id: 1,
-        type: "declaration",
-        operation: "create",
-        summary: "Users Database Model",
-        description:
-          "Create a users table to store user information including authentication details and timestamps",
-        acceptanceCriteria: [
-          "Model includes id, name, email, createdAt, updatedAt fields",
-          "Email field has unique constraint",
-          "ID uses UUID with automatic generation",
-          "Timestamps are automatically managed",
-          "Model exports TypeScript types",
-          "Relations to posts are defined",
-        ],
-        subTasks: [
-          "Create users table schema with Drizzle ORM",
-          "Add id field as UUID primary key",
-          "Add name and email fields with appropriate constraints",
-          "Add createdAt and updatedAt timestamp fields",
-          "Define relations to posts table",
-          "Export TypeScript types for User and NewUser",
-        ],
-        filePath: "apps/server/src/db/schema/users.ts",
-        specs: {
-          type: "db-model",
-          name: "users",
-          columns: [
-            {
-              name: "id",
-              type: "uuid",
-              nullable: false,
-              isPrimaryKey: true,
-            },
-            {
-              name: "name",
-              type: "text",
-              nullable: false,
-            },
-            {
-              name: "email",
-              type: "text",
-              nullable: false,
-              unique: true,
-            },
-            {
-              name: "createdAt",
-              type: "timestamp",
-              nullable: false,
-            },
-            {
-              name: "updatedAt",
-              type: "timestamp",
-              nullable: false,
-            },
-          ],
-          relationships: [
-            {
-              type: "oneToMany",
-              referencedModel: "posts",
-              referencedColumn: "userId",
-            },
-          ],
-        },
-      },
-    ],
   },
 
   {

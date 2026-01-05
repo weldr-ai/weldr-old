@@ -2,7 +2,7 @@ import { stepCountIs, streamText, type ToolSet } from "ai";
 import type z from "zod";
 
 import { db, eq } from "@weldr/db";
-import { declarations, tasks, versions } from "@weldr/db/schema";
+import { tasks, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 import { getBranchDir } from "@weldr/shared/state";
 import type { addMessageItemSchema } from "@weldr/shared/validators/chats";
@@ -28,7 +28,6 @@ import { stream } from "@/lib/stream-utils";
 import type { WorkflowContext } from "@/workflow/context";
 import { prompts } from "../prompts";
 import { queryRelatedDeclarationsTool } from "../tools/query-related-declarations";
-import { formatTaskDeclarationToMarkdown } from "../utils/formatters";
 import { calculateModelCost } from "../utils/providers-pricing";
 
 export async function coderAgent({
@@ -62,7 +61,7 @@ export async function coderAgent({
 
   const allTaskContexts = await Promise.all(
     executionPlan.map(async (task) => {
-      const { taskContext } = await createTaskContext(task);
+      const taskContext = createTaskContext(task);
       return {
         taskId: task.id,
         taskName: task.data.summary,
@@ -97,17 +96,6 @@ export async function coderAgent({
         summary: task.data.summary,
         progress: "completed",
       });
-
-      const declaration = task.declaration;
-      if (declaration) {
-        await db
-          .update(declarations)
-          .set({ progress: "completed" })
-          .where(eq(declarations.id, declaration.id));
-
-        await updateCanvasNode({ context, declarationId: declaration.id });
-      }
-
       continue;
     }
 
@@ -117,17 +105,6 @@ export async function coderAgent({
       .where(eq(tasks.id, task.id));
 
     context.set("currentTaskId", task.id);
-
-    const declaration = task.declaration;
-
-    if (declaration) {
-      await db
-        .update(declarations)
-        .set({ progress: "in_progress" })
-        .where(eq(declarations.id, declaration.id));
-
-      await updateCanvasNode({ context, declarationId: declaration.id });
-    }
 
     const maxRetries = 3;
     let retryCount = 0;
@@ -154,16 +131,6 @@ export async function coderAgent({
             summary: task.data.summary,
             progress: "completed",
           });
-
-          if (declaration) {
-            await db
-              .update(declarations)
-              .set({ progress: "completed" })
-              .where(eq(declarations.id, declaration.id));
-
-            await updateCanvasNode({ context, declarationId: declaration.id });
-          }
-
           taskCompleted = true;
         } else {
           throw new Error(
@@ -554,104 +521,19 @@ async function executeTaskCoder({
   logger.info(`Coder agent completed for task ${task.id}`);
 }
 
-async function updateCanvasNode({
-  context,
-  declarationId,
-}: {
-  context: WorkflowContext;
-  declarationId: string;
-}) {
-  const project = context.get("project");
-  const branch = context.get("branch");
-
-  const logger = Logger.get({
-    projectId: project.id,
-    versionId: branch.headVersion.id,
-    declarationId,
-  });
-
-  try {
-    const updatedDeclaration = await db.query.declarations.findFirst({
-      where: eq(declarations.id, declarationId),
-      with: { node: true },
-    });
-
-    if (!updatedDeclaration) {
-      throw new Error("Declaration not found");
-    }
-
-    if (updatedDeclaration.node && updatedDeclaration.metadata?.specs) {
-      await stream(branch.headVersion.chatId, {
-        type: "node",
-        nodeId: updatedDeclaration.node.id,
-        position: updatedDeclaration.node.position,
-        metadata: updatedDeclaration.metadata,
-        progress: updatedDeclaration.progress,
-        node: updatedDeclaration.node,
-      });
-    }
-  } catch (error) {
-    logger.warn("Failed to stream declaration progress start", {
-      extra: { error, declarationId },
-    });
-  }
-}
-
-const createTaskContext = async (task: TaskWithRelations) => {
-  const sharedContext = `Acceptance Criteria:
-${task.data.acceptanceCriteria.map((criteria) => `- ${criteria}`).join("\n")}
-
-${
-  task.data.implementationNotes
-    ? `Implementation Notes:
-${task.data.implementationNotes.map((note) => `- ${note}`).join("\n")}
-`
-    : ""
-}
-
-${
-  task.data.subTasks
-    ? `Sub-tasks:
-${task.data.subTasks.map((subTask) => `- ${subTask}`).join("\n")}
-`
-    : ""
-}`;
-
-  if (task.data.type === "declaration") {
-    const declaration = task.declaration;
-
-    if (!declaration) {
-      throw new Error("Declaration not found");
-    }
-
-    const taskContext = `=== TASK: ${task.data.summary} ===
-Type: declaration
-
-${formatTaskDeclarationToMarkdown(declaration)}
-
-${sharedContext}
-
-Note:
-- You can implement any utility functions, components, or other declarations you need to implement the declaration.
-- Read the files you need and implement the required changes.
-- Leverage the notes and sub-tasks to implement the declaration.
-===`;
-
-    return { taskContext, declaration };
-  }
-
-  const taskContext = `=== TASK: ${task.data.summary} ===
-Type: generic
+function createTaskContext(task: TaskWithRelations): string {
+  return `=== TASK: ${task.data.summary} ===
 
 Description: ${task.data.description}
 
-${sharedContext}
+Acceptance Criteria:
+${task.data.acceptanceCriteria.map((c) => `- ${c}`).join("\n")}
 
+${task.data.implementationNotes ? `Implementation Notes:\n${task.data.implementationNotes.map((n) => `- ${n}`).join("\n")}\n` : ""}
+${task.data.subTasks ? `Sub-tasks:\n${task.data.subTasks.map((s) => `- ${s}`).join("\n")}\n` : ""}
 Note:
-- You can implement any utility functions, components, or other declarations you need to implement the task.
-- Read the files you need and implement the required changes.
-- Leverage the notes and sub-tasks to implement the task.
+- Implement this task based on the description and acceptance criteria
+- Read existing files to understand patterns before implementing
+- You can implement any utility functions, components, or other code you need
 ===`;
-
-  return { taskContext };
-};
+}

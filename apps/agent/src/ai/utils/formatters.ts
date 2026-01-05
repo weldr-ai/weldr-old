@@ -151,32 +151,6 @@ export function formatPageToMarkdown(
   return markdown;
 }
 
-export function formatTaskDeclarationToMarkdown(
-  declaration: typeof declarations.$inferSelect & {
-    dependencies: {
-      dependency: typeof declarations.$inferSelect;
-    }[];
-  },
-): string {
-  if (!declaration.metadata?.specs) {
-    return `### Declaration with invalid specs\n\nID: ${declaration.id}\n\n---\n\n`;
-  }
-
-  let markdown = formatDeclarationSpecs(declaration);
-
-  if (declaration.dependencies && declaration.dependencies.length > 0) {
-    markdown += "**Dependencies You Should Use:**\n";
-    for (const dep of declaration.dependencies) {
-      markdown += formatDeclarationSpecs(dep.dependency);
-    }
-    markdown += "\n";
-  }
-
-  markdown += "\n---\n\n";
-
-  return markdown;
-}
-
 export function formatDeclarationSpecs(
   declaration: typeof declarations.$inferSelect,
 ): string {
