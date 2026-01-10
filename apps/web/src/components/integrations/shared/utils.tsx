@@ -1,9 +1,4 @@
-import {
-  BetterAuthIcon,
-  ORPCIcon,
-  PostgresIcon,
-  TanstackIcon,
-} from "@weldr/ui/icons";
+import { BetterAuthIcon, ORPCIcon, PostgresIcon, TanstackIcon } from "@weldr/ui/icons";
 
 export const getIntegrationIcon = (key: string, size: number = 5) => {
   switch (key) {

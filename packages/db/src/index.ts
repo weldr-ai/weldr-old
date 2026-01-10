@@ -11,7 +11,7 @@ const globalForDb = globalThis as unknown as {
   conn: postgres.Sql | undefined;
 };
 
-// biome-ignore lint/style/noNonNullAssertion: reason
+// oxlint-disable-next-line no-non-null-assertion
 const conn = globalForDb.conn ?? postgres(process.env.DATABASE_URL!);
 if (process.env.NODE_ENV !== "production") globalForDb.conn = conn;
 

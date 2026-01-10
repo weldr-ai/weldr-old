@@ -5,11 +5,7 @@ import { and, db, eq } from "@weldr/db";
 import { projects } from "@weldr/db/schema";
 import { isLocalMode } from "@weldr/shared/state";
 
-import {
-  getDevServer,
-  startDevServer,
-  updateLastAccessed,
-} from "@/lib/dev-server-manager";
+import { getDevServer, startDevServer, updateLastAccessed } from "@/lib/dev-server-manager";
 
 export async function GET(
   request: NextRequest,
@@ -98,10 +94,7 @@ async function handlePreviewRequest(
 
     // Verify user owns the project
     const project = await db.query.projects.findFirst({
-      where: and(
-        eq(projects.id, projectId),
-        eq(projects.userId, session.user.id),
-      ),
+      where: and(eq(projects.id, projectId), eq(projects.userId, session.user.id)),
     });
 
     if (!project) {
@@ -127,19 +120,14 @@ async function handlePreviewRequest(
       const result = await startDevServer(projectId, branchId);
 
       if (result.status === "error") {
-        return NextResponse.json(
-          { error: "Failed to start dev server" },
-          { status: 503 },
-        );
+        return NextResponse.json({ error: "Failed to start dev server" }, { status: 503 });
       }
 
       port = result.port;
     }
 
     // Proxy to dev server
-    const targetUrl = `http://localhost:${port}/${path}${
-      request.nextUrl.search || ""
-    }`;
+    const targetUrl = `http://localhost:${port}/${path}${request.nextUrl.search || ""}`;
 
     const proxyHeaders = new Headers();
 
@@ -173,12 +161,9 @@ async function handlePreviewRequest(
     proxyResponse.headers.forEach((value, key) => {
       // Don't copy certain headers
       if (
-        ![
-          "content-encoding",
-          "content-length",
-          "transfer-encoding",
-          "connection",
-        ].includes(key.toLowerCase())
+        !["content-encoding", "content-length", "transfer-encoding", "connection"].includes(
+          key.toLowerCase(),
+        )
       ) {
         responseHeaders.set(key, value);
       }
@@ -192,9 +177,6 @@ async function handlePreviewRequest(
     });
   } catch (error) {
     console.error("Preview proxy error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

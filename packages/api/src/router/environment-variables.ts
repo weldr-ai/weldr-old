@@ -102,20 +102,19 @@ export const environmentVariablesRouter = {
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const environmentVariable =
-        await ctx.db.query.environmentVariables.findFirst({
-          where: and(
-            eq(environmentVariables.id, input.id),
-            eq(environmentVariables.userId, ctx.session.user.id),
-          ),
-          with: {
-            integrations: {
-              with: {
-                integration: true,
-              },
+      const environmentVariable = await ctx.db.query.environmentVariables.findFirst({
+        where: and(
+          eq(environmentVariables.id, input.id),
+          eq(environmentVariables.userId, ctx.session.user.id),
+        ),
+        with: {
+          integrations: {
+            with: {
+              integration: true,
             },
           },
-        });
+        },
+      });
 
       if (!environmentVariable) {
         throw new TRPCError({
@@ -131,13 +130,9 @@ export const environmentVariablesRouter = {
         });
       }
 
-      await ctx.db
-        .delete(secrets)
-        .where(eq(secrets.id, environmentVariable.secretId));
+      await ctx.db.delete(secrets).where(eq(secrets.id, environmentVariable.secretId));
 
-      await ctx.db
-        .delete(environmentVariables)
-        .where(eq(environmentVariables.id, input.id));
+      await ctx.db.delete(environmentVariables).where(eq(environmentVariables.id, input.id));
 
       // Only destroy Fly secrets in cloud mode
       if (!isLocalMode()) {

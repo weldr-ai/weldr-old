@@ -21,10 +21,7 @@ export async function GET(
     }
 
     const project = await db.query.projects.findFirst({
-      where: and(
-        eq(projects.id, projectId),
-        eq(projects.userId, session.user.id),
-      ),
+      where: and(eq(projects.id, projectId), eq(projects.userId, session.user.id)),
     });
 
     if (!project) {
@@ -95,9 +92,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("Proxy error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

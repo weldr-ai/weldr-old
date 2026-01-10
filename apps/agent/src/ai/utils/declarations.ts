@@ -1,13 +1,7 @@
 import { inArray } from "drizzle-orm";
 
 import { and, db, eq } from "@weldr/db";
-import {
-  declarations,
-  dependencies,
-  nodes,
-  versionDeclarations,
-} from "@weldr/db/schema";
-import type { Tx } from "@weldr/db/types";
+import { declarations, dependencies, versionDeclarations } from "@weldr/db/schema";
 import { mergeJson } from "@weldr/db/utils";
 import { Logger } from "@weldr/shared/logger";
 import { nanoid } from "@weldr/shared/nanoid";
@@ -16,99 +10,6 @@ import type { DeclarationCodeMetadata } from "@weldr/shared/types/declarations";
 import { extractDeclarations } from "@/lib/extract-declarations";
 import type { WorkflowContext } from "@/workflow/context";
 import { queueEnrichingJob } from "./enriching-jobs";
-
-// Canvas node placement configuration - exported for use in enriching-jobs.ts
-export const NODE_DIMENSIONS = {
-  page: { width: 400, height: 300 },
-  endpoint: { width: 256, height: 128 },
-  "db-model": { width: 300, height: 250 },
-  default: { width: 300, height: 200 },
-};
-
-export const PLACEMENT_CONFIG = {
-  gap: 50,
-  maxCanvasWidth: 2000,
-  xStep: 150,
-  yStep: 150,
-};
-
-export interface Rect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-/**
- * Checks if two rectangles intersect, accounting for a gap buffer around each rectangle.
- *
- * @param a - First rectangle with position (x, y) and dimensions (width, height)
- * @param b - Second rectangle with position (x, y) and dimensions (width, height)
- * @returns True if the rectangles overlap (including gap buffer), false otherwise
- */
-export const intersects = (a: Rect, b: Rect): boolean => {
-  return (
-    a.x < b.x + b.width + PLACEMENT_CONFIG.gap &&
-    a.x + a.width + PLACEMENT_CONFIG.gap > b.x &&
-    a.y < b.y + b.height + PLACEMENT_CONFIG.gap &&
-    a.y + a.height + PLACEMENT_CONFIG.gap > b.y
-  );
-};
-
-/**
- * Finds a non-overlapping position for a new canvas node.
- *
- * @param existingNodes - Array of existing nodes with their positions
- * @param specType - Type of spec to determine node dimensions
- * @returns Position {x, y} for the new node
- */
-export async function findNodePosition(
-  tx: Tx,
-  projectId: string,
-  specType: keyof typeof NODE_DIMENSIONS,
-): Promise<{ x: number; y: number }> {
-  const existingNodes = await tx.query.nodes.findMany({
-    where: eq(nodes.projectId, projectId),
-    with: {
-      declaration: {
-        columns: {
-          metadata: true,
-        },
-      },
-    },
-  });
-
-  const allRects: Rect[] = existingNodes.map((node) => {
-    const type =
-      (node.declaration?.metadata?.codeMetadata
-        ?.type as keyof typeof NODE_DIMENSIONS) ?? "default";
-    const dimensions = NODE_DIMENSIONS[type] || NODE_DIMENSIONS.default;
-    return {
-      x: node.position.x,
-      y: node.position.y,
-      ...dimensions,
-    };
-  });
-
-  const dimensions = NODE_DIMENSIONS[specType] || NODE_DIMENSIONS.default;
-  const nextPos = { x: 0, y: 0 };
-  let hasCollision = true;
-
-  while (hasCollision) {
-    const candidateRect: Rect = { ...nextPos, ...dimensions };
-    hasCollision = allRects.some((rect) => intersects(candidateRect, rect));
-
-    if (hasCollision) {
-      nextPos.x += PLACEMENT_CONFIG.xStep;
-      if (nextPos.x > PLACEMENT_CONFIG.maxCanvasWidth) {
-        nextPos.x = 0;
-        nextPos.y += PLACEMENT_CONFIG.yStep;
-      }
-    }
-  }
-
-  return nextPos;
-}
 
 /**
  * Generates TypeScript path aliases based on the project's integration categories.
@@ -121,15 +22,10 @@ export async function findNodePosition(
  * @param integrationCategories - Set of integration category strings (e.g., "frontend", "backend")
  * @returns Record mapping path alias patterns to their actual file system paths
  */
-function getPathAliases(
-  integrationCategories: Set<string>,
-): Record<string, string> {
+function getPathAliases(integrationCategories: Set<string>): Record<string, string> {
   const pathAliases: Record<string, string> = {};
 
-  if (
-    integrationCategories.has("frontend") &&
-    integrationCategories.has("backend")
-  ) {
+  if (integrationCategories.has("frontend") && integrationCategories.has("backend")) {
     pathAliases["@repo/web/*"] = "apps/web/src/*";
     pathAliases["@repo/server/*"] = "apps/server/src/*";
   } else if (integrationCategories.has("backend")) {
@@ -173,9 +69,7 @@ async function getHeadVersionDeclarations(
   });
 }
 
-type DeclarationOperation =
-  | { type: "update"; declarationId: string }
-  | { type: "create" };
+type DeclarationOperation = { type: "update"; declarationId: string } | { type: "create" };
 
 /**
  * Determines what operation should be performed for an extracted declaration.
@@ -193,11 +87,7 @@ type DeclarationOperation =
 function determineDeclarationOperation(
   extractedDeclaration: DeclarationCodeMetadata,
   headVersionDeclarations: Array<
-    NonNullable<
-      Awaited<
-        ReturnType<typeof getHeadVersionDeclarations>
-      >[number]["declaration"]
-    >
+    NonNullable<Awaited<ReturnType<typeof getHeadVersionDeclarations>>[number]["declaration"]>
   >,
   existingDeclarationByUri: { id: string } | null | undefined,
   logger: ReturnType<typeof Logger.get>,
@@ -213,18 +103,14 @@ function determineDeclarationOperation(
         `Expected existing declaration ID but got none for URI: ${extractedDeclaration.uri}`,
       );
     }
-    logger.info(
-      `Decision: UPDATE existing declaration ${existingId} (matched by URI)`,
-    );
+    logger.info(`Decision: UPDATE existing declaration ${existingId} (matched by URI)`);
     return {
       type: "update",
       declarationId: existingId,
     };
   }
 
-  logger.info(
-    `Decision: CREATE new declaration for ${extractedDeclaration.uri} (no match found)`,
-  );
+  logger.info(`Decision: CREATE new declaration for ${extractedDeclaration.uri} (no match found)`);
   return {
     type: "create",
   };
@@ -254,9 +140,7 @@ async function resolveDependencies(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   extractedDeclarations: DeclarationCodeMetadata[],
   declarationUriToIdMap: Map<string, string>,
-  headVersionDeclarations: Awaited<
-    ReturnType<typeof getHeadVersionDeclarations>
-  >,
+  headVersionDeclarations: Awaited<ReturnType<typeof getHeadVersionDeclarations>>,
   logger: ReturnType<typeof Logger.get>,
 ): Promise<void> {
   for (const data of extractedDeclarations) {
@@ -264,9 +148,7 @@ async function resolveDependencies(
     const dependentId = declarationUriToIdMap.get(dependentUri);
 
     if (!dependentId) {
-      logger.warn(
-        `Skipping dependency resolution for ${dependentUri}: declaration ID not found`,
-      );
+      logger.warn(`Skipping dependency resolution for ${dependentUri}: declaration ID not found`);
       continue;
     }
 
@@ -312,14 +194,9 @@ async function resolveInternalDependencies(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   dependentId: string,
   dependentUri: string,
-  dependency: Extract<
-    DeclarationCodeMetadata["dependencies"][number],
-    { type: "internal" }
-  >,
+  dependency: Extract<DeclarationCodeMetadata["dependencies"][number], { type: "internal" }>,
   declarationUriToIdMap: Map<string, string>,
-  headVersionDeclarations: Awaited<
-    ReturnType<typeof getHeadVersionDeclarations>
-  >,
+  headVersionDeclarations: Awaited<ReturnType<typeof getHeadVersionDeclarations>>,
   logger: ReturnType<typeof Logger.get>,
 ): Promise<void> {
   for (const depName of dependency.dependsOn) {
@@ -328,9 +205,8 @@ async function resolveInternalDependencies(
     let dependencyId = declarationUriToIdMap.get(dependencyUri);
 
     if (!dependencyId) {
-      dependencyId = headVersionDeclarations.find(
-        (d) => d.declaration?.uri === dependencyUri,
-      )?.declaration?.id;
+      dependencyId = headVersionDeclarations.find((d) => d.declaration?.uri === dependencyUri)
+        ?.declaration?.id;
     }
 
     if (dependencyId) {
@@ -342,9 +218,7 @@ async function resolveInternalDependencies(
         })
         .onConflictDoNothing();
     } else {
-      logger.warn(
-        `Could not resolve dependency: ${dependencyUri} for ${dependentUri}`,
-      );
+      logger.warn(`Could not resolve dependency: ${dependencyUri} for ${dependentUri}`);
     }
   }
 }
@@ -376,9 +250,7 @@ async function updateDeclaration(
     declarationId,
   });
 
-  logger.info(
-    `✅ Updating existing declaration ${declarationId} (matched by URI)`,
-  );
+  logger.info(`✅ Updating existing declaration ${declarationId} (matched by URI)`);
 
   await tx
     .update(declarations)
@@ -544,18 +416,13 @@ export async function extractAndSaveDeclarations({
       }> = [];
 
       await db.transaction(async (tx) => {
-        const headVersionDeclarations = await getHeadVersionDeclarations(
-          tx,
-          branch.headVersion.id,
-        );
+        const headVersionDeclarations = await getHeadVersionDeclarations(tx, branch.headVersion.id);
 
         const allDeclarations = headVersionDeclarations
           .map((d) => d.declaration)
           .filter((d): d is NonNullable<typeof d> => d !== null);
 
-        const completedDeclarations = allDeclarations.filter(
-          (d) => d.progress === "completed",
-        );
+        const completedDeclarations = allDeclarations.filter((d) => d.progress === "completed");
 
         if (completedDeclarations.length > 0) {
           const idsToDelete = completedDeclarations.map((d) => d.id);
@@ -579,12 +446,7 @@ export async function extractAndSaveDeclarations({
           const [existingDeclarationByUri] = await tx
             .select({ id: declarations.id })
             .from(declarations)
-            .where(
-              and(
-                eq(declarations.projectId, project.id),
-                eq(declarations.uri, data.uri),
-              ),
-            )
+            .where(and(eq(declarations.projectId, project.id), eq(declarations.uri, data.uri)))
             .limit(1);
 
           const decision = determineDeclarationOperation(
@@ -598,11 +460,7 @@ export async function extractAndSaveDeclarations({
 
           switch (decision.type) {
             case "update": {
-              declarationId = await updateDeclaration(
-                tx,
-                decision.declarationId,
-                data,
-              );
+              declarationId = await updateDeclaration(tx, decision.declarationId, data);
               break;
             }
 
@@ -650,9 +508,7 @@ export async function extractAndSaveDeclarations({
         );
       });
 
-      logger.info(
-        `Successfully inserted ${extracted.length} declarations and linked to version.`,
-      );
+      logger.info(`Successfully inserted ${extracted.length} declarations and linked to version.`);
 
       for (const job of enrichingJobs) {
         await queueEnrichingJob(job);
@@ -661,10 +517,7 @@ export async function extractAndSaveDeclarations({
   } catch (error) {
     logger.error("Failed to extract or save declarations", {
       extra: {
-        error:
-          error instanceof Error
-            ? { message: error.message, stack: error.stack }
-            : error,
+        error: error instanceof Error ? { message: error.message, stack: error.stack } : error,
       },
     });
   }

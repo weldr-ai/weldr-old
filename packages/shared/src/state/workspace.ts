@@ -28,9 +28,7 @@ export function isCloudMode(): boolean {
  * Local: ~/.weldr
  * Cloud: /workspace
  */
-export const WORKSPACE_BASE = isLocalMode()
-  ? path.join(homedir(), ".weldr")
-  : "/workspace";
+export const WORKSPACE_BASE = isLocalMode() ? path.join(homedir(), ".weldr") : "/workspace";
 
 export const WORKSPACE_DIR = WORKSPACE_BASE;
 
@@ -54,10 +52,7 @@ export function getBranchDir(projectId: string, branchId: string): string {
  * Get the main git repository path from project ID and main branch ID
  * Unified structure: {WORKSPACE_BASE}/{projectId}/{mainBranchId}
  */
-export function getMainRepoPath(
-  projectId: string,
-  mainBranchId: string,
-): string {
+export function getMainRepoPath(projectId: string, mainBranchId: string): string {
   return path.join(WORKSPACE_BASE, projectId, mainBranchId);
 }
 

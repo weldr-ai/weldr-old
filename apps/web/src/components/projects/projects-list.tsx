@@ -25,9 +25,7 @@ export function ProjectsList({
         {projects.map((project) => (
           <div key={project.id} className="flex flex-col gap-2">
             <div className="size-54 rounded-lg bg-muted" />
-            <span className="font-medium text-sm">
-              {project.title ?? "Untitled Project"}
-            </span>
+            <span className="font-medium text-sm">{project.title ?? "Untitled Project"}</span>
           </div>
         ))}
       </div>

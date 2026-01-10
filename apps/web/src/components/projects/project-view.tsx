@@ -70,9 +70,7 @@ export function ProjectView({
     <div className="flex size-full flex-col">
       <div className="flex h-10 items-center justify-between border-b p-1.5">
         <MainDropdownMenu />
-        <span className="font-medium text-sm">
-          {project.title ?? "Untitled Project"}
-        </span>
+        <span className="font-medium text-sm">{project.title ?? "Untitled Project"}</span>
         <ProjectSettings
           project={project}
           integrationTemplates={integrationTemplates}

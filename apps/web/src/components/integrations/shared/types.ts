@@ -8,8 +8,7 @@ import type {
   IntegrationKey,
 } from "@weldr/shared/types";
 
-export type IntegrationTemplate =
-  RouterOutputs["integrationTemplates"]["list"][0];
+export type IntegrationTemplate = RouterOutputs["integrationTemplates"]["list"][0];
 
 export interface IntegrationConfiguration {
   templateId: string;
@@ -38,12 +37,7 @@ export type IntegrationToolCall = {
 export type IntegrationToolOutput = {
   type: "json";
   value: {
-    status:
-      | "awaiting_config"
-      | "installing"
-      | "completed"
-      | "cancelled"
-      | "failed";
+    status: "awaiting_config" | "installing" | "completed" | "cancelled" | "failed";
     categories: IntegrationCategoryKey[];
     integrations?: {
       category: IntegrationCategoryKey;

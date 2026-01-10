@@ -15,11 +15,7 @@ export function JiraIcon(props: ComponentProps<"svg">) {
     >
       <title>Jira</title>
       <g id="SVGRepo_bgCarrier" strokeWidth="0" />
-      <g
-        id="SVGRepo_tracerCarrier"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round" />
       <g id="SVGRepo_iconCarrier">
         <defs>
           <linearGradient

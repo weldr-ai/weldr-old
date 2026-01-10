@@ -20,9 +20,7 @@ export const generateProjectInfoStep = createStep({
 
     // Only run if project is missing title or description
     if (project.title && project.description) {
-      logger.info(
-        "Project already has title and description, skipping generation",
-      );
+      logger.info("Project already has title and description, skipping generation");
       return;
     }
 

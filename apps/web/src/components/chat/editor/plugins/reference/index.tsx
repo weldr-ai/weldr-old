@@ -62,11 +62,7 @@ export function ReferencesPlugin({
   }, []);
 
   const onSelectOption = useCallback(
-    (
-      selectedOption: ReferenceOption,
-      nodeToReplace: TextNode | null,
-      closeMenu: () => void,
-    ) => {
+    (selectedOption: ReferenceOption, nodeToReplace: TextNode | null, closeMenu: () => void) => {
       editor.update(() => {
         const referenceNode = $createReferenceNode(selectedOption.reference);
         if (nodeToReplace) {

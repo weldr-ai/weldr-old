@@ -11,10 +11,7 @@ export default defineConfig({
   external: ["pg-cloudflare"],
   copy: (options) => {
     const integrationPaths: Array<{ from: string; to: string }> = [];
-    const integrationsDir = join(
-      options.cwd || process.cwd(),
-      "src/integrations",
-    );
+    const integrationsDir = join(options.cwd || process.cwd(), "src/integrations");
 
     try {
       const findDataDirs = (dir: string, relativePath = ""): void => {

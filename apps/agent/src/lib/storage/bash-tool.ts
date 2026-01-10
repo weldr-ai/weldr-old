@@ -1,9 +1,5 @@
 import { agentfs } from "agentfs-sdk/just-bash";
-import {
-  type BashToolkit,
-  type CreateBashToolOptions,
-  createBashTool,
-} from "bash-tool";
+import { type BashToolkit, type CreateBashToolOptions, createBashTool } from "bash-tool";
 import { Bash } from "just-bash";
 
 import type { AgentFSInstance } from "./agentfs";
@@ -56,17 +52,13 @@ export interface AgentFSBashToolOptions {
    * Callback invoked before each bash command execution
    * Can be used for logging, validation, or command modification
    */
-  onBeforeBashCall?: (
-    input: BeforeBashCallInput,
-  ) => BeforeBashCallOutput | undefined;
+  onBeforeBashCall?: (input: BeforeBashCallInput) => BeforeBashCallOutput | undefined;
 
   /**
    * Callback invoked after each bash command execution
    * Can be used for logging or result modification
    */
-  onAfterBashCall?: (
-    input: AfterBashCallInput,
-  ) => AfterBashCallOutput | undefined;
+  onAfterBashCall?: (input: AfterBashCallInput) => AfterBashCallOutput | undefined;
 }
 
 /**
@@ -125,12 +117,7 @@ export interface AgentFSBashTools {
 export async function createAgentFSBashTool(
   options: AgentFSBashToolOptions,
 ): Promise<AgentFSBashTools> {
-  const {
-    agent,
-    cwd = "/workspace",
-    onBeforeBashCall,
-    onAfterBashCall,
-  } = options;
+  const { agent, cwd = "/workspace", onBeforeBashCall, onAfterBashCall } = options;
 
   const fs = await agentfs(agent, cwd);
 
@@ -142,10 +129,8 @@ export async function createAgentFSBashTool(
   const { tools, sandbox } = await createBashTool({
     sandbox: bashInstance,
     destination: cwd,
-    onBeforeBashCall:
-      onBeforeBashCall as CreateBashToolOptions["onBeforeBashCall"],
-    onAfterBashCall:
-      onAfterBashCall as CreateBashToolOptions["onAfterBashCall"],
+    onBeforeBashCall: onBeforeBashCall as CreateBashToolOptions["onBeforeBashCall"],
+    onAfterBashCall: onAfterBashCall as CreateBashToolOptions["onAfterBashCall"],
   });
 
   const exec = async (command: string): Promise<BashResult> => {

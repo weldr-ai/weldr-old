@@ -1,28 +1,16 @@
 import * as path from "node:path";
+
 import { z } from "zod";
 
 import { Logger } from "@weldr/shared/logger";
 import { getBranchDir } from "@weldr/shared/state";
 
-import {
-  type AgentFSBashTools,
-  agentFSManager,
-  createAgentFSBashTool,
-} from "@/lib/storage";
+import { type AgentFSBashTools, agentFSManager, createAgentFSBashTool } from "@/lib/storage";
 import type { WorkflowContext } from "@/workflow/context";
 import { trackFileChange } from "../utils/extract-changed-files";
 import { createTool } from "./utils";
 
-const CODE_EXTENSIONS = new Set([
-  ".ts",
-  ".tsx",
-  ".js",
-  ".jsx",
-  ".mts",
-  ".mjs",
-  ".cts",
-  ".cjs",
-]);
+const CODE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mts", ".mjs", ".cts", ".cjs"]);
 const WORKSPACE_ROOT = "/workspace";
 const WORKSPACE_PREFIX = "workspace/";
 
@@ -47,28 +35,19 @@ function extractModifiedFiles(command: string): string[] {
   const files: string[] = [];
 
   // Match output redirections: > file, >> file
-  const redirectMatches = getAllMatches(
-    /(?:>>?)\s*["']?([^\s"'|;&]+)["']?/g,
-    command,
-  );
+  const redirectMatches = getAllMatches(/(?:>>?)\s*["']?([^\s"'|;&]+)["']?/g, command);
   for (const match of redirectMatches) {
     if (match[1]) files.push(match[1]);
   }
 
   // Match tee command: tee file, tee -a file
-  const teeMatches = getAllMatches(
-    /\btee\s+(?:-a\s+)?["']?([^\s"'|;&]+)["']?/g,
-    command,
-  );
+  const teeMatches = getAllMatches(/\btee\s+(?:-a\s+)?["']?([^\s"'|;&]+)["']?/g, command);
   for (const match of teeMatches) {
     if (match[1]) files.push(match[1]);
   }
 
   // Match touch command: touch file1 file2
-  const touchMatches = getAllMatches(
-    /\btouch\s+((?:["']?[^\s"'|;&]+["']?\s*)+)/g,
-    command,
-  );
+  const touchMatches = getAllMatches(/\btouch\s+((?:["']?[^\s"'|;&]+["']?\s*)+)/g, command);
   for (const match of touchMatches) {
     if (match[1]) {
       const touchFiles = match[1].trim().split(/\s+/);
@@ -131,10 +110,7 @@ const bashToolCache = new Map<string, AgentFSBashTools>();
  * Get or create a bash tool instance for a branch.
  * Uses AgentFSManager for connection lifecycle management.
  */
-async function getOrCreateBashTool(
-  projectId: string,
-  branchId: string,
-): Promise<AgentFSBashTools> {
+async function getOrCreateBashTool(projectId: string, branchId: string): Promise<AgentFSBashTools> {
   const cacheKey = `${projectId}:${branchId}`;
 
   const cached = bashToolCache.get(cacheKey);
@@ -170,10 +146,7 @@ async function getOrCreateBashTool(
  * Clear the bash tool cache for a branch.
  * Also releases the underlying AgentFS connection.
  */
-export async function clearBashToolCache(
-  projectId: string,
-  branchId: string,
-): Promise<void> {
+export async function clearBashToolCache(projectId: string, branchId: string): Promise<void> {
   const cacheKey = `${projectId}:${branchId}`;
   if (bashToolCache.has(cacheKey)) {
     bashToolCache.delete(cacheKey);
@@ -281,8 +254,7 @@ Prefer this over specialized tools when you need flexibility or when combining m
 
       return {
         stdout: "",
-        stderr:
-          error instanceof Error ? error.message : "Failed to execute command",
+        stderr: error instanceof Error ? error.message : "Failed to execute command",
         exitCode: 1,
       };
     }
@@ -293,9 +265,7 @@ Prefer this over specialized tools when you need flexibility or when combining m
  * Get the bash tools instance for direct access.
  * This can be used for operations that need direct access to the sandbox.
  */
-export async function getBashTools(
-  context: WorkflowContext,
-): Promise<AgentFSBashTools> {
+export async function getBashTools(context: WorkflowContext): Promise<AgentFSBashTools> {
   const project = context.get("project");
   const branch = context.get("branch");
   return getOrCreateBashTool(project.id, branch.id);

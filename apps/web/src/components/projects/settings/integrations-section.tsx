@@ -55,9 +55,7 @@ export function IntegrationsSection({
                   integrationTemplate as RouterOutputs["integrationTemplates"]["byId"]
                 }
                 integration={integrations?.find(
-                  (integration) =>
-                    integration.integrationTemplate.id ===
-                    integrationTemplate.id,
+                  (integration) => integration.integrationTemplate.id === integrationTemplate.id,
                 )}
                 environmentVariables={environmentVariables}
               />

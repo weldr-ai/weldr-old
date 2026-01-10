@@ -8,11 +8,7 @@ import type { WorkflowContext } from "./context";
 // --- Type Definitions ---
 export type Step = {
   id: string;
-  execute: ({
-    context,
-  }: {
-    context: WorkflowContext;
-  }) => Promise<unknown> | unknown;
+  execute: ({ context }: { context: WorkflowContext }) => Promise<unknown> | unknown;
   timeout?: number; // timeout in milliseconds
 };
 
@@ -37,11 +33,7 @@ export function createStep({
   timeout,
 }: {
   id: string;
-  execute: ({
-    context,
-  }: {
-    context: WorkflowContext;
-  }) => Promise<unknown> | unknown;
+  execute: ({ context }: { context: WorkflowContext }) => Promise<unknown> | unknown;
   timeout?: number;
 }): Step {
   return { id, execute, timeout };
@@ -106,10 +98,7 @@ export function createWorkflow(
       });
 
       try {
-        const { branchDir, status } = await ensureBranchDir(
-          branch.id,
-          project.id,
-        );
+        const { branchDir, status } = await ensureBranchDir(branch.id, project.id);
         logger.info(`Branch directory ${status}`, {
           extra: { branchDir, status },
         });
@@ -121,9 +110,9 @@ export function createWorkflow(
             error: error instanceof Error ? error.message : String(error),
           },
         });
-        throw new Error(
-          `Cannot execute workflow: failed to ensure branch directory exists`,
-        );
+        throw new Error("Cannot execute workflow: failed to ensure branch directory exists", {
+          cause: error,
+        });
       }
 
       await stream(branch.headVersion.chatId, {
@@ -133,9 +122,7 @@ export function createWorkflow(
 
       try {
         logger.info(`Current version status: ${branch.headVersion.status}`);
-        logger.info(
-          `Workflow execution started for version ${branch.headVersion.id}`,
-        );
+        logger.info(`Workflow execution started for version ${branch.headVersion.id}`);
 
         // Check if workflow is already completed or failed
         if (branch.headVersion.status === "completed") {
@@ -186,9 +173,7 @@ export function createWorkflow(
           });
           api.status = "idle";
         }
-        logger.info(
-          `Workflow execution finished for version ${branch.headVersion.id}`,
-        );
+        logger.info(`Workflow execution finished for version ${branch.headVersion.id}`);
       }
     },
   };
@@ -220,45 +205,33 @@ async function executeWithRetry({
   for (let i = 0; i < retryConfig.attempts; i++) {
     try {
       if (step.timeout && step.timeout > 0) {
-        logger.info(
-          `Step ${step.id} executing with timeout: ${step.timeout}ms`,
-        );
+        logger.info(`Step ${step.id} executing with timeout: ${step.timeout}ms`);
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => {
-            reject(
-              new Error(`Step ${step.id} timed out after ${step.timeout}ms`),
-            );
+            reject(new Error(`Step ${step.id} timed out after ${step.timeout}ms`));
           }, step.timeout);
         });
 
-        return await Promise.race([
-          Promise.resolve(step.execute({ context })),
-          timeoutPromise,
-        ]);
+        return await Promise.race([Promise.resolve(step.execute({ context })), timeoutPromise]);
       }
 
       return await step.execute({ context });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
 
-      logger.error(
-        `Step ${step.id} failed on attempt ${i + 1}: ${errorMessage}`,
-        {
-          extra: {
-            error: errorMessage,
-            errorStack,
-            attempt: i + 1,
-            maxAttempts: retryConfig.attempts,
-          },
+      logger.error(`Step ${step.id} failed on attempt ${i + 1}: ${errorMessage}`, {
+        extra: {
+          error: errorMessage,
+          errorStack,
+          attempt: i + 1,
+          maxAttempts: retryConfig.attempts,
         },
-      );
+      });
 
       lastError = error;
       if (i < retryConfig.attempts - 1) {
-        const isTimeout =
-          error instanceof Error && error.message.includes("timed out");
+        const isTimeout = error instanceof Error && error.message.includes("timed out");
         logger.info(
           `Step ${step.id} ${isTimeout ? "timed out" : "failed"}. Attempt ${i + 1} of ${retryConfig.attempts}. Retrying in ${retryConfig.delay}ms...`,
           {
@@ -276,11 +249,8 @@ async function executeWithRetry({
     }
   }
 
-  logger.error(
-    `Step ${step.id} failed after ${retryConfig.attempts} attempts.`,
-    {
-      extra: { maxAttempts: retryConfig.attempts },
-    },
-  );
+  logger.error(`Step ${step.id} failed after ${retryConfig.attempts} attempts.`, {
+    extra: { maxAttempts: retryConfig.attempts },
+  });
   throw lastError;
 }

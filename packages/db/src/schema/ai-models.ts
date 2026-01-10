@@ -1,11 +1,4 @@
-import {
-  integer,
-  numeric,
-  pgTable,
-  text,
-  timestamp,
-  unique,
-} from "drizzle-orm/pg-core";
+import { integer, numeric, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 
 import { nanoid } from "@weldr/shared/nanoid";
 

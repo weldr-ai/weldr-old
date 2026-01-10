@@ -78,9 +78,7 @@ export async function createTasks({
   });
 }
 
-export async function getTasksWithDependencies(
-  versionId: string,
-): Promise<TaskWithRelations[]> {
+export async function getTasksWithDependencies(versionId: string): Promise<TaskWithRelations[]> {
   const result = await db.query.tasks.findMany({
     where: (tasks) => eq(tasks.versionId, versionId),
     with: {

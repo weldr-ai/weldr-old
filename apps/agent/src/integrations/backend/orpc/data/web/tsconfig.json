@@ -25,6 +25,6 @@
       "@repo/web/*": ["./src/*"],
       "@repo/server/*": ["../server/src/*"]
     },
-    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json"
+    "tsBuildInfoFile": ".tsbuildinfo",
   }
 }

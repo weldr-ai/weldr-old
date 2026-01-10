@@ -1,5 +1,5 @@
 import { stepCountIs, streamText, type ToolSet } from "ai";
-import type z from "zod";
+import type { z } from "zod";
 
 import { db, eq } from "@weldr/db";
 import { tasks, versions } from "@weldr/db/schema";
@@ -74,10 +74,7 @@ export async function coderAgent({
 
     logger.info(`Processing task: ${taskName}`);
 
-    const [currentTaskState] = await db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, task.id));
+    const [currentTaskState] = await db.select().from(tasks).where(eq(tasks.id, task.id));
 
     if (currentTaskState?.status === "completed") {
       logger.info(`Task ${taskName} already completed, skipping`);
@@ -88,10 +85,7 @@ export async function coderAgent({
       continue;
     }
 
-    await db
-      .update(tasks)
-      .set({ status: "in_progress" })
-      .where(eq(tasks.id, task.id));
+    await db.update(tasks).set({ status: "in_progress" }).where(eq(tasks.id, task.id));
 
     context.set("currentTaskId", task.id);
 
@@ -109,10 +103,7 @@ export async function coderAgent({
           coolDownPeriod,
         });
 
-        const [updatedTask] = await db
-          .select()
-          .from(tasks)
-          .where(eq(tasks.id, task.id));
+        const [updatedTask] = await db.select().from(tasks).where(eq(tasks.id, task.id));
 
         if (updatedTask?.status === "completed") {
           logger.info(`Task "${taskName}" completed successfully`);
@@ -128,8 +119,7 @@ export async function coderAgent({
         }
       } catch (error) {
         retryCount++;
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error(
           `Task "${taskName}" failed (attempt ${retryCount}/${maxRetries}): ${errorMessage}`,
           {
@@ -145,14 +135,9 @@ export async function coderAgent({
             maxRetries,
           });
 
-          await new Promise((resolve) =>
-            setTimeout(resolve, coolDownPeriod * 2),
-          );
+          await new Promise((resolve) => setTimeout(resolve, coolDownPeriod * 2));
 
-          await db
-            .update(tasks)
-            .set({ status: "in_progress" })
-            .where(eq(tasks.id, task.id));
+          await db.update(tasks).set({ status: "in_progress" }).where(eq(tasks.id, task.id));
 
           currentProgress.set(task.id, {
             summary: task.data.summary,
@@ -161,10 +146,7 @@ export async function coderAgent({
             maxRetries,
           });
         } else {
-          await db
-            .update(tasks)
-            .set({ status: "failed" })
-            .where(eq(tasks.id, task.id));
+          await db.update(tasks).set({ status: "failed" }).where(eq(tasks.id, task.id));
 
           currentProgress.set(task.id, {
             summary: task.data.summary,
@@ -284,8 +266,7 @@ async function executeTaskCoder({
     .join("\n");
 
   const currentTaskEntry = Array.from(progress.entries()).find(
-    ([_id, { progress: status }]) =>
-      status === "in_progress" || status === "retrying",
+    ([_id, { progress: status }]) => status === "in_progress" || status === "retrying",
   );
 
   const currentTaskInfo = currentTaskEntry
@@ -328,17 +309,9 @@ async function executeTaskCoder({
                 : "○";
 
       let statusText: string = status;
-      if (
-        status === "retrying" &&
-        taskProgress?.retryAttempt &&
-        taskProgress?.maxRetries
-      ) {
+      if (status === "retrying" && taskProgress?.retryAttempt && taskProgress?.maxRetries) {
         statusText = `retrying (attempt ${taskProgress.retryAttempt}/${taskProgress.maxRetries})`;
-      } else if (
-        status === "failed" &&
-        taskProgress?.retryAttempt &&
-        taskProgress?.maxRetries
-      ) {
+      } else if (status === "failed" && taskProgress?.retryAttempt && taskProgress?.maxRetries) {
         statusText = `failed after ${taskProgress.retryAttempt} attempts`;
       }
 
@@ -472,18 +445,13 @@ async function executeTaskCoder({
 
   while (shouldContinue && iterationCount < maxIterations) {
     iterationCount++;
-    logger.info(
-      `Starting coder agent iteration ${iterationCount} for task ${task.id}`,
-    );
+    logger.info(`Starting coder agent iteration ${iterationCount} for task ${task.id}`);
 
     shouldContinue = await executeCoderLoop();
 
-    logger.info(
-      `Coder agent iteration ${iterationCount} completed for task ${task.id}`,
-      {
-        extra: { shouldContinue },
-      },
-    );
+    logger.info(`Coder agent iteration ${iterationCount} completed for task ${task.id}`, {
+      extra: { shouldContinue },
+    });
 
     if (shouldContinue) {
       logger.info(`Recurring in ${coolDownPeriod}ms...`);

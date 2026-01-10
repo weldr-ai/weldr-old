@@ -17,16 +17,8 @@ import { useEffect, useState } from "react";
 
 import { Badge } from "@weldr/ui/components/badge";
 import { Button, buttonVariants } from "@weldr/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@weldr/ui/components/dialog";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@weldr/ui/components/toggle-group";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@weldr/ui/components/dialog";
+import { ToggleGroup, ToggleGroupItem } from "@weldr/ui/components/toggle-group";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { getPreviewUrl } from "@/lib/preview-url";
@@ -98,20 +90,14 @@ export function SitePreviewDialog({
   const handleBack = () => {
     const iframe = document.querySelector("iframe");
     if (iframe) {
-      iframe.contentWindow?.postMessage(
-        { type: "navigation", action: "back" },
-        "*",
-      );
+      iframe.contentWindow?.postMessage({ type: "navigation", action: "back" }, "*");
     }
   };
 
   const handleForward = () => {
     const iframe = document.querySelector("iframe");
     if (iframe) {
-      iframe.contentWindow?.postMessage(
-        { type: "navigation", action: "forward" },
-        "*",
-      );
+      iframe.contentWindow?.postMessage({ type: "navigation", action: "forward" }, "*");
     }
   };
 
@@ -125,28 +111,13 @@ export function SitePreviewDialog({
           {browserHeader ? (
             <div className="flex flex-1 items-center gap-1">
               <div className="flex items-center">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-7"
-                  onClick={handleBack}
-                >
+                <Button variant="ghost" size="icon" className="size-7" onClick={handleBack}>
                   <ArrowLeftIcon className="size-3.5" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-7"
-                  onClick={handleForward}
-                >
+                <Button variant="ghost" size="icon" className="size-7" onClick={handleForward}>
                   <ArrowRightIcon className="size-3.5" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-7"
-                  onClick={handleRefresh}
-                >
+                <Button variant="ghost" size="icon" className="size-7" onClick={handleRefresh}>
                   <RefreshCwIcon className="size-3.5" />
                 </Button>
               </div>
@@ -216,12 +187,9 @@ export function SitePreviewDialog({
         />
         {isLoading && (
           <div
-            className={cn(
-              "flex size-full flex-1 items-center justify-center bg-background",
-              {
-                "mx-auto max-w-[375px]": isMobile,
-              },
-            )}
+            className={cn("flex size-full flex-1 items-center justify-center bg-background", {
+              "mx-auto max-w-[375px]": isMobile,
+            })}
           >
             <div className="flex flex-col items-center gap-2">
               <LoaderIcon className="size-5 animate-spin" />

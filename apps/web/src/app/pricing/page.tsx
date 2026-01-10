@@ -22,24 +22,15 @@ export default async function PricingPage() {
           <div className="flex gap-2">
             {!session && (
               <>
-                <Link
-                  href="/"
-                  className={buttonVariants({ variant: "ghost", size: "sm" })}
-                >
+                <Link href="/" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                   Home
                 </Link>
-                <Link
-                  href="/pricing"
-                  className={buttonVariants({ variant: "ghost", size: "sm" })}
-                >
+                <Link href="/pricing" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                   Pricing
                 </Link>
               </>
             )}
-            <Link
-              href="/auth/sign-in"
-              className={buttonVariants({ variant: "ghost", size: "sm" })}
-            >
+            <Link href="/auth/sign-in" className={buttonVariants({ variant: "ghost", size: "sm" })}>
               Login
             </Link>
             <Link
@@ -59,10 +50,7 @@ export default async function PricingPage() {
         <p className="max-w-lg text-center text-muted-foreground">
           Choose a plan that works best for you and start building today.
         </p>
-        <SubscriptionPlans
-          activeSubscription={activeSubscription}
-          session={session}
-        />
+        <SubscriptionPlans activeSubscription={activeSubscription} session={session} />
       </div>
       <div className="flex w-full items-center justify-between p-2">
         <p className="text-muted-foreground text-xs">

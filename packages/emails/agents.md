@@ -1,11 +1,13 @@
 # Emails Package Development Guidelines
 
 ## Overview
+
 The @weldr/emails package provides React-based email templates using react-email. It contains type-safe, responsive email components for transactional emails like verification and password reset.
 
 ## Type Safety Requirements
 
 ### Template Props
+
 ```typescript
 // ALWAYS define typed props interfaces
 interface VerificationEmailProps {
@@ -26,6 +28,7 @@ export function VerificationEmail({
 ```
 
 ### Preview Props for Development
+
 ```typescript
 // ALWAYS provide preview props for development
 VerificationEmail.PreviewProps = {
@@ -39,6 +42,7 @@ export default VerificationEmail;
 ## Template Structure
 
 ### Standard Template Pattern
+
 ```typescript
 import {
   Body,
@@ -123,26 +127,28 @@ export default TemplateName;
 ## Available Components
 
 ### Core Components from @react-email/components
-| Component | Description |
-|-----------|-------------|
-| `Html` | Root HTML wrapper |
-| `Head` | Document head for metadata |
-| `Preview` | Preview text shown in email clients |
-| `Body` | Email body container |
-| `Container` | Centered content wrapper |
-| `Section` | Content section grouping |
-| `Text` | Paragraph text |
-| `Button` | CTA button with href |
-| `Img` | Image component |
-| `Link` | Anchor link |
-| `Tailwind` | Tailwind CSS integration |
-| `Hr` | Horizontal rule |
-| `Row` | Table row layout |
-| `Column` | Table column layout |
+
+| Component   | Description                         |
+| ----------- | ----------------------------------- |
+| `Html`      | Root HTML wrapper                   |
+| `Head`      | Document head for metadata          |
+| `Preview`   | Preview text shown in email clients |
+| `Body`      | Email body container                |
+| `Container` | Centered content wrapper            |
+| `Section`   | Content section grouping            |
+| `Text`      | Paragraph text                      |
+| `Button`    | CTA button with href                |
+| `Img`       | Image component                     |
+| `Link`      | Anchor link                         |
+| `Tailwind`  | Tailwind CSS integration            |
+| `Hr`        | Horizontal rule                     |
+| `Row`       | Table row layout                    |
+| `Column`    | Table column layout                 |
 
 ## Tailwind Configuration
 
 ### Inline Tailwind Config
+
 ```typescript
 <Tailwind
   config={{
@@ -164,6 +170,7 @@ export default TemplateName;
 ```
 
 ### Common Styling Classes
+
 ```typescript
 // Container
 <Container className="mx-auto px-4 py-8 max-w-xl" />
@@ -186,6 +193,7 @@ export default TemplateName;
 ## Environment-Aware Assets
 
 ### Logo URLs
+
 ```typescript
 <Img
   src={
@@ -201,6 +209,7 @@ export default TemplateName;
 ## Integration with Auth Package
 
 ### Import Pattern
+
 ```typescript
 // In @weldr/auth
 import ResetPasswordEmail from "@weldr/emails/reset-password";
@@ -208,6 +217,7 @@ import VerificationEmail from "@weldr/emails/verification-email";
 ```
 
 ### Sending Emails with Resend
+
 ```typescript
 import { Resend } from "resend";
 import VerificationEmail from "@weldr/emails/verification-email";
@@ -230,6 +240,7 @@ await resend.emails.send({
 ## Development Workflow
 
 ### Preview Server
+
 ```bash
 # Start email preview server on port 3001
 bun dev --filter @weldr/emails
@@ -238,15 +249,17 @@ bun dev --filter @weldr/emails
 ```
 
 ### Available Scripts
-| Script | Command | Description |
-|--------|---------|-------------|
-| `dev` | `email dev -p 3001 --dir ./src/templates` | Start preview server |
-| `export` | `email export` | Export emails to HTML |
-| `typecheck` | `tsc --noEmit` | Type validation |
+
+| Script      | Command                                   | Description           |
+| ----------- | ----------------------------------------- | --------------------- |
+| `dev`       | `email dev -p 3001 --dir ./src/templates` | Start preview server  |
+| `export`    | `email export`                            | Export emails to HTML |
+| `typecheck` | `tsc --noEmit`                            | Type validation       |
 
 ## Creating New Templates
 
 ### Step-by-Step Process
+
 1. Create file in `/src/templates/new-template.tsx`
 2. Define typed props interface
 3. Implement template with proper structure
@@ -255,6 +268,7 @@ bun dev --filter @weldr/emails
 6. Test in preview server
 
 ### Template Checklist
+
 - [ ] TypeScript interface for props
 - [ ] `PreviewProps` for development
 - [ ] `Html`, `Head`, `Preview` components
@@ -268,11 +282,13 @@ bun dev --filter @weldr/emails
 ## Current Templates
 
 ### VerificationEmail
+
 - **Purpose**: Email verification after sign-up
 - **Props**: `firstName`, `verificationLink`
 - **Triggered**: On user registration
 
 ### ResetPasswordEmail
+
 - **Purpose**: Password reset flow
 - **Props**: `firstName`, `resetPasswordLink`
 - **Triggered**: On password reset request
@@ -288,22 +304,24 @@ bun dev --filter @weldr/emails
 ```
 
 Import pattern:
+
 ```typescript
 import TemplateName from "@weldr/emails/template-name";
 ```
 
 ## Dependencies
 
-| Package | Purpose |
-|---------|---------|
+| Package                   | Purpose               |
+| ------------------------- | --------------------- |
 | `@react-email/components` | Core email components |
-| `react-email` | Development toolkit |
-| `react` / `react-dom` | React runtime |
-| `tailwindcss` | CSS styling (dev) |
+| `react-email`             | Development toolkit   |
+| `react` / `react-dom`     | React runtime         |
+| `tailwindcss`             | CSS styling (dev)     |
 
 ## Do's and Don'ts
 
 ### Do's
+
 - Define TypeScript interfaces for all props
 - Provide `PreviewProps` for development
 - Use Tailwind for consistent styling
@@ -314,6 +332,7 @@ import TemplateName from "@weldr/emails/template-name";
 - Keep emails simple and focused
 
 ### Don'ts
+
 - Use complex CSS that email clients don't support
 - Embed large images directly
 - Use JavaScript in email templates

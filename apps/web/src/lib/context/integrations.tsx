@@ -28,8 +28,6 @@ export function IntegrationsProvider({
   }[];
 }) {
   return (
-    <IntegrationsContext.Provider value={integrations}>
-      {children}
-    </IntegrationsContext.Provider>
+    <IntegrationsContext.Provider value={integrations}>{children}</IntegrationsContext.Provider>
   );
 }

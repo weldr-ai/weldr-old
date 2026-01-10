@@ -25,11 +25,7 @@ class AgentFSManager {
    * Acquire an AgentFS connection. Increments ref count.
    * Must call release() when done.
    */
-  async acquire(
-    projectId: string,
-    branchId: string,
-    branchDir: string,
-  ): Promise<AgentFSInstance> {
+  async acquire(projectId: string, branchId: string, branchDir: string): Promise<AgentFSInstance> {
     const key = this.getKey(projectId, branchId);
 
     const existing = this.connections.get(key);

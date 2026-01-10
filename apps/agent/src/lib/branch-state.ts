@@ -4,11 +4,7 @@ import path from "node:path";
 import { db, eq } from "@weldr/db";
 import { branches, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
-import {
-  BRANCH_STATE_FILE,
-  type BranchState,
-  getBranchDir,
-} from "@weldr/shared/state";
+import { BRANCH_STATE_FILE, type BranchState, getBranchDir } from "@weldr/shared/state";
 
 import {
   agentFSExists,
@@ -79,9 +75,7 @@ export async function ensureBranchDir(
     const syncResult = await syncBranchFromStorage(branchId, projectId);
 
     if (!syncResult.success) {
-      logger.warn(
-        "Failed to sync existing branch from storage, using local copy",
-      );
+      logger.warn("Failed to sync existing branch from storage, using local copy");
     }
 
     return { branchDir, status: "reused" };
@@ -96,12 +90,7 @@ export async function ensureBranchDir(
       extra: { forkedFromVersionId: branch.forkedFromVersionId },
     });
 
-    return await createBranchFromFork(
-      projectId,
-      branchId,
-      branch.forkedFromVersionId,
-      branchDir,
-    );
+    return await createBranchFromFork(projectId, branchId, branch.forkedFromVersionId, branchDir);
   }
 
   // Main branch or new branch without fork point
@@ -174,11 +163,7 @@ async function createBranchFromFork(
       }
 
       // Sync files from AgentFS to disk
-      const agent = await agentFSManager.acquire(
-        projectId,
-        branchId,
-        branchDir,
-      );
+      const agent = await agentFSManager.acquire(projectId, branchId, branchDir);
       try {
         const { synced, errors } = await syncAgentFSToDisk(agent, branchDir);
 

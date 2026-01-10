@@ -1,9 +1,9 @@
 import type { AssistantContent, ToolContent, UserContent } from "ai";
 import { eq } from "drizzle-orm";
-import { db } from "..";
 
 import type { EndpointDeclarationSpecs } from "@weldr/shared/types/declarations";
 
+import { db } from "..";
 import {
   branches,
   chatMessages,
@@ -43,27 +43,18 @@ export async function seedProjectData(userId: string): Promise<void> {
       console.log(`  ✅ Created project: ${project.id}`);
 
       // 2. Query integration templates for the four categories
-      const integrationTemplates = await tx.query.integrationTemplates.findMany(
-        {
-          where: (templates, { inArray }) =>
-            inArray(templates.key, [
-              "orpc",
-              "tanstack-start",
-              "postgresql",
-              "better-auth",
-            ]),
-          with: {
-            category: true,
-          },
+      const integrationTemplates = await tx.query.integrationTemplates.findMany({
+        where: (templates, { inArray }) =>
+          inArray(templates.key, ["orpc", "tanstack-start", "postgresql", "better-auth"]),
+        with: {
+          category: true,
         },
-      );
+      });
 
       const templateMap = new Map(integrationTemplates.map((t) => [t.key, t]));
 
       if (templateMap.size < 4) {
-        console.warn(
-          `  ⚠️  Warning: Expected 4 integration templates, found ${templateMap.size}`,
-        );
+        console.warn(`  ⚠️  Warning: Expected 4 integration templates, found ${templateMap.size}`);
       }
 
       // 3. Create integrations
@@ -72,11 +63,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         const [integration] = await tx
           .insert(integrations)
           .values({
-            key: template.key as
-              | "orpc"
-              | "tanstack-start"
-              | "postgresql"
-              | "better-auth",
+            key: template.key as "orpc" | "tanstack-start" | "postgresql" | "better-auth",
             name: template.name,
             projectId: project.id,
             userId,
@@ -230,8 +217,7 @@ export async function seedProjectData(userId: string): Promise<void> {
           sequenceNumber: 1,
           kind: "checkpoint",
           status: "completed",
-          message:
-            "feat: initialize task management app with core integrations",
+          message: "feat: initialize task management app with core integrations",
           description:
             "Sets up the initial project with database models for users, tasks, and projects, along with API endpoints and pages.",
         })
@@ -330,9 +316,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         });
       }
 
-      console.log(
-        `  ✅ Created ${createdDeclarations.length} declarations with nodes in main v1`,
-      );
+      console.log(`  ✅ Created ${createdDeclarations.length} declarations with nodes in main v1`);
 
       // 8. Create main v2
       const [mainV2Chat] = await tx
@@ -483,14 +467,10 @@ export async function seedProjectData(userId: string): Promise<void> {
         throw new Error("Failed to create stream v1 chat");
       }
 
-      const streamV1Messages = createRealisticMessages(
-        streamV1Chat.id,
-        userId,
-        [
-          "I'd like to add comments to tasks so users can discuss them.",
-          "Good idea! I'll add a comments field to the tasks model and update the task detail page to show comments.",
-        ],
-      );
+      const streamV1Messages = createRealisticMessages(streamV1Chat.id, userId, [
+        "I'd like to add comments to tasks so users can discuss them.",
+        "Good idea! I'll add a comments field to the tasks model and update the task detail page to show comments.",
+      ]);
 
       await tx.insert(chatMessages).values(streamV1Messages);
 
@@ -544,14 +524,10 @@ export async function seedProjectData(userId: string): Promise<void> {
         throw new Error("Failed to create stream v2 chat");
       }
 
-      const streamV2Messages = createRealisticMessages(
-        streamV2Chat.id,
-        userId,
-        [
-          "The comments feature looks good. Can we add the ability to edit and delete comments?",
-          "Sure! I'll add endpoints to update and delete comments.",
-        ],
-      );
+      const streamV2Messages = createRealisticMessages(streamV2Chat.id, userId, [
+        "The comments feature looks good. Can we add the ability to edit and delete comments?",
+        "Sure! I'll add endpoints to update and delete comments.",
+      ]);
 
       await tx.insert(chatMessages).values(streamV2Messages);
 
@@ -680,9 +656,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         throw new Error("Failed to create variant2 branch");
       }
 
-      console.log(
-        `  ✅ Created variant branches: ${variant1Branch.id}, ${variant2Branch.id}`,
-      );
+      console.log(`  ✅ Created variant branches: ${variant1Branch.id}, ${variant2Branch.id}`);
 
       // 15. Create variant-1 v1
       const [variant1V1Chat] = await tx
@@ -697,16 +671,12 @@ export async function seedProjectData(userId: string): Promise<void> {
         throw new Error("Failed to create variant1 v1 chat");
       }
 
-      const variant1V1Messages = createRealisticMessages(
-        variant1V1Chat.id,
-        userId,
-        [
-          "I want to try a different UI approach for the tasks list - maybe a table view.",
-          "Good idea! I'll create a table-based UI for tasks with sortable columns.",
-          "That sounds more organized for managing many tasks.",
-          "Exactly! The table view will make it easier to scan and manage multiple tasks at once.",
-        ],
-      );
+      const variant1V1Messages = createRealisticMessages(variant1V1Chat.id, userId, [
+        "I want to try a different UI approach for the tasks list - maybe a table view.",
+        "Good idea! I'll create a table-based UI for tasks with sortable columns.",
+        "That sounds more organized for managing many tasks.",
+        "Exactly! The table view will make it easier to scan and manage multiple tasks at once.",
+      ]);
 
       await tx.insert(chatMessages).values(variant1V1Messages);
 
@@ -760,16 +730,12 @@ export async function seedProjectData(userId: string): Promise<void> {
         throw new Error("Failed to create variant1 v2 chat");
       }
 
-      const variant1V2Messages = createRealisticMessages(
-        variant1V2Chat.id,
-        userId,
-        [
-          "The table view is working well. Can we add bulk actions?",
-          "Sure! I'll add checkboxes and bulk action buttons for selecting and managing multiple tasks.",
-          "That will make task management much more efficient.",
-          "Absolutely! Bulk actions will streamline workflows for power users.",
-        ],
-      );
+      const variant1V2Messages = createRealisticMessages(variant1V2Chat.id, userId, [
+        "The table view is working well. Can we add bulk actions?",
+        "Sure! I'll add checkboxes and bulk action buttons for selecting and managing multiple tasks.",
+        "That will make task management much more efficient.",
+        "Absolutely! Bulk actions will streamline workflows for power users.",
+      ]);
 
       await tx.insert(chatMessages).values(variant1V2Messages);
 
@@ -823,16 +789,12 @@ export async function seedProjectData(userId: string): Promise<void> {
         throw new Error("Failed to create variant2 v1 chat");
       }
 
-      const variant2V1Messages = createRealisticMessages(
-        variant2V1Chat.id,
-        userId,
-        [
-          "I'd like to try a card-based UI instead of a list for tasks.",
-          "Great choice! I'll create a card-based layout with drag-and-drop support.",
-          "That will make it more visual and interactive.",
-          "Exactly! The card-based UI will provide a more modern and engaging experience.",
-        ],
-      );
+      const variant2V1Messages = createRealisticMessages(variant2V1Chat.id, userId, [
+        "I'd like to try a card-based UI instead of a list for tasks.",
+        "Great choice! I'll create a card-based layout with drag-and-drop support.",
+        "That will make it more visual and interactive.",
+        "Exactly! The card-based UI will provide a more modern and engaging experience.",
+      ]);
 
       await tx.insert(chatMessages).values(variant2V1Messages);
 
@@ -886,16 +848,12 @@ export async function seedProjectData(userId: string): Promise<void> {
         throw new Error("Failed to create variant2 v2 chat");
       }
 
-      const variant2V2Messages = createRealisticMessages(
-        variant2V2Chat.id,
-        userId,
-        [
-          "The card view looks great! Can we add kanban-style columns?",
-          "Absolutely! I'll organize cards into columns like 'To Do', 'In Progress', and 'Done'.",
-          "That will make task management more visual and intuitive.",
-          "Perfect! The kanban board will provide a clear workflow visualization.",
-        ],
-      );
+      const variant2V2Messages = createRealisticMessages(variant2V2Chat.id, userId, [
+        "The card view looks great! Can we add kanban-style columns?",
+        "Absolutely! I'll organize cards into columns like 'To Do', 'In Progress', and 'Done'.",
+        "That will make task management more visual and intuitive.",
+        "Perfect! The kanban board will provide a clear workflow visualization.",
+      ]);
 
       await tx.insert(chatMessages).values(variant2V2Messages);
 
@@ -1042,21 +1000,15 @@ function createDeclarations(
           { name: "updated_at", type: "timestamp", nullable: true },
         ],
         relationships: [],
-        indexes: [
-          { name: "users_email_idx", columns: ["email"], unique: true },
-        ],
+        indexes: [{ name: "users_email_idx", columns: ["email"], unique: true }],
       },
       semanticData: {
-        summary:
-          "User database model storing authentication and profile information",
+        summary: "User database model storing authentication and profile information",
         description:
           "The users table stores all user accounts with email authentication. It includes basic profile information and timestamps for account creation and updates.",
         tags: ["database", "authentication", "user-management"],
         usagePattern: {
-          commonUseCases: [
-            "User registration and login",
-            "User profile management",
-          ],
+          commonUseCases: ["User registration and login", "User profile management"],
         },
       },
     },
@@ -1226,10 +1178,7 @@ function createDeclarations(
           "The projects table allows users to organize their tasks into different projects. Each project belongs to a user and can contain multiple tasks.",
         tags: ["database", "project-management", "organization"],
         usagePattern: {
-          commonUseCases: [
-            "Organizing tasks by project",
-            "Project-based task filtering",
-          ],
+          commonUseCases: ["Organizing tasks by project", "Project-based task filtering"],
         },
       },
     },
@@ -1799,10 +1748,8 @@ function createDeclarations(
           summary: endpoint.summary,
           description: endpoint.description,
           tags: endpoint.tags,
-          parameters:
-            endpoint.parameters as EndpointDeclarationSpecs["parameters"],
-          requestBody:
-            endpoint.requestBody as EndpointDeclarationSpecs["requestBody"],
+          parameters: endpoint.parameters as EndpointDeclarationSpecs["parameters"],
+          requestBody: endpoint.requestBody as EndpointDeclarationSpecs["requestBody"],
           responses: endpoint.responses,
           security: endpoint.security as EndpointDeclarationSpecs["security"],
           protected: !!endpoint.security,
@@ -1874,8 +1821,7 @@ function createDeclarations(
       path: "src/pages/projects/[id].tsx",
       name: "Project Detail",
       route: "/projects/{id}",
-      description:
-        "Page displaying detailed information about a specific project",
+      description: "Page displaying detailed information about a specific project",
       protected: true,
       parameters: [
         {

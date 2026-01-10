@@ -1,5 +1,4 @@
-import type { ClassValue } from "clsx";
-import { clsx } from "clsx";
+import { type ClassValue, clsx } from "clsx";
 import {
   BanIcon,
   BinaryIcon,
@@ -29,15 +28,7 @@ export function cn(...inputs: ClassValue[]): string {
 export function getDataTypeIcon(type: DataType) {
   if (
     typeof type === "string" &&
-    ![
-      "string",
-      "number",
-      "integer",
-      "array",
-      "boolean",
-      "object",
-      "null",
-    ].includes(type)
+    !["string", "number", "integer", "array", "boolean", "object", "null"].includes(type)
   ) {
     return Layers3Icon;
   }

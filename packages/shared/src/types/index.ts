@@ -174,19 +174,13 @@ export type TriggerWorkflowResponse = {
 };
 
 export type IntegrationCategory = z.infer<typeof integrationCategorySchema>;
-export type IntegrationCategoryKey = z.infer<
-  typeof integrationCategoryKeySchema
->;
+export type IntegrationCategoryKey = z.infer<typeof integrationCategoryKeySchema>;
 
-export type IntegrationTemplateOptions = z.infer<
-  typeof integrationTemplateSchema
->["options"];
+export type IntegrationTemplateOptions = z.infer<typeof integrationTemplateSchema>["options"];
 export type IntegrationTemplateRecommendedOptions = z.infer<
   typeof integrationTemplateSchema
 >["recommendedOptions"];
-export type IntegrationTemplateVariable = z.infer<
-  typeof integrationTemplateSchema
->["variables"];
+export type IntegrationTemplateVariable = z.infer<typeof integrationTemplateSchema>["variables"];
 export type IntegrationTemplate = z.infer<typeof integrationTemplateSchema>;
 
 export type IntegrationKey = z.infer<typeof integrationKeySchema>;
@@ -195,9 +189,5 @@ export type Integration = z.infer<typeof integrationSchema>;
 export type IntegrationEnvironmentVariableMapping = z.infer<
   typeof integrationEnvironmentVariableMappingSchema
 >;
-export type IntegrationInstallationStatus = z.infer<
-  typeof integrationInstallationStatusSchema
->;
-export type IntegrationInstallation = z.infer<
-  typeof integrationInstallationSchema
->;
+export type IntegrationInstallationStatus = z.infer<typeof integrationInstallationStatusSchema>;
+export type IntegrationInstallation = z.infer<typeof integrationInstallationSchema>;

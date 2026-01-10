@@ -53,10 +53,7 @@ export class SnapshotService {
   /**
    * Fork from a version - creates a new branch from a historical snapshot
    */
-  async forkFromVersion(
-    sourceVersionId: string,
-    targetBranchId: string,
-  ): Promise<string> {
+  async forkFromVersion(sourceVersionId: string, targetBranchId: string): Promise<string> {
     const snapshotPath = this.getSnapshotPath(sourceVersionId);
     const targetBranchDbPath = this.getBranchDbPath(targetBranchId);
 

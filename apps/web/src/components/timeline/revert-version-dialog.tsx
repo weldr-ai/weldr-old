@@ -14,11 +14,7 @@ import {
   AlertDialogTrigger,
 } from "@weldr/ui/components/alert-dialog";
 import { Button, buttonVariants } from "@weldr/ui/components/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@weldr/ui/components/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@weldr/ui/components/tooltip";
 import { toast } from "@weldr/ui/hooks/use-toast";
 
 import { useTRPC } from "@/lib/trpc/react";
@@ -51,29 +47,28 @@ export function RevertVersionDialog({
         );
 
         const revertedVersionId = `temp-${Date.now()}`;
-        const revertedVersion: RouterOutputs["branches"]["byIdOrMain"]["versions"][number] =
-          {
-            id: revertedVersionId,
-            userId: version.userId,
-            branchId: version.branchId,
-            projectId: version.projectId,
-            number: version.number + 1,
-            sequenceNumber: version.sequenceNumber + 1,
-            message: `revert: revert to #${version.sequenceNumber} ${version.message}`,
-            description: `Reverted from #${version.sequenceNumber} ${version.message}`,
-            status: "completed",
-            kind: "revert",
-            createdAt: new Date(),
-            publishedAt: new Date(),
-            appliedFromBranchId: null,
-            revertedVersionId: version.id,
-            appliedFromBranch: null,
-            revertedVersion: {
-              id: version.id,
-              sequenceNumber: version.sequenceNumber,
-              message: version.message,
-            },
-          };
+        const revertedVersion: RouterOutputs["branches"]["byIdOrMain"]["versions"][number] = {
+          id: revertedVersionId,
+          userId: version.userId,
+          branchId: version.branchId,
+          projectId: version.projectId,
+          number: version.number + 1,
+          sequenceNumber: version.sequenceNumber + 1,
+          message: `revert: revert to #${version.sequenceNumber} ${version.message}`,
+          description: `Reverted from #${version.sequenceNumber} ${version.message}`,
+          status: "completed",
+          kind: "revert",
+          createdAt: new Date(),
+          publishedAt: new Date(),
+          appliedFromBranchId: null,
+          revertedVersionId: version.id,
+          appliedFromBranch: null,
+          revertedVersion: {
+            id: version.id,
+            sequenceNumber: version.sequenceNumber,
+            message: version.message,
+          },
+        };
 
         queryClient.setQueryData(
           trpc.branches.byIdOrMain.queryKey({
@@ -157,10 +152,7 @@ export function RevertVersionDialog({
           Are you sure you want to revert to this version?
         </AlertDialogDescription>
         <AlertDialogFooter>
-          <AlertDialogCancel
-            disabled={revertMutation.isPending}
-            className="h-8"
-          >
+          <AlertDialogCancel disabled={revertMutation.isPending} className="h-8">
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction

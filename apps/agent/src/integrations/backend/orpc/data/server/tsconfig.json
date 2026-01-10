@@ -23,6 +23,6 @@
     "paths": {
       "@repo/server/*": ["./src/*"]
     },
-    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json"
+    "tsBuildInfoFile": ".tsbuildinfo",
   }
 }

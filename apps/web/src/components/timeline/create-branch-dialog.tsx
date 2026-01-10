@@ -4,12 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Loader2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
-import {
-  adjectives,
-  animals,
-  colors,
-  uniqueNamesGenerator,
-} from "unique-names-generator";
+import { adjectives, animals, colors, uniqueNamesGenerator } from "unique-names-generator";
 
 import {
   AlertDialog,
@@ -111,9 +106,7 @@ export function CreateBranchDialog({
             }
             disabled={createBranch.isPending}
           >
-            {createBranch.isPending && (
-              <Loader2Icon className="size-4 animate-spin" />
-            )}
+            {createBranch.isPending && <Loader2Icon className="size-4 animate-spin" />}
             Create
           </AlertDialogAction>
         </AlertDialogFooter>

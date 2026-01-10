@@ -1,12 +1,12 @@
-import type {
-  DOMExportOutput,
-  EditorConfig,
-  LexicalEditor,
-  LexicalNode,
-  SerializedLexicalNode,
-  Spread,
+import {
+  type DOMExportOutput,
+  type EditorConfig,
+  type LexicalEditor,
+  type LexicalNode,
+  type SerializedLexicalNode,
+  type Spread,
+  DecoratorNode,
 } from "lexical";
-import { DecoratorNode } from "lexical";
 import type { ReactNode } from "react";
 import type { z } from "zod";
 
@@ -44,9 +44,7 @@ export class ReferenceNode extends DecoratorNode<ReactNode> {
     const base = {
       id: this.__reference.id,
       type: this.__reference.type,
-      ...Object.fromEntries(
-        Object.entries(this.__reference).filter(([key]) => key !== "type"),
-      ),
+      ...Object.fromEntries(Object.entries(this.__reference).filter(([key]) => key !== "type")),
     };
 
     if (this.__reference.type === "endpoint") {
@@ -98,8 +96,6 @@ export function $createReferenceNode(
   return new ReferenceNode(referenceNode);
 }
 
-export function $isReferenceNode(
-  node: LexicalNode | null | undefined,
-): node is ReferenceNode {
+export function $isReferenceNode(node: LexicalNode | null | undefined): node is ReferenceNode {
   return node instanceof ReferenceNode;
 }

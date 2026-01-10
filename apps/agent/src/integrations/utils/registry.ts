@@ -1,17 +1,10 @@
-import type {
-  Integration,
-  IntegrationCategoryKey,
-  IntegrationKey,
-} from "@weldr/shared/types";
+import type { Integration, IntegrationCategoryKey, IntegrationKey } from "@weldr/shared/types";
 
 import { authenticationIntegrationCategory } from "@/integrations/authentication";
 import { backendIntegrationCategory } from "@/integrations/backend";
 import { databaseIntegrationCategory } from "@/integrations/database";
 import { frontendIntegrationCategory } from "@/integrations/frontend";
-import type {
-  IntegrationCategoryDefinition,
-  IntegrationDefinition,
-} from "@/integrations/types";
+import type { IntegrationCategoryDefinition, IntegrationDefinition } from "@/integrations/types";
 import { applyFiles } from "@/integrations/utils/apply-files";
 import type { WorkflowContext } from "@/workflow/context";
 
@@ -35,9 +28,7 @@ class IntegrationRegistry {
     return Array.from(this.integrationCategories.values());
   }
 
-  getCategory(
-    key: IntegrationCategoryKey,
-  ): IntegrationCategoryDefinition<IntegrationKey[]> {
+  getCategory(key: IntegrationCategoryKey): IntegrationCategoryDefinition<IntegrationKey[]> {
     const category = this.integrationCategories.get(key);
     if (!category) {
       throw new Error(`Category ${key} not found`);
@@ -56,9 +47,7 @@ class IntegrationRegistry {
     throw new Error(`Integration ${key} not found`);
   }
 
-  getIntegrationCategory(
-    key: IntegrationKey,
-  ): IntegrationCategoryDefinition<IntegrationKey[]> {
+  getIntegrationCategory(key: IntegrationKey): IntegrationCategoryDefinition<IntegrationKey[]> {
     return this.getCategory(this.getIntegration(key).category);
   }
 
@@ -100,9 +89,7 @@ class IntegrationRegistry {
       requiredCategories.add(integrationDefinition.category);
     }
 
-    const resolveCategoryDependencies = (
-      categoryKey: IntegrationCategoryKey,
-    ) => {
+    const resolveCategoryDependencies = (categoryKey: IntegrationCategoryKey) => {
       if (visitedCategories.has(categoryKey)) {
         return;
       }

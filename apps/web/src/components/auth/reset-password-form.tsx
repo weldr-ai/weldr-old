@@ -144,9 +144,7 @@ export function ResetPasswordForm({ className }: { className?: string }) {
                         variant="ghost"
                         size="icon"
                         type="button"
-                        onClick={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       >
                         {showConfirmPassword ? (
                           <EyeOffIcon className="size-3" />
@@ -166,9 +164,7 @@ export function ResetPasswordForm({ className }: { className?: string }) {
               aria-disabled={!form.formState.isValid || isSubmitting}
               disabled={!form.formState.isValid || isSubmitting}
             >
-              {isSubmitting && (
-                <LoaderIcon className="mr-1 size-3 animate-spin" />
-              )}
+              {isSubmitting && <LoaderIcon className="mr-1 size-3 animate-spin" />}
               Reset password
             </Button>
           </form>

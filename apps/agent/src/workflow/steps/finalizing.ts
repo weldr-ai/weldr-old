@@ -6,11 +6,7 @@ import { getBranchDir, isCloudMode } from "@weldr/shared/state";
 import { syncBranchToStorage } from "@/lib/branch-state";
 import { build } from "@/lib/build";
 import { Git } from "@/lib/git";
-import {
-  agentFSManager,
-  createSnapshotService,
-  syncAgentFSToDisk,
-} from "@/lib/storage";
+import { agentFSManager, createSnapshotService, syncAgentFSToDisk } from "@/lib/storage";
 import { stream } from "@/lib/stream-utils";
 import { createStep } from "../engine";
 
@@ -34,11 +30,7 @@ export const finalizingStep = createStep({
       // 1. Sync AgentFS filesystem to disk for Git commit
       // (Agent writes to AgentFS via bash tool, need to materialize files on disk)
       logger.info("Syncing AgentFS to disk");
-      const agent = await agentFSManager.acquire(
-        project.id,
-        branch.id,
-        branchDir,
-      );
+      const agent = await agentFSManager.acquire(project.id, branch.id, branchDir);
       let synced: number;
       let errors: string[];
       try {
@@ -87,10 +79,7 @@ export const finalizingStep = createStep({
       logger.info("Creating AgentFS snapshot");
 
       const snapshotService = createSnapshotService(project.id);
-      const snapshotPath = await snapshotService.createSnapshot(
-        branch.id,
-        branch.headVersion.id,
-      );
+      const snapshotPath = await snapshotService.createSnapshot(branch.id, branch.headVersion.id);
 
       logger.info("Snapshot created", { extra: { snapshotPath } });
 

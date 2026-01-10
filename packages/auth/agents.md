@@ -1,11 +1,13 @@
 # Auth Package Development Guidelines
 
 ## Overview
+
 The @weldr/auth package provides authentication and authorization for the Weldr platform using Better Auth. It handles user management, session handling, OAuth providers, and Stripe subscription integration.
 
 ## Type Safety Requirements
 
 ### Session Types
+
 ```typescript
 // Server-side session access
 import { auth, type Session, type User, type Subscription } from "@weldr/auth";
@@ -24,6 +26,7 @@ const email: string = session.user.email;
 ```
 
 ### Client-Side Types
+
 ```typescript
 // Client-side auth hooks
 import { authClient } from "@weldr/auth/client";
@@ -32,13 +35,15 @@ const { data: session, isPending, error } = authClient.useSession();
 
 // Type-safe session access
 if (session?.user) {
-  console.log(session.user.id);
+  const userId = session.user.id;
+  // Use userId for authenticated operations
 }
 ```
 
 ## Configuration Patterns
 
 ### Server-Side Auth Setup
+
 ```typescript
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -88,28 +93,29 @@ export const auth = betterAuth({
   // Plugins
   plugins: [
     admin(),
-    stripe({ /* config */ }),
+    stripe({
+      /* config */
+    }),
     organization(),
   ],
 });
 ```
 
 ### Client-Side Auth Setup
+
 ```typescript
 import { createAuthClient } from "better-auth/react";
 import { adminClient, stripeClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
-  plugins: [
-    adminClient(),
-    stripeClient({ subscription: true }),
-  ],
+  plugins: [adminClient(), stripeClient({ subscription: true })],
 });
 ```
 
 ## Session Management
 
 ### Server-Side Session Access
+
 ```typescript
 import { auth } from "@weldr/auth";
 
@@ -125,6 +131,7 @@ const sessions = await auth.api.listSessions({
 ```
 
 ### Client-Side Session Access
+
 ```typescript
 import { authClient } from "@weldr/auth/client";
 
@@ -140,6 +147,7 @@ function MyComponent() {
 ```
 
 ### Session Operations
+
 ```typescript
 // Sign out
 await authClient.signOut();
@@ -151,6 +159,7 @@ await authClient.revokeSession({ token: sessionToken });
 ## Authentication Flows
 
 ### Email/Password Sign Up
+
 ```typescript
 const result = await authClient.signUp.email({
   email: "user@example.com",
@@ -164,6 +173,7 @@ if (result.error) {
 ```
 
 ### Email/Password Sign In
+
 ```typescript
 const result = await authClient.signIn.email({
   email: "user@example.com",
@@ -173,6 +183,7 @@ const result = await authClient.signIn.email({
 ```
 
 ### Social Sign In
+
 ```typescript
 // GitHub OAuth
 await authClient.signIn.social({
@@ -188,6 +199,7 @@ await authClient.signIn.social({
 ```
 
 ### Password Reset
+
 ```typescript
 // Request reset email
 await authClient.forgetPassword({
@@ -205,6 +217,7 @@ await authClient.resetPassword({
 ## Protected Routes
 
 ### Next.js Middleware Pattern
+
 ```typescript
 // middleware.ts
 import { auth } from "@weldr/auth";
@@ -231,6 +244,7 @@ export const config = {
 ```
 
 ### tRPC Protected Procedure
+
 ```typescript
 // In @weldr/api
 import type { Session } from "@weldr/auth";
@@ -254,6 +268,7 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 ## Email Integration
 
 ### Sending Verification Emails
+
 ```typescript
 import { Resend } from "resend";
 import VerificationEmail from "@weldr/emails/verification-email";
@@ -274,6 +289,7 @@ await resend.emails.send({
 ```
 
 ### Sending Password Reset Emails
+
 ```typescript
 import ResetPasswordEmail from "@weldr/emails/reset-password";
 
@@ -293,6 +309,7 @@ await resend.emails.send({
 ## Admin Operations
 
 ### User Management
+
 ```typescript
 import { authClient } from "@weldr/auth/client";
 
@@ -322,6 +339,7 @@ await authClient.admin.unbanUser({
 ```
 
 ### Session Management
+
 ```typescript
 // Revoke all sessions for a user
 await authClient.admin.revokeUserSessions({
@@ -337,6 +355,7 @@ await authClient.admin.impersonateUser({
 ## Stripe Integration
 
 ### Subscription Configuration
+
 ```typescript
 stripe({
   stripeClient,
@@ -352,10 +371,11 @@ stripe({
       },
     ],
   },
-})
+});
 ```
 
 ### Checking Subscription
+
 ```typescript
 const session = await auth.api.getSession({ headers });
 
@@ -386,22 +406,23 @@ export type Subscription = {
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `BETTER_AUTH_SECRET` | Yes | Auth secret key |
-| `NEXT_PUBLIC_BASE_URL` | Yes | Base URL for auth callbacks |
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `RESEND_API_KEY` | Yes | Email delivery service |
-| `GITHUB_CLIENT_ID` | No | GitHub OAuth |
-| `GITHUB_CLIENT_SECRET` | No | GitHub OAuth |
-| `GOOGLE_CLIENT_ID` | No | Google OAuth |
-| `GOOGLE_CLIENT_SECRET` | No | Google OAuth |
-| `STRIPE_SECRET_KEY` | No | Stripe API |
-| `STRIPE_WEBHOOK_SECRET` | No | Stripe webhooks |
+| Variable                | Required | Description                  |
+| ----------------------- | -------- | ---------------------------- |
+| `BETTER_AUTH_SECRET`    | Yes      | Auth secret key              |
+| `NEXT_PUBLIC_BASE_URL`  | Yes      | Base URL for auth callbacks  |
+| `DATABASE_URL`          | Yes      | PostgreSQL connection string |
+| `RESEND_API_KEY`        | Yes      | Email delivery service       |
+| `GITHUB_CLIENT_ID`      | No       | GitHub OAuth                 |
+| `GITHUB_CLIENT_SECRET`  | No       | GitHub OAuth                 |
+| `GOOGLE_CLIENT_ID`      | No       | Google OAuth                 |
+| `GOOGLE_CLIENT_SECRET`  | No       | Google OAuth                 |
+| `STRIPE_SECRET_KEY`     | No       | Stripe API                   |
+| `STRIPE_WEBHOOK_SECRET` | No       | Stripe webhooks              |
 
 ## Security Patterns
 
 ### Password Validation
+
 ```typescript
 // From @weldr/shared/validators/auth
 const passwordSchema = z
@@ -414,11 +435,13 @@ const passwordSchema = z
 ```
 
 ### Secure Cookies
+
 - Cookie prefix: "weldr"
 - Secure cookies in production
 - HTTP-only cookies for session tokens
 
 ### Trusted Origins
+
 ```typescript
 trustedOrigins: ["https://weldr.ai", "http://localhost:3000"],
 ```
@@ -426,6 +449,7 @@ trustedOrigins: ["https://weldr.ai", "http://localhost:3000"],
 ## Do's and Don'ts
 
 ### Do's
+
 - Always check session before accessing protected resources
 - Use `protectedProcedure` in tRPC for authenticated routes
 - Validate passwords with the shared schema
@@ -435,6 +459,7 @@ trustedOrigins: ["https://weldr.ai", "http://localhost:3000"],
 - Use environment variables for all secrets
 
 ### Don'ts
+
 - Expose session tokens in client-side code
 - Skip email verification in production
 - Store passwords in plain text

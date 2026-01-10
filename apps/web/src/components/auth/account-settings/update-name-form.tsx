@@ -37,8 +37,7 @@ const updateNameSchema = z.object({
       message: "Name cannot be longer than 50 characters.",
     })
     .regex(/^[a-zA-Z\s'-]+$/, {
-      message:
-        "Name can only contain letters, spaces, hyphens and apostrophes.",
+      message: "Name can only contain letters, spaces, hyphens and apostrophes.",
     }),
 });
 
@@ -99,9 +98,7 @@ export function UpdateNameForm({
     <Card>
       <CardHeader>
         <CardTitle>General Settings</CardTitle>
-        <CardDescription>
-          Enter your full name or display name you want to use.
-        </CardDescription>
+        <CardDescription>Enter your full name or display name you want to use.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -113,11 +110,7 @@ export function UpdateNameForm({
                 <FormItem>
                   <FormLabel>Name</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="Enter your name"
-                      {...field}
-                      disabled={isSubmitting}
-                    />
+                    <Input placeholder="Enter your name" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -126,15 +119,9 @@ export function UpdateNameForm({
             <div className="flex justify-end">
               <Button
                 type="submit"
-                disabled={
-                  isSubmitting ||
-                  !form.formState.isValid ||
-                  !form.formState.isDirty
-                }
+                disabled={isSubmitting || !form.formState.isValid || !form.formState.isDirty}
               >
-                {isSubmitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Update
               </Button>
             </div>

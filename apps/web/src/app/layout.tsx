@@ -1,7 +1,7 @@
 import { ReactFlowProvider } from "@xyflow/react";
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { Poppins } from "next/font/google";
 
 import { Toaster } from "@weldr/ui/components/toaster";
 import { TooltipProvider } from "@weldr/ui/components/tooltip";
@@ -11,7 +11,6 @@ import { QueryProvider } from "@/components/query-client-provider";
 import { UIStoreProvider } from "@/lib/context/ui-store";
 import { TRPCReactProvider } from "@/lib/trpc/react";
 import { HydrateClient } from "@/lib/trpc/server";
-
 import "@/lib/shutdown";
 import "@weldr/ui/styles/globals.css";
 
@@ -31,15 +30,10 @@ const fontMono = Poppins({
 
 export const metadata: Metadata = {
   title: "Weldr",
-  description:
-    "Build full-stack apps, LLM agents and workflow automation in minutes!",
+  description: "Build full-stack apps, LLM agents and workflow automation in minutes!",
 };
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body

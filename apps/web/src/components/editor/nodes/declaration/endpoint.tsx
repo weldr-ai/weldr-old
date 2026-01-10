@@ -15,12 +15,7 @@ import { ProtectedBadge } from "../components/protected-badge";
 import { Status } from "../components/status";
 
 export const EndpointNode = memo(
-  ({
-    data: _data,
-    selected,
-    positionAbsoluteX,
-    positionAbsoluteY,
-  }: CanvasNodeProps) => {
+  ({ data: _data, selected, positionAbsoluteX, positionAbsoluteY }: CanvasNodeProps) => {
     const trpc = useTRPC();
 
     const { data: declaration } = useQuery(
@@ -43,41 +38,25 @@ export const EndpointNode = memo(
 
     useEffect(() => {
       const handleClickOutside = (event: Event) => {
-        if (
-          isExpanded &&
-          cardRef.current &&
-          !cardRef.current.contains(event.target as Node)
-        ) {
+        if (isExpanded && cardRef.current && !cardRef.current.contains(event.target as Node)) {
           setIsExpanded(false);
           if (
             "onCollapse" in _data &&
-            typeof (_data as unknown as Record<string, unknown>).onCollapse ===
-              "function"
+            typeof (_data as unknown as Record<string, unknown>).onCollapse === "function"
           ) {
-            (
-              (_data as unknown as Record<string, unknown>)
-                .onCollapse as () => void
-            )();
+            ((_data as unknown as Record<string, unknown>).onCollapse as () => void)();
           }
         }
       };
 
       const handleDocumentClick = (event: MouseEvent) => {
-        if (
-          isExpanded &&
-          cardRef.current &&
-          !cardRef.current.contains(event.target as Node)
-        ) {
+        if (isExpanded && cardRef.current && !cardRef.current.contains(event.target as Node)) {
           setIsExpanded(false);
           if (
             "onCollapse" in _data &&
-            typeof (_data as unknown as Record<string, unknown>).onCollapse ===
-              "function"
+            typeof (_data as unknown as Record<string, unknown>).onCollapse === "function"
           ) {
-            (
-              (_data as unknown as Record<string, unknown>)
-                .onCollapse as () => void
-            )();
+            ((_data as unknown as Record<string, unknown>).onCollapse as () => void)();
           }
         }
       };
@@ -109,12 +88,9 @@ export const EndpointNode = memo(
         // Call onExpand callback if it exists
         if (
           "onExpand" in _data &&
-          typeof (_data as unknown as Record<string, unknown>).onExpand ===
-            "function"
+          typeof (_data as unknown as Record<string, unknown>).onExpand === "function"
         ) {
-          (
-            (_data as unknown as Record<string, unknown>).onExpand as () => void
-          )();
+          ((_data as unknown as Record<string, unknown>).onExpand as () => void)();
         }
         fitBounds(
           {
@@ -139,8 +115,7 @@ export const EndpointNode = memo(
             {
               "border-primary": selected,
               "max-h-[400px] w-[300px]": !isExpanded,
-              "-translate-x-[72px] -translate-y-[108px] h-[400px] w-[500px]":
-                isExpanded,
+              "-translate-x-[72px] -translate-y-[108px] h-[400px] w-[500px]": isExpanded,
             },
           )}
           onClick={handleCardClick}
@@ -158,36 +133,31 @@ export const EndpointNode = memo(
                       "bg-primary/30 text-primary": specs.method === "get",
                       "bg-success/30 text-success": specs.method === "post",
                       "bg-warning/30 text-warning": specs.method === "put",
-                      "bg-destructive/30 text-destructive":
-                        specs.method === "delete",
+                      "bg-destructive/30 text-destructive": specs.method === "delete",
                       "p-0 font-semibold text-primary text-xs": !specs.method,
                     })}
                   >
                     {specs.method?.toUpperCase() || "API"}
                   </Badge>
                   <span className="truncate font-mono text-xs">
-                    {(specs.path || "/api/endpoint")
-                      .split(/(\{[^}]+\})/)
-                      .map((part) => (
-                        <span
-                          key={part || `path-segment-${Math.random()}`}
-                          className={cn(
-                            part.startsWith("{") && part.endsWith("}")
-                              ? "font-medium text-warning"
-                              : "text-muted-foreground",
-                          )}
-                        >
-                          {part}
-                        </span>
-                      ))}
+                    {(specs.path || "/api/endpoint").split(/(\{[^}]+\})/).map((part) => (
+                      <span
+                        key={part || `path-segment-${Math.random()}`}
+                        className={cn(
+                          part.startsWith("{") && part.endsWith("}")
+                            ? "font-medium text-warning"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        {part}
+                      </span>
+                    ))}
                   </span>
                 </div>
                 <ProtectedBadge protected={specs.protected ?? false} />
               </div>
               {specs.summary && (
-                <span className="w-full truncate text-start text-sm">
-                  {specs.summary}
-                </span>
+                <span className="w-full truncate text-start text-sm">{specs.summary}</span>
               )}
               {specs.description && (
                 <span className="w-full text-start text-muted-foreground text-xs">
@@ -202,16 +172,12 @@ export const EndpointNode = memo(
               <div className="flex flex-col items-start justify-start gap-2 border-b p-4">
                 <div className="flex w-full items-center justify-between">
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="font-semibold text-primary text-xs">
-                      REST
-                    </span>
+                    <span className="font-semibold text-primary text-xs">REST</span>
                     <span className="text-muted-foreground">Endpoint</span>
                   </div>
                   <ProtectedBadge protected={specs.protected ?? false} />
                 </div>
-                <h3 className="text-sm">
-                  {specs.summary || specs.path || "API Endpoint"}
-                </h3>
+                <h3 className="text-sm">{specs.summary || specs.path || "API Endpoint"}</h3>
               </div>
 
               {/* Content */}

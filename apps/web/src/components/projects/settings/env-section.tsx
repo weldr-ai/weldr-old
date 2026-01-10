@@ -60,20 +60,14 @@ export function EnvSection({
           <span>Environment Variables</span>
           <CreateEnvironmentVariableDialog />
         </CardTitle>
-        <CardDescription>
-          Manage your project environment variables
-        </CardDescription>
+        <CardDescription>Manage your project environment variables</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
           {environmentVariables.map((envVar) => (
             <div key={envVar.id} className="flex items-center justify-between">
               <span>{envVar.key}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setDeleteDialogOpen(true)}
-              >
+              <Button variant="ghost" size="icon" onClick={() => setDeleteDialogOpen(true)}>
                 <Trash2Icon className="size-4 text-destructive" />
               </Button>
               <DeleteAlertDialog

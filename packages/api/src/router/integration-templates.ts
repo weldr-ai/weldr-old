@@ -34,36 +34,32 @@ export const integrationTemplatesRouter = createTRPCRouter({
       orderBy: (templates, { asc }) => [asc(templates.key)],
     });
   }),
-  byId: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .query(async ({ input }) => {
-      const integrationTemplate = await db.query.integrationTemplates.findFirst(
-        {
-          where: (templates, { eq }) => eq(templates.id, input.id),
-          columns: {
-            id: true,
-            name: true,
-            description: true,
-            key: true,
-            isRecommended: true,
-            version: true,
-            variables: true,
-            options: true,
-            recommendedOptions: true,
-          },
-          with: {
-            category: true,
-          },
-        },
-      );
+  byId: publicProcedure.input(z.object({ id: z.string() })).query(async ({ input }) => {
+    const integrationTemplate = await db.query.integrationTemplates.findFirst({
+      where: (templates, { eq }) => eq(templates.id, input.id),
+      columns: {
+        id: true,
+        name: true,
+        description: true,
+        key: true,
+        isRecommended: true,
+        version: true,
+        variables: true,
+        options: true,
+        recommendedOptions: true,
+      },
+      with: {
+        category: true,
+      },
+    });
 
-      if (!integrationTemplate) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Integration template not found",
-        });
-      }
+    if (!integrationTemplate) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Integration template not found",
+      });
+    }
 
-      return integrationTemplate;
-    }),
+    return integrationTemplate;
+  }),
 });

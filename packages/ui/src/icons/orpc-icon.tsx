@@ -11,14 +11,7 @@ export function ORPCIcon(props: ComponentProps<"svg">) {
       {...props}
     >
       <title>ORPC</title>
-      <circle
-        cx="300"
-        cy="300"
-        r="299"
-        fill="#000"
-        stroke="#2F3336"
-        strokeWidth="2"
-      />
+      <circle cx="300" cy="300" r="299" fill="#000" stroke="#2F3336" strokeWidth="2" />
     </svg>
   );
 }

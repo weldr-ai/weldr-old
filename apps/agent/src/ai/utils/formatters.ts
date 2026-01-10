@@ -18,9 +18,7 @@ import type { pageDeclarationSpecsSchema } from "@weldr/shared/validators/declar
 export function formatEndpointToMarkdown(
   endpoint: z.infer<typeof endpointDeclarationSpecsSchema>,
 ): string {
-  let markdown = `\`\`\`http\n${endpoint.method.toUpperCase()} ${
-    endpoint.path
-  }\n\`\`\`\n\n`;
+  let markdown = `\`\`\`http\n${endpoint.method.toUpperCase()} ${endpoint.path}\n\`\`\`\n\n`;
   markdown += `**Summary:** ${endpoint.summary}\n\n`;
   if (endpoint.description) {
     markdown += `**Description:** ${endpoint.description}\n\n`;
@@ -50,15 +48,10 @@ export function formatEndpointToMarkdown(
     for (const contentType in endpoint.requestBody.content) {
       markdown += `*   **${contentType}**\n`;
       const schema =
-        endpoint.requestBody.content[
-          contentType as keyof typeof endpoint.requestBody.content
-        ]?.schema;
+        endpoint.requestBody.content[contentType as keyof typeof endpoint.requestBody.content]
+          ?.schema;
       if (schema) {
-        markdown += `    \`\`\`json\n${JSON.stringify(
-          schema,
-          null,
-          2,
-        )}\n\`\`\`\n`;
+        markdown += `    \`\`\`json\n${JSON.stringify(schema, null, 2)}\n\`\`\`\n`;
       }
     }
     markdown += "\n";
@@ -72,15 +65,9 @@ export function formatEndpointToMarkdown(
       if (response.content) {
         for (const contentType in response.content) {
           markdown += `    *   **${contentType}**\n`;
-          const schema =
-            response.content[contentType as keyof typeof response.content]
-              ?.schema;
+          const schema = response.content[contentType as keyof typeof response.content]?.schema;
           if (schema) {
-            markdown += `        \`\`\`json\n${JSON.stringify(
-              schema,
-              null,
-              2,
-            )}\n\`\`\`\n`;
+            markdown += `        \`\`\`json\n${JSON.stringify(schema, null, 2)}\n\`\`\`\n`;
           }
         }
       }
@@ -101,9 +88,7 @@ export function formatDbModelToMarkdown(
   for (const col of model.columns) {
     markdown += `| \`${col.name}\` | \`${col.type}\` | ${
       col.nullable ?? false
-    } | ${col.isPrimaryKey ?? false} | ${col.unique ?? false} | ${
-      col.default ?? ""
-    } |\n`;
+    } | ${col.isPrimaryKey ?? false} | ${col.unique ?? false} | ${col.default ?? ""} |\n`;
   }
   markdown += "\n";
 
@@ -128,9 +113,7 @@ export function formatDbModelToMarkdown(
   return markdown;
 }
 
-export function formatPageToMarkdown(
-  page: z.infer<typeof pageDeclarationSpecsSchema>,
-): string {
+export function formatPageToMarkdown(page: z.infer<typeof pageDeclarationSpecsSchema>): string {
   let markdown = `**Route:** \`${page.route}\`\n\n`;
   markdown += `**Description:** ${page.description}\n\n`;
   if (page.protected) {
@@ -151,19 +134,13 @@ export function formatPageToMarkdown(
   return markdown;
 }
 
-export function formatDeclarationSpecs(
-  declaration: typeof declarations.$inferSelect,
-): string {
+export function formatDeclarationSpecs(declaration: typeof declarations.$inferSelect): string {
   const specs = declaration.metadata?.specs;
   const data = declaration.metadata?.codeMetadata;
 
   if (
     !specs ||
-    !(
-      specs.type === "endpoint" ||
-      specs.type === "db-model" ||
-      specs.type === "page"
-    )
+    !(specs.type === "endpoint" || specs.type === "db-model" || specs.type === "page")
   ) {
     return "";
   }
@@ -171,8 +148,7 @@ export function formatDeclarationSpecs(
   // Extract position information from data (not specs)
   const position = data?.position;
 
-  const name =
-    specs.type === "endpoint" ? `${specs.method} ${specs.path}` : specs.name;
+  const name = specs.type === "endpoint" ? `${specs.method} ${specs.path}` : specs.name;
   const category = specs.type === "db-model" ? "db_model" : specs.type;
 
   let result = `## ${category}: ${name}\n\n`;
@@ -243,9 +219,7 @@ function formatDeclarationHeader(
   return result;
 }
 
-function formatFunctionDeclaration(
-  data: FunctionDeclarationCodeMetadata,
-): string {
+function formatFunctionDeclaration(data: FunctionDeclarationCodeMetadata): string {
   let result = "";
 
   // Function modifiers (only if present)
@@ -366,9 +340,7 @@ function formatNamespaceDeclaration(
   return result;
 }
 
-function formatInterfaceOrTypeDeclaration(
-  data: InterfaceDeclarationCodeMetadata,
-): string {
+function formatInterfaceOrTypeDeclaration(data: InterfaceDeclarationCodeMetadata): string {
   let result = "";
 
   // For interfaces, show extends information
@@ -412,13 +384,8 @@ function formatUsageInfo(data: DeclarationMetadata): string {
   }
 
   // Show external dependencies
-  if (
-    data.codeMetadata?.dependencies &&
-    data.codeMetadata.dependencies.length > 0
-  ) {
-    const externalDeps = data.codeMetadata.dependencies.filter(
-      (dep) => dep.type === "external",
-    );
+  if (data.codeMetadata?.dependencies && data.codeMetadata.dependencies.length > 0) {
+    const externalDeps = data.codeMetadata.dependencies.filter((dep) => dep.type === "external");
     if (externalDeps.length > 0) {
       result += "**Requires:** ";
       result += externalDeps.map((dep) => `\`${dep.packageName}\``).join(", ");
@@ -429,9 +396,7 @@ function formatUsageInfo(data: DeclarationMetadata): string {
   return result;
 }
 
-export function formatDeclarationData(
-  declaration: typeof declarations.$inferSelect,
-): string {
+export function formatDeclarationData(declaration: typeof declarations.$inferSelect): string {
   const data = declaration.metadata;
 
   if (!data) {
@@ -443,24 +408,16 @@ export function formatDeclarationData(
   // Dispatch based on declaration type
   switch (data.codeMetadata?.type) {
     case "function":
-      result += formatFunctionDeclaration(
-        data.codeMetadata as FunctionDeclarationCodeMetadata,
-      );
+      result += formatFunctionDeclaration(data.codeMetadata as FunctionDeclarationCodeMetadata);
       break;
     case "class":
-      result += formatClassDeclaration(
-        data.codeMetadata as ClassDeclarationCodeMetadata,
-      );
+      result += formatClassDeclaration(data.codeMetadata as ClassDeclarationCodeMetadata);
       break;
     case "enum":
-      result += formatEnumDeclaration(
-        data.codeMetadata as EnumDeclarationCodeMetadata,
-      );
+      result += formatEnumDeclaration(data.codeMetadata as EnumDeclarationCodeMetadata);
       break;
     case "namespace":
-      result += formatNamespaceDeclaration(
-        data.codeMetadata as NamespaceDeclarationCodeMetadata,
-      );
+      result += formatNamespaceDeclaration(data.codeMetadata as NamespaceDeclarationCodeMetadata);
       break;
     case "interface":
     case "type":
@@ -471,9 +428,7 @@ export function formatDeclarationData(
     case "const":
     case "let":
     case "var":
-      result += formatVariableDeclaration(
-        data.codeMetadata as VariableDeclarationCodeMetadata,
-      );
+      result += formatVariableDeclaration(data.codeMetadata as VariableDeclarationCodeMetadata);
       break;
     default:
       break;

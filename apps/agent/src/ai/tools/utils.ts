@@ -3,11 +3,7 @@ import type { z } from "zod";
 
 import type { WorkflowContext } from "@/workflow/context";
 
-type ToolConfig<
-  TName extends string,
-  TInput extends z.ZodSchema,
-  TOutput extends z.ZodSchema,
-> = {
+type ToolConfig<TName extends string, TInput extends z.ZodSchema, TOutput extends z.ZodSchema> = {
   name: TName;
   description: string;
   whenToUse: string;

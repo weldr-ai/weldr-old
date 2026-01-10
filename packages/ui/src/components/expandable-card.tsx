@@ -39,38 +39,22 @@ const ExpandableCardTrigger = React.forwardRef<
   React.HTMLAttributes<HTMLButtonElement>
 >(({ className, ...props }, ref) => {
   const { onOpenChange } = useExpandableCardContext();
-  return (
-    <button
-      ref={ref}
-      className={className}
-      {...props}
-      onClick={() => onOpenChange(true)}
-    />
-  );
+  return <button ref={ref} className={className} {...props} onClick={() => onOpenChange(true)} />;
 });
 ExpandableCardTrigger.displayName = "ExpandableCardTrigger";
 
-const ExpandableCardHeader = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("flex flex-col px-4 pt-4", className)}
-    {...props}
-  />
-));
+const ExpandableCardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("flex flex-col px-4 pt-4", className)} {...props} />
+  ),
+);
 ExpandableCardHeader.displayName = "ExpandableCardHeaderHeader";
 
 const ExpandableCardTitle = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLHeadingElement>
 >(({ className, ...props }, ref) => (
-  <h3
-    ref={ref}
-    className={cn("font-semibold leading-none tracking-tight", className)}
-    {...props}
-  />
+  <h3 ref={ref} className={cn("font-semibold leading-none tracking-tight", className)} {...props} />
 ));
 ExpandableCardTitle.displayName = "ExpandableCardTitle";
 
@@ -78,11 +62,7 @@ const ExpandableCardDescription = React.forwardRef<
   HTMLParagraphElement,
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
-  <p
-    ref={ref}
-    className={cn("text-muted-foreground text-sm", className)}
-    {...props}
-  />
+  <p ref={ref} className={cn("text-muted-foreground text-sm", className)} {...props} />
 ));
 ExpandableCardDescription.displayName = "ExpandableCardDescription";
 
@@ -92,7 +72,6 @@ const ExpandableCardContent = React.forwardRef<
 >(({ className, ...props }, ref) => {
   const { open, onOpenChange } = useExpandableCardContext();
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: More control is needed here
   React.useEffect(() => {
     const handleClickOnPane = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -122,16 +101,11 @@ const ExpandableCardContent = React.forwardRef<
 });
 ExpandableCardContent.displayName = "ExpandableCardContent";
 
-const ExpandableCardFooter = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("flex items-center p-6 pt-0", className)}
-    {...props}
-  />
-));
+const ExpandableCardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("flex items-center p-6 pt-0", className)} {...props} />
+  ),
+);
 ExpandableCardFooter.displayName = "ExpandableCardFooter";
 
 export {

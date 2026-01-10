@@ -6,14 +6,8 @@ import { Logger } from "@weldr/shared/logger";
 import { registry } from "./registry";
 
 const projectSchema = z.object({
-  title: z
-    .string()
-    .describe(
-      "A concise, professional project title (3-4 words max, Title Case)",
-    ),
-  description: z
-    .string()
-    .describe("A brief, clear description of the project (1-2 sentences)"),
+  title: z.string().describe("A concise, professional project title (3-4 words max, Title Case)"),
+  description: z.string().describe("A brief, clear description of the project (1-2 sentences)"),
 });
 
 export async function generateProjectInfo(messages: ModelMessage[]) {

@@ -4,12 +4,7 @@ import { Logger } from "@weldr/shared/logger";
 import { nanoid } from "@weldr/shared/nanoid";
 
 import { prompts } from "@/ai/prompts";
-import {
-  addIntegrationsTool,
-  bashTool,
-  callCoderTool,
-  searchCodebaseTool,
-} from "@/ai/tools";
+import { addIntegrationsTool, bashTool, callCoderTool, searchCodebaseTool } from "@/ai/tools";
 import { getMessages } from "@/ai/utils/get-messages";
 import { registry } from "@/ai/utils/registry";
 import { stream } from "@/lib/stream-utils";

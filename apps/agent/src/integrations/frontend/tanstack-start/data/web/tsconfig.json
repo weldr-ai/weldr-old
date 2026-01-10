@@ -24,6 +24,6 @@
     "paths": {
       "@repo/web/*": ["./src/*"]
     },
-    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json"
+    "tsBuildInfoFile": ".tsbuildinfo",
   }
 }

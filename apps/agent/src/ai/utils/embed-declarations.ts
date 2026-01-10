@@ -12,7 +12,7 @@ import { registry } from "./registry";
 
 export async function embedDeclaration(
   declarationMetadata: DeclarationMetadata,
-) {
+): Promise<number[] | undefined> {
   try {
     // Generate searchable text from semantic data and specs
     const embeddingText = generateEmbeddingText(
@@ -27,9 +27,7 @@ export async function embedDeclaration(
     }
 
     // Generate embedding using OpenAI's text-embedding-ada-002
-    const embeddingModel = registry.textEmbeddingModel(
-      "openai:text-embedding-ada-002",
-    );
+    const embeddingModel = registry.textEmbeddingModel("openai:text-embedding-ada-002");
 
     const { embeddings } = await embedMany({
       model: embeddingModel,
@@ -61,6 +59,7 @@ export async function embedDeclaration(
         error: error instanceof Error ? error.message : String(error),
       },
     });
+    return;
   }
 }
 
@@ -93,9 +92,7 @@ function generateEmbeddingText(
 
     // Add common use cases
     if (semanticData.usagePattern.commonUseCases.length > 0) {
-      textParts.push(
-        `Use cases: ${semanticData.usagePattern.commonUseCases.join(", ")}`,
-      );
+      textParts.push(`Use cases: ${semanticData.usagePattern.commonUseCases.join(", ")}`);
     }
   }
 
@@ -126,9 +123,7 @@ function generateEmbeddingText(
 
         // Add column information
         if (specs.columns && specs.columns.length > 0) {
-          const columnNames = specs.columns.map(
-            (col) => `${col.name} (${col.type})`,
-          );
+          const columnNames = specs.columns.map((col) => `${col.name} (${col.type})`);
           textParts.push(`Columns: ${columnNames.join(", ")}`);
         }
 

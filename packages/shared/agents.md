@@ -1,11 +1,13 @@
 # Shared Package Development Guidelines
 
 ## Overview
+
 The @weldr/shared package provides shared utilities, types, validators, and integrations used across all packages in the Weldr monorepo. It includes logging, ID generation, Zod validators, and external service integrations (Fly.io, Tigris).
 
 ## Type Safety Requirements
 
 ### Type Definitions
+
 ```typescript
 // ALWAYS export explicit types
 export interface Project {
@@ -38,6 +40,7 @@ export interface ToolMessage {
 ```
 
 ### Zod Validators
+
 ```typescript
 import { z } from "zod";
 
@@ -61,6 +64,7 @@ export const updateProjectSchema = insertProjectSchema.partial();
 ## Logger Usage
 
 ### Logger Module
+
 ```typescript
 import { Logger } from "@weldr/shared/logger";
 
@@ -72,6 +76,7 @@ Logger.debug("Debug information", { data });
 ```
 
 ### Contextual Logger
+
 ```typescript
 // Get logger with persistent context
 const logger = Logger.get({
@@ -85,6 +90,7 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 ```
 
 ### Log Levels
+
 - `trace` - Detailed tracing information
 - `debug` - Debug information for development
 - `info` - General operational information
@@ -93,6 +99,7 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 - `fatal` - Critical failures
 
 ### Environment Configuration
+
 ```bash
 # Set log level via environment variable
 LOG_LEVEL=debug  # trace, debug, info, warn, error, fatal
@@ -101,6 +108,7 @@ LOG_LEVEL=debug  # trace, debug, info, warn, error, fatal
 ## Utility Functions
 
 ### Nanoid Generation
+
 ```typescript
 import { nanoid } from "@weldr/shared/nanoid";
 
@@ -109,15 +117,17 @@ const id = nanoid(); // e.g., "a1b2c3d4e5f6g7h8"
 ```
 
 ### String Utilities
+
 ```typescript
 import { toKebabCase, toSentence, toTitle } from "@weldr/shared/utils";
 
-toKebabCase("camelCase");    // "camel-case"
-toSentence("camelCase");     // "camel Case"
-toTitle("kebab-case");       // "Kebab Case"
+toKebabCase("camelCase"); // "camel-case"
+toSentence("camelCase"); // "camel Case"
+toTitle("kebab-case"); // "Kebab Case"
 ```
 
 ### Color Utilities
+
 ```typescript
 import {
   hexToHsl,
@@ -127,13 +137,14 @@ import {
   toCssVariables,
 } from "@weldr/shared/color-utils";
 
-hexToHsl("#ff0000");         // "hsl(0, 100%, 50%)"
-isValidHex("#ff0000");       // true
+hexToHsl("#ff0000"); // "hsl(0, 100%, 50%)"
+isValidHex("#ff0000"); // true
 isValidHsl("hsl(0, 100%, 50%)"); // true
-parseHsl("hsl(0, 100%, 50%)");   // "0 100% 50%"
+parseHsl("hsl(0, 100%, 50%)"); // "0 100% 50%"
 ```
 
 ### Text Processing
+
 ```typescript
 import { processText, parseReferences } from "@weldr/shared/process-text";
 
@@ -145,6 +156,7 @@ const parts = processText("Check <Reference type='page' id='home' /> page");
 ## State Management
 
 ### Workspace Utilities
+
 ```typescript
 import {
   isLocalMode,
@@ -173,6 +185,7 @@ await initializeWorkspace();
 ## Fly.io Integration
 
 ### App Operations
+
 ```typescript
 import { Fly } from "@weldr/shared/fly";
 
@@ -193,19 +206,13 @@ await Fly.app.destroy(appName);
 ```
 
 ### Machine Operations
+
 ```typescript
 // Create machine with presets
-const machine = await Fly.machine.create(
-  appName,
-  Fly.machine.presets.development,
-  region,
-);
+const machine = await Fly.machine.create(appName, Fly.machine.presets.development, region);
 
 // Create development machine with volume
-const { machine, volume } = await Fly.machine.createWithVolume(
-  appName,
-  volumeConfig,
-);
+const { machine, volume } = await Fly.machine.createWithVolume(appName, volumeConfig);
 
 // List machines
 const machines = await Fly.machine.list(appName);
@@ -216,6 +223,7 @@ await Fly.machine.destroy(appName, machineId);
 ```
 
 ### Secret Operations
+
 ```typescript
 // Create secrets
 await Fly.secret.create(appName, {
@@ -228,6 +236,7 @@ await Fly.secret.delete(appName, ["DATABASE_URL", "API_KEY"]);
 ```
 
 ### Volume Operations
+
 ```typescript
 // Create volume
 const volume = await Fly.volume.create(appName, {
@@ -243,6 +252,7 @@ await Fly.volume.destroy(appName, volumeId);
 ## Tigris Storage Integration
 
 ### Bucket Operations
+
 ```typescript
 import { Tigris } from "@weldr/shared/tigris";
 
@@ -254,6 +264,7 @@ await Tigris.bucket.delete(bucketName);
 ```
 
 ### Credentials Management
+
 ```typescript
 // Create credentials with IAM policy
 const credentials = await Tigris.credentials.create(projectId, bucketName);
@@ -264,6 +275,7 @@ await Tigris.credentials.delete(projectId);
 ```
 
 ### Signed URLs
+
 ```typescript
 // Generate presigned URL for object
 const url = await Tigris.object.getSignedUrl(bucketName, objectKey, {
@@ -274,6 +286,7 @@ const url = await Tigris.object.getSignedUrl(bucketName, objectKey, {
 ## Validator Organization
 
 ### File Structure
+
 ```
 src/validators/
 ├── auth.ts              # Authentication schemas
@@ -302,6 +315,7 @@ src/validators/
 ```
 
 ### Validator Patterns
+
 ```typescript
 // Base entity schema
 export const projectSchema = z.object({
@@ -329,6 +343,7 @@ export type UpdateProject = z.infer<typeof updateProjectSchema>;
 ## Type Definitions
 
 ### Main Types Export
+
 ```typescript
 // @weldr/shared/types
 export type {
@@ -353,6 +368,7 @@ export type {
 ```
 
 ### SSE/Streaming Types
+
 ```typescript
 export type SSEValue =
   | TextStreamableValue
@@ -372,12 +388,9 @@ export interface SSEEvent {
 ```
 
 ### Declaration Types
+
 ```typescript
-export type DeclarationProgress =
-  | "pending"
-  | "in_progress"
-  | "enriching"
-  | "completed";
+export type DeclarationProgress = "pending" | "in_progress" | "enriching" | "completed";
 
 export interface DeclarationMetadata {
   code: DeclarationCodeMetadata;
@@ -409,6 +422,7 @@ export interface DeclarationMetadata {
 ## Dependencies
 
 ### Runtime Dependencies
+
 - `zod` - Runtime validation
 - `pino` - Structured logging
 - `nanoid` - ID generation
@@ -417,11 +431,13 @@ export interface DeclarationMetadata {
 - `@tigrisdata/storage` - Tigris S3 storage
 
 ### Dev Dependencies
+
 - `pino-pretty` - Pretty logging for development
 
 ## Do's and Don'ts
 
 ### Do's
+
 - Export explicit TypeScript types
 - Use Zod schemas for all validators
 - Use Logger instead of console methods
@@ -432,8 +448,9 @@ export interface DeclarationMetadata {
 - Check `isLocalMode()` before cloud operations
 
 ### Don'ts
+
 - Use `any` type
-- Use `console.log` or other console methods
+- Use `console.log`, `console.error`, or any console methods (use Logger from @weldr/shared)
 - Create validators without type exports
 - Hardcode IDs or secrets
 - Skip validation on external data

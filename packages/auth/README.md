@@ -127,7 +127,9 @@ The auth instance is configured with:
 ```typescript
 import type { Session, User, Subscription } from "@weldr/auth";
 
-const session: Session = await auth.api.getSession({ /* ... */ });
+const session: Session = await auth.api.getSession({
+  /* ... */
+});
 const user: User = session.user;
 ```
 

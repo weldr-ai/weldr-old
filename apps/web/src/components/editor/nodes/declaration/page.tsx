@@ -31,20 +31,18 @@ interface PageNodeHeaderProps {
   children?: React.ReactNode;
 }
 
-const PageNodeHeader = memo(
-  ({ name, protected: isProtected, children }: PageNodeHeaderProps) => (
-    <div className="-top-10 absolute right-0 left-0 z-20 flex h-8 items-center justify-between gap-2 rounded-md border bg-muted px-2 py-1 opacity-0 transition-all duration-200 group-hover:opacity-100">
-      <div className="flex items-center gap-2">
-        <span className="font-semibold text-primary text-xs">PAGE</span>
-        <span className="font-medium text-sm">{name}</span>
-      </div>
-      <div className="flex items-center gap-1">
-        {children}
-        <ProtectedBadge protected={isProtected} />
-      </div>
+const PageNodeHeader = memo(({ name, protected: isProtected, children }: PageNodeHeaderProps) => (
+  <div className="-top-10 absolute right-0 left-0 z-20 flex h-8 items-center justify-between gap-2 rounded-md border bg-muted px-2 py-1 opacity-0 transition-all duration-200 group-hover:opacity-100">
+    <div className="flex items-center gap-2">
+      <span className="font-semibold text-primary text-xs">PAGE</span>
+      <span className="font-medium text-sm">{name}</span>
     </div>
-  ),
-);
+    <div className="flex items-center gap-1">
+      {children}
+      <ProtectedBadge protected={isProtected} />
+    </div>
+  </div>
+));
 
 export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
   if (_data.metadata?.specs?.type !== "page") {
@@ -83,9 +81,7 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
 
   const specs = declaration.metadata?.specs;
 
-  const [parameterValues, setParameterValues] = useState<
-    Record<string, string>
-  >({});
+  const [parameterValues, setParameterValues] = useState<Record<string, string>>({});
   const [showPreview, setShowPreview] = useState(false);
   const [sitePreviewDialogOpen, setSitePreviewDialogOpen] = useState(false);
 
@@ -96,9 +92,7 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
     }
 
     return (
-      specs.parameters
-        ?.filter((param) => param.in === "path")
-        .map((param) => param.name) ?? []
+      specs.parameters?.filter((param) => param.in === "path").map((param) => param.name) ?? []
     );
   }, [specs]);
 
@@ -129,21 +123,11 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
     }
 
     return `${baseUrl}/${route}`;
-  }, [
-    versionToUse?.id,
-    projectId,
-    branch?.id,
-    specs,
-    getRouteParameters,
-    parameterValues,
-  ]);
+  }, [versionToUse?.id, projectId, branch?.id, specs, getRouteParameters, parameterValues]);
 
   const canShowPreview = useCallback(() => {
     const routeParameters = getRouteParameters();
-    return (
-      !routeParameters.length ||
-      routeParameters.every((param) => parameterValues[param])
-    );
+    return !routeParameters.length || routeParameters.every((param) => parameterValues[param]);
   }, [getRouteParameters, parameterValues]);
 
   const getResolvedRoute = useCallback(() => {
@@ -162,19 +146,14 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
 
     for (const param of routeParameters) {
       if (parameterValues[param]) {
-        resolvedRoute = resolvedRoute.replace(
-          `{${param}}`,
-          parameterValues[param],
-        );
+        resolvedRoute = resolvedRoute.replace(`{${param}}`, parameterValues[param]);
       }
     }
 
     return resolvedRoute.split(/(\{[^}]+\})/).map((part) => (
       <span
         key={part || `path-segment-${Math.random()}`}
-        className={cn(
-          part.startsWith("{") && part.endsWith("}") ? "text-warning" : "",
-        )}
+        className={cn(part.startsWith("{") && part.endsWith("}") ? "text-warning" : "")}
       >
         {part}
       </span>
@@ -189,9 +168,7 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
     return specs.route.split(/(\{[^}]+\})/).map((part) => (
       <span
         key={part || `path-segment-${Math.random()}`}
-        className={cn(
-          part.startsWith("{") && part.endsWith("}") ? "text-warning" : "",
-        )}
+        className={cn(part.startsWith("{") && part.endsWith("}") ? "text-warning" : "")}
       >
         {part}
       </span>
@@ -201,10 +178,8 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
   // Determine the current state
   const isVersionCompleted = versionToUse?.status === "completed";
   const isDeclarationCompleted = declaration.progress === "completed";
-  const needsParameters =
-    getRouteParameters().length > 0 && (!showPreview || !canShowPreview());
-  const isPreviewReady =
-    isDeclarationCompleted && isVersionCompleted && !needsParameters;
+  const needsParameters = getRouteParameters().length > 0 && (!showPreview || !canShowPreview());
+  const isPreviewReady = isDeclarationCompleted && isVersionCompleted && !needsParameters;
 
   if (!specs || specs.type !== "page") {
     return null;
@@ -271,22 +246,19 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
                   </div>
                 )}
 
-                {!isVersionCompleted &&
-                  declaration.progress === "completed" && (
-                    <div className="space-y-2">
-                      <LoaderIcon className="mx-auto size-8 animate-spin text-primary" />
-                      <h3 className="font-semibold text-lg">Loading</h3>
-                    </div>
-                  )}
+                {!isVersionCompleted && declaration.progress === "completed" && (
+                  <div className="space-y-2">
+                    <LoaderIcon className="mx-auto size-8 animate-spin text-primary" />
+                    <h3 className="font-semibold text-lg">Loading</h3>
+                  </div>
+                )}
 
                 <div className="flex flex-col items-start gap-1">
                   <span className="text-sm">
-                    <span className="text-muted-foreground">Page:</span>{" "}
-                    {specs.name}
+                    <span className="text-muted-foreground">Page:</span> {specs.name}
                   </span>
                   <span className="text-sm">
-                    <span className="text-muted-foreground">Route:</span>{" "}
-                    {getColorizedRoute()}
+                    <span className="text-muted-foreground">Route:</span> {getColorizedRoute()}
                   </span>
                 </div>
                 <Badge variant="secondary" className="text-xs">
@@ -300,53 +272,48 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
               </>
             )}
 
-            {needsParameters &&
-              isVersionCompleted &&
-              isDeclarationCompleted && (
-                <>
-                  <div className="space-y-2 text-center">
-                    <SettingsIcon className="mx-auto h-8 w-8 text-muted-foreground" />
-                    <h3 className="font-semibold text-lg">
-                      Parameters Required
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      Enter parameter values to preview this page
-                    </p>
-                  </div>
+            {needsParameters && isVersionCompleted && isDeclarationCompleted && (
+              <>
+                <div className="space-y-2 text-center">
+                  <SettingsIcon className="mx-auto h-8 w-8 text-muted-foreground" />
+                  <h3 className="font-semibold text-lg">Parameters Required</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Enter parameter values to preview this page
+                  </p>
+                </div>
 
-                  <div className="w-full max-w-sm space-y-2">
-                    {getRouteParameters().map((param) => (
-                      <div key={param} className="space-y-2">
-                        <Label>{param}</Label>
-                        <Input
-                          id={`param-${param}`}
-                          placeholder={`Enter ${param}...`}
-                          value={parameterValues[param] || ""}
-                          onChange={(e) =>
-                            setParameterValues((prev) => ({
-                              ...prev,
-                              [param]: e.target.value,
-                            }))
-                          }
-                          className="h-8 w-full"
-                        />
-                      </div>
-                    ))}
-                    <Button
-                      onClick={() => setShowPreview(true)}
-                      disabled={!canShowPreview}
-                      className="w-full"
-                      size="sm"
-                    >
-                      Preview
-                    </Button>
-                  </div>
-                  <span className="text-sm">
-                    <span className="text-muted-foreground">Route:</span>{" "}
-                    {getColorizedRoute()}
-                  </span>
-                </>
-              )}
+                <div className="w-full max-w-sm space-y-2">
+                  {getRouteParameters().map((param) => (
+                    <div key={param} className="space-y-2">
+                      <Label>{param}</Label>
+                      <Input
+                        id={`param-${param}`}
+                        placeholder={`Enter ${param}...`}
+                        value={parameterValues[param] || ""}
+                        onChange={(e) =>
+                          setParameterValues((prev) => ({
+                            ...prev,
+                            [param]: e.target.value,
+                          }))
+                        }
+                        className="h-8 w-full"
+                      />
+                    </div>
+                  ))}
+                  <Button
+                    onClick={() => setShowPreview(true)}
+                    disabled={!canShowPreview}
+                    className="w-full"
+                    size="sm"
+                  >
+                    Preview
+                  </Button>
+                </div>
+                <span className="text-sm">
+                  <span className="text-muted-foreground">Route:</span> {getColorizedRoute()}
+                </span>
+              </>
+            )}
           </CardContent>
         )}
       </Card>

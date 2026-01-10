@@ -1,15 +1,9 @@
 "use client";
 
 import equal from "fast-deep-equal";
-import {
-  $getRoot,
-  type EditorState,
-  type LexicalEditor,
-  type ParagraphNode,
-} from "lexical";
+import { $getRoot, type EditorState, type LexicalEditor, type ParagraphNode } from "lexical";
 import { MicIcon, PlusIcon, SendIcon } from "lucide-react";
-import type React from "react";
-import {
+import React, {
   type ChangeEvent,
   type Dispatch,
   memo,
@@ -64,9 +58,7 @@ type TextareaMultimodalInputProps = BaseMultimodalInputProps & {
   setMessage: (message: string) => void;
 };
 
-type MultimodalInputProps =
-  | EditorMultimodalInputProps
-  | TextareaMultimodalInputProps;
+type MultimodalInputProps = EditorMultimodalInputProps | TextareaMultimodalInputProps;
 
 function PureMultimodalInput({
   type,
@@ -88,9 +80,7 @@ function PureMultimodalInput({
   const { data: session } = authClient.useSession();
   const { setAuthDialogOpen } = useUIStore();
 
-  const [currentPlaceholder, setCurrentPlaceholder] = useState(
-    placeholder ?? "Send a message...",
-  );
+  const [currentPlaceholder, setCurrentPlaceholder] = useState(placeholder ?? "Send a message...");
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorRef = useRef<LexicalEditor | null>(null);
@@ -162,16 +152,19 @@ function PureMultimodalInput({
         title: "Something went wrong!",
         description: error,
       });
-    } catch (_error) {
+
+      return undefined;
+    } catch {
       toast({
         variant: "destructive",
         title: "Something went wrong!",
         description: "Failed to upload file, please try again!",
       });
+
+      return undefined;
     }
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reason
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(event.target.files || []);
@@ -198,7 +191,6 @@ function PureMultimodalInput({
     [setAttachments],
   );
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reason
   const handlePaste = useCallback(
     async (event: ClipboardEvent) => {
       const items = event.clipboardData?.items;
@@ -378,7 +370,7 @@ function PureMultimodalInput({
       {status && (
         <div className="flex items-center gap-2 border-b bg-muted px-2 py-1 text-xs">
           <LogoIcon className="size-4" />
-          <span className="inline-flex w-fit animate-shine bg-[length:200%_100%] bg-[linear-gradient(90deg,var(--color-muted-foreground)_0%,var(--color-muted-foreground)_40%,var(--color-foreground)_50%,var(--color-muted-foreground)_60%,var(--color-muted-foreground)_100%)] bg-clip-text text-transparent">
+          <span className="inline-flex w-fit animate-shine bg-size-[200%_100%] bg-[linear-gradient(90deg,var(--color-muted-foreground)_0%,var(--color-muted-foreground)_40%,var(--color-foreground)_50%,var(--color-muted-foreground)_60%,var(--color-muted-foreground)_100%)] bg-clip-text text-transparent">
             {status.charAt(0).toUpperCase() + status.slice(1)}
             ...
           </span>
@@ -426,8 +418,7 @@ function PureMultimodalInput({
               event.preventDefault();
               if (status) {
                 toast({
-                  description:
-                    "Please wait for the model to finish its response!",
+                  description: "Please wait for the model to finish its response!",
                 });
               } else {
                 submitForm();
@@ -467,16 +458,13 @@ function PureMultimodalInput({
   );
 }
 
-export const MultimodalInput = memo(
-  PureMultimodalInput,
-  (prevProps, nextProps) => {
-    if (!equal(prevProps.message, nextProps.message)) return false;
-    if (prevProps.status !== nextProps.status) return false;
-    if (!equal(prevProps.attachments, nextProps.attachments)) return false;
-    if (prevProps.isVisible !== nextProps.isVisible) return false;
-    return true;
-  },
-);
+export const MultimodalInput = memo(PureMultimodalInput, (prevProps, nextProps) => {
+  if (!equal(prevProps.message, nextProps.message)) return false;
+  if (prevProps.status !== nextProps.status) return false;
+  if (!equal(prevProps.attachments, nextProps.attachments)) return false;
+  if (prevProps.isVisible !== nextProps.isVisible) return false;
+  return true;
+});
 
 function PureAttachmentsButton({
   fileInputRef,
@@ -519,12 +507,7 @@ type SendButtonProps = {
   status: TStatus;
 };
 
-function PureSendButton({
-  submitForm,
-  message,
-  uploadQueue,
-  status,
-}: SendButtonProps) {
+function PureSendButton({ submitForm, message, uploadQueue, status }: SendButtonProps) {
   const { data: session } = authClient.useSession();
   const { setAuthDialogOpen } = useUIStore();
 

@@ -12,20 +12,12 @@ export function VerifyEmailForm({ className }: { className?: string }) {
   const email = searchParams.get("email");
 
   return (
-    <div
-      className={cn(
-        "flex w-full flex-col items-center justify-center gap-2",
-        className,
-      )}
-    >
+    <div className={cn("flex w-full flex-col items-center justify-center gap-2", className)}>
       <LogoIcon className="size-20" />
       <h3 className="text-xl">Email verified successfully!</h3>
       <div className="flex flex-col items-center justify-center">
         <p>Your email has been verified.</p>
-        <Link
-          href="/"
-          className={cn(buttonVariants({ variant: "default" }), "mt-4")}
-        >
+        <Link href="/" className={cn(buttonVariants({ variant: "default" }), "mt-4")}>
           Start Building!
         </Link>
       </div>

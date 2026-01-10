@@ -7,11 +7,7 @@ import { getBranchDir } from "@weldr/shared/state";
 
 import { auth } from "@/lib/auth";
 import { Git } from "@/lib/git";
-import {
-  agentFSManager,
-  createSnapshotService,
-  syncAgentFSToDisk,
-} from "@/lib/storage";
+import { agentFSManager, createSnapshotService, syncAgentFSToDisk } from "@/lib/storage";
 import { createRouter } from "@/lib/utils";
 
 const route = createRoute({
@@ -26,16 +22,12 @@ const route = createRoute({
       content: {
         "application/json": {
           schema: z.object({
-            projectId: z
-              .string()
-              .openapi({ description: "Project ID", example: "123abc" }),
+            projectId: z.string().openapi({ description: "Project ID", example: "123abc" }),
             versionId: z.string().openapi({
               description: "Version ID to revert to",
               example: "456def",
             }),
-            branchId: z
-              .string()
-              .openapi({ description: "Branch ID", example: "789ghi" }),
+            branchId: z.string().openapi({ description: "Branch ID", example: "789ghi" }),
           }),
         },
       },
@@ -82,10 +74,7 @@ router.openapi(route, async (c) => {
   // Validate project, branch, version
   const [project, branch, version] = await Promise.all([
     db.query.projects.findFirst({
-      where: and(
-        eq(projects.id, projectId),
-        eq(projects.userId, session.user.id),
-      ),
+      where: and(eq(projects.id, projectId), eq(projects.userId, session.user.id)),
     }),
     db.query.branches.findFirst({
       where: and(eq(branches.id, branchId), eq(branches.projectId, projectId)),
@@ -206,10 +195,7 @@ router.openapi(route, async (c) => {
         versionId: version.id,
       },
     });
-    return c.json(
-      { error: error instanceof Error ? error.message : "Revert failed" },
-      500,
-    );
+    return c.json({ error: error instanceof Error ? error.message : "Revert failed" }, 500);
   }
 });
 

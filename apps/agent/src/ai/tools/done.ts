@@ -49,9 +49,7 @@ export const doneTool = createTool({
     }
 
     if (activeTasks) {
-      const invalidTasks = taskIdsToComplete.filter(
-        (id) => !activeTasks.includes(id),
-      );
+      const invalidTasks = taskIdsToComplete.filter((id) => !activeTasks.includes(id));
       if (invalidTasks.length > 0) {
         throw new Error(
           `Cannot complete tasks that are not in the current execution plan: ${invalidTasks.join(", ")}`,
@@ -63,10 +61,7 @@ export const doneTool = createTool({
       extra: { taskIds: taskIdsToComplete },
     });
 
-    await db
-      .update(tasks)
-      .set({ status: "completed" })
-      .where(inArray(tasks.id, taskIdsToComplete));
+    await db.update(tasks).set({ status: "completed" }).where(inArray(tasks.id, taskIdsToComplete));
 
     const taskWord = taskIdsToComplete.length === 1 ? "task" : "tasks";
     const message = `${taskIdsToComplete.length} ${taskWord} completed successfully`;
@@ -100,9 +95,7 @@ export const doneTool = createTool({
         });
       }
 
-      logger.info(
-        `Declaration extraction completed: ${processed} files processed`,
-      );
+      logger.info(`Declaration extraction completed: ${processed} files processed`);
 
       // Clear changedFiles after successful extraction
       await db

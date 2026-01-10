@@ -79,10 +79,7 @@ async function getRedisSubscriber(): Promise<RedisClientType> {
 /**
  * Create a stream ID record in the database
  */
-export async function createStreamId(params: {
-  streamId: string;
-  chatId: string;
-}) {
+export async function createStreamId(params: { streamId: string; chatId: string }) {
   const { streamId, chatId } = params;
 
   try {
@@ -99,9 +96,7 @@ export async function createStreamId(params: {
 /**
  * Get all stream IDs for a chat (for resumption)
  */
-export async function getStreamIdsByChatId(params: {
-  chatId: string;
-}): Promise<string[]> {
+export async function getStreamIdsByChatId(params: { chatId: string }): Promise<string[]> {
   try {
     const results = await db
       .select({ id: streams.id })
@@ -111,10 +106,7 @@ export async function getStreamIdsByChatId(params: {
 
     return results.map((row) => row.id);
   } catch (error) {
-    console.error(
-      `[Stream] Failed to get stream IDs for chat ${params.chatId}:`,
-      error,
-    );
+    console.error(`[Stream] Failed to get stream IDs for chat ${params.chatId}:`, error);
     return [];
   }
 }
@@ -157,10 +149,7 @@ export async function createSSEStream(
             controller.enqueue(sseData);
           } catch (error) {
             // Check if it's a disconnect error (enqueue failed)
-            if (
-              error instanceof TypeError &&
-              error.message.includes("enqueue")
-            ) {
+            if (error instanceof TypeError && error.message.includes("enqueue")) {
               Logger.info("Client disconnected (enqueue failed)", {
                 extra: { streamId, chatId },
               });
@@ -169,12 +158,9 @@ export async function createSSEStream(
               db.delete(streams)
                 .where(eq(streams.id, streamId))
                 .catch((err) => {
-                  Logger.error(
-                    "Failed to delete stream from database on disconnect",
-                    {
-                      error: err,
-                    },
-                  );
+                  Logger.error("Failed to delete stream from database on disconnect", {
+                    error: err,
+                  });
                 });
             } else {
               Logger.error("Failed to parse Redis message", { error, message });
@@ -184,11 +170,7 @@ export async function createSSEStream(
 
         // Send buffered events from Redis
         // If lastEventId is provided, only send events after that ID
-        const bufferedEvents = await redis.lRange(
-          `${channelName}:buffer`,
-          0,
-          -1,
-        );
+        const bufferedEvents = await redis.lRange(`${channelName}:buffer`, 0, -1);
 
         let skipRemaining = !!lastEventId; // Skip until we find the lastEventId
         let foundLastEvent = false;
@@ -216,10 +198,7 @@ export async function createSSEStream(
             controller.enqueue(sseData);
           } catch (error) {
             // Check if it's a disconnect error (enqueue failed)
-            if (
-              error instanceof TypeError &&
-              error.message.includes("enqueue")
-            ) {
+            if (error instanceof TypeError && error.message.includes("enqueue")) {
               Logger.info("Client disconnected during buffer replay", {
                 extra: { streamId, chatId },
               });
@@ -243,12 +222,9 @@ export async function createSSEStream(
         }
 
         if (lastEventId && !foundLastEvent) {
-          Logger.warn(
-            "Last event ID not found in buffer, sending all buffered events",
-            {
-              extra: { streamId, chatId, lastEventId },
-            },
-          );
+          Logger.warn("Last event ID not found in buffer, sending all buffered events", {
+            extra: { streamId, chatId, lastEventId },
+          });
         }
 
         Logger.info("Redis streaming initialized", {

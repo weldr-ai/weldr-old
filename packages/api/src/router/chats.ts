@@ -1,15 +1,11 @@
-import type { TRPCRouterRecord } from "@trpc/server";
-import { TRPCError } from "@trpc/server";
+import { type TRPCRouterRecord, TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { chatMessages, chats } from "@weldr/db/schema";
 import { Tigris } from "@weldr/shared/tigris";
 import type { ChatMessage } from "@weldr/shared/types";
-import {
-  addMessageItemSchema,
-  updateMessageItemSchema,
-} from "@weldr/shared/validators/chats";
+import { addMessageItemSchema, updateMessageItemSchema } from "@weldr/shared/validators/chats";
 
 import { protectedProcedure } from "../init";
 
@@ -47,7 +43,7 @@ export const chatsRouter = {
 
           for (const attachment of message.attachments) {
             const url = await Tigris.object.getSignedUrl(
-              // biome-ignore lint/style/noNonNullAssertion: reason
+              // oxlint-disable-next-line no-non-null-assertion
               process.env.GENERAL_BUCKET!,
               attachment.key,
             );
@@ -77,10 +73,7 @@ export const chatsRouter = {
     .mutation(async ({ ctx, input }) => {
       try {
         const chat = await ctx.db.query.chats.findFirst({
-          where: and(
-            eq(chats.id, input.chatId),
-            eq(chats.userId, ctx.session.user.id),
-          ),
+          where: and(eq(chats.id, input.chatId), eq(chats.userId, ctx.session.user.id)),
         });
 
         if (!chat) {
@@ -124,12 +117,7 @@ export const chatsRouter = {
           .set({
             content: input.content,
           })
-          .where(
-            and(
-              eq(chatMessages.id, input.id),
-              eq(chatMessages.chatId, input.chatId),
-            ),
-          )
+          .where(and(eq(chatMessages.id, input.id), eq(chatMessages.chatId, input.chatId)))
           .returning();
 
         if (!message) {

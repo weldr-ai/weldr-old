@@ -87,10 +87,7 @@ router.openapi(route, async (c) => {
     }
 
     const project = await db.query.projects.findFirst({
-      where: and(
-        eq(projects.id, projectId),
-        eq(projects.userId, session.user.id),
-      ),
+      where: and(eq(projects.id, projectId), eq(projects.userId, session.user.id)),
       with: {
         integrations: {
           with: {
@@ -122,9 +119,7 @@ router.openapi(route, async (c) => {
       return c.json({ success: false }, 500);
     }
 
-    const installedCategories = await getInstalledCategories(
-      branch.headVersion.id,
-    );
+    const installedCategories = await getInstalledCategories(branch.headVersion.id);
 
     const workflowContext = c.get("workflowContext");
     workflowContext.set("project", {
@@ -166,8 +161,7 @@ router.openapi(route, async (c) => {
 
     return c.json({ success: true });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logger.error("Integration installation process failed", {
       extra: { error: errorMessage },
     });

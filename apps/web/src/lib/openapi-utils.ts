@@ -51,23 +51,18 @@ export function getResponseSchema(
 ): OpenAPIV3.SchemaObject | undefined {
   const response = operation.responses[statusCode] as OpenAPIV3.ResponseObject;
   if (response?.content?.["application/json"]) {
-    return response.content["application/json"]
-      .schema as OpenAPIV3.SchemaObject;
+    return response.content["application/json"].schema as OpenAPIV3.SchemaObject;
   }
   return undefined;
 }
 
-export function parseSchema(
-  schema: OpenAPIV3.SchemaObject | undefined,
-): ParsedSchema | undefined {
+export function parseSchema(schema: OpenAPIV3.SchemaObject | undefined): ParsedSchema | undefined {
   if (!schema) return undefined;
 
   if (schema.type === "object" && schema.properties) {
     const properties: ParsedSchemaProperties = {};
     for (const [key, value] of Object.entries(schema.properties)) {
-      properties[key] = parseSchema(
-        value as OpenAPIV3.SchemaObject,
-      ) as ParsedSchema;
+      properties[key] = parseSchema(value as OpenAPIV3.SchemaObject) as ParsedSchema;
     }
     return {
       type: "object",
@@ -92,9 +87,7 @@ export function parseSchema(
   };
 }
 
-export function parseOpenApiSpec(
-  spec: OpenAPIV3.Document,
-): OpenAPIV3.OperationObject {
+export function parseOpenApiSpec(spec: OpenAPIV3.Document): OpenAPIV3.OperationObject {
   const firstPath = Object.keys(spec.paths)[0];
   if (!firstPath) {
     throw new Error("No paths found in OpenAPI spec");
@@ -118,8 +111,7 @@ export function getRequestBodySchema(
 ): OpenAPIV3.SchemaObject | null {
   const requestBody = operation.requestBody as OpenAPIV3.RequestBodyObject;
   if (requestBody?.content?.["application/json"]) {
-    return requestBody.content["application/json"]
-      .schema as OpenAPIV3.SchemaObject;
+    return requestBody.content["application/json"].schema as OpenAPIV3.SchemaObject;
   }
   return null;
 }

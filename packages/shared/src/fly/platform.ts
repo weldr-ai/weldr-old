@@ -47,16 +47,13 @@ export namespace Platform {
 
     const response = await ofetch<
       paths["/platform/regions"]["get"]["responses"][200]["content"]["application/json"]
-    >(
-      `${flyApiHostname}/v1/platform/regions${params.toString() ? `?${params.toString()}` : ""}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${flyApiKey}`,
-        },
-        ...ofetchConfig({ tag: "fly:platform:getRegions" }),
+    >(`${flyApiHostname}/v1/platform/regions${params.toString() ? `?${params.toString()}` : ""}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${flyApiKey}`,
       },
-    );
+      ...ofetchConfig({ tag: "fly:platform:getRegions" }),
+    });
 
     return response;
   };
@@ -98,9 +95,7 @@ export namespace Platform {
         count,
         region,
         volume_name: volumeName,
-        volume_size_bytes: volumeSizeGb
-          ? volumeSizeGb * 1024 * 1024 * 1024
-          : undefined,
+        volume_size_bytes: volumeSizeGb ? volumeSizeGb * 1024 * 1024 * 1024 : undefined,
         weights,
       } satisfies components["schemas"]["main.getPlacementsRequest"],
       ...ofetchConfig({ tag: "fly:platform:getPlacements" }),
@@ -125,11 +120,7 @@ export namespace Platform {
   }) => {
     // Determine which regions to check based on preferred region
     const regionsToCheck =
-      preferredRegion === "eu"
-        ? euRegions
-        : preferredRegion === "us"
-          ? usRegions
-          : allRegions;
+      preferredRegion === "eu" ? euRegions : preferredRegion === "us" ? usRegions : allRegions;
 
     // Build region expression from the preferred regions
     const regionExpression = regionsToCheck.join(",");
@@ -150,14 +141,10 @@ export namespace Platform {
 
     // Sort available regions according to the preferred order
     // This maintains the machine creation order preference
-    const orderedRegions = regionsToCheck.filter((region) =>
-      availableRegions.includes(region),
-    );
+    const orderedRegions = regionsToCheck.filter((region) => availableRegions.includes(region));
 
     // Add any available regions not in our preferred list at the end
-    const remainingRegions = availableRegions.filter(
-      (region) => !orderedRegions.includes(region),
-    );
+    const remainingRegions = availableRegions.filter((region) => !orderedRegions.includes(region));
 
     return [...orderedRegions, ...remainingRegions];
   };

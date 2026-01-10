@@ -102,10 +102,7 @@ export async function withRetry<T>(
 
       if (i < attempts - 1) {
         await new Promise((resolve) => setTimeout(resolve, currentDelay));
-        currentDelay = Math.min(
-          currentDelay * (backoffMultiplier ?? 2),
-          maxDelayMs ?? 10000,
-        );
+        currentDelay = Math.min(currentDelay * (backoffMultiplier ?? 2), maxDelayMs ?? 10000);
       }
     }
   }

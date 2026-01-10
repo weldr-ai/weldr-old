@@ -20,9 +20,7 @@ type WorkflowContextStore = {
 export class WorkflowContext {
   private store: Partial<WorkflowContextStore> = {};
 
-  public get<K extends keyof WorkflowContextStore>(
-    key: K,
-  ): WorkflowContextStore[K] {
+  public get<K extends keyof WorkflowContextStore>(key: K): WorkflowContextStore[K] {
     const value = this.store[key];
     if (value === undefined) {
       throw new Error(`Value for key "${key}" not found in WorkflowContext.`);
@@ -30,10 +28,7 @@ export class WorkflowContext {
     return value as WorkflowContextStore[K];
   }
 
-  public set<K extends keyof WorkflowContextStore>(
-    key: K,
-    value: WorkflowContextStore[K],
-  ): void {
+  public set<K extends keyof WorkflowContextStore>(key: K, value: WorkflowContextStore[K]): void {
     this.store[key] = value;
   }
 }

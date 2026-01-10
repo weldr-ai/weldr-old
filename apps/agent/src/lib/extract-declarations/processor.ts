@@ -22,11 +22,7 @@ import {
   inferTypeFromExpression,
 } from "./ast-utils";
 import { findDependencies } from "./dependencies";
-import {
-  generateDeclarationUri,
-  isExternalPackage,
-  resolveInternalPathAsync,
-} from "./path-utils";
+import { generateDeclarationUri, isExternalPackage, resolveInternalPathAsync } from "./path-utils";
 
 export async function processSourceFile({
   sourceFile,
@@ -105,8 +101,7 @@ async function processStatement({
       Array.isArray(statement.modifiers) &&
       statement.modifiers.some(
         (m: ts.Modifier) =>
-          m.kind === ts.SyntaxKind.ExportKeyword ||
-          m.kind === ts.SyntaxKind.DefaultKeyword,
+          m.kind === ts.SyntaxKind.ExportKeyword || m.kind === ts.SyntaxKind.DefaultKeyword,
       )) ||
     false;
 
@@ -251,13 +246,10 @@ async function processImportDeclaration({
           });
         }
       } else if (ts.isNamespaceImport(importDecl.importClause.namedBindings)) {
-        importedIdentifiers.set(
-          importDecl.importClause.namedBindings.name.text,
-          {
-            source: resolvedSource,
-            isExternal,
-          },
-        );
+        importedIdentifiers.set(importDecl.importClause.namedBindings.name.text, {
+          source: resolvedSource,
+          isExternal,
+        });
       }
     }
   }
@@ -287,9 +279,7 @@ async function processFunctionDeclaration({
     ? extractTypeParameters(funcDecl.typeParameters)
     : undefined;
 
-  const parameters = funcDecl.parameters.map((param) =>
-    extractParameterInfo(param),
-  );
+  const parameters = funcDecl.parameters.map((param) => extractParameterInfo(param));
 
   const returnType = funcDecl.type
     ? extractTypeAnnotation(funcDecl.type)
@@ -297,15 +287,10 @@ async function processFunctionDeclaration({
 
   const typeParams = typeParameters ? `<${typeParameters.join(", ")}>` : "";
   const params = parameters
-    .map(
-      (p) =>
-        `${p.isRest ? "..." : ""}${p.name}${p.isOptional ? "?" : ""}: ${p.type}`,
-    )
+    .map((p) => `${p.isRest ? "..." : ""}${p.name}${p.isOptional ? "?" : ""}: ${p.type}`)
     .join(", ");
   const returnTypeStr = returnType;
-  const asyncPrefix = funcDecl.modifiers?.some(
-    (m) => m.kind === ts.SyntaxKind.AsyncKeyword,
-  )
+  const asyncPrefix = funcDecl.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword)
     ? "async "
     : "";
   const generatorSuffix = funcDecl.asteriskToken ? "*" : "";
@@ -315,8 +300,7 @@ async function processFunctionDeclaration({
   const dependencies = findDependencies({ code: raw, importedIdentifiers });
 
   const isDefault =
-    funcDecl.modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) ||
-    false;
+    funcDecl.modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) || false;
 
   return {
     name,
@@ -328,9 +312,7 @@ async function processFunctionDeclaration({
     uri: generateDeclarationUri({ filename, name }),
     typeParameters,
     typeSignature,
-    isAsync:
-      funcDecl.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword) ||
-      false,
+    isAsync: funcDecl.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword) || false,
     isGenerator: !!funcDecl.asteriskToken,
     parameters,
     returnType,
@@ -366,9 +348,7 @@ async function processClassDeclaration({
   const extendsClause = classDecl.heritageClauses?.find(
     (clause) => clause.token === ts.SyntaxKind.ExtendsKeyword,
   )?.types[0]?.expression;
-  const extendsType = extendsClause
-    ? extractExpressionType(extendsClause)
-    : undefined;
+  const extendsType = extendsClause ? extractExpressionType(extendsClause) : undefined;
 
   const implementsClause = classDecl.heritageClauses
     ?.find((clause) => clause.token === ts.SyntaxKind.ImplementsKeyword)
@@ -394,14 +374,10 @@ async function processClassDeclaration({
   const setters: SetterMemberMetadata[] = [];
 
   // Helper function to check modifiers
-  const hasModifier = (
-    member: ts.ClassElement,
-    kind: ts.SyntaxKind,
-  ): boolean => {
+  const hasModifier = (member: ts.ClassElement, kind: ts.SyntaxKind): boolean => {
     return (
-      // biome-ignore lint/suspicious/noExplicitAny: TypeScript ClassElement doesn't have modifiers property but implementations do
-      (member as any).modifiers?.some((m: ts.Modifier) => m.kind === kind) ??
-      false
+      // oxlint-disable-next-line no-explicit-any
+      (member as any).modifiers?.some((m: ts.Modifier) => m.kind === kind) ?? false
     );
   };
 
@@ -428,9 +404,7 @@ async function processClassDeclaration({
     const isProtected = hasModifier(member, ts.SyntaxKind.ProtectedKeyword);
 
     if (ts.isConstructorDeclaration(member)) {
-      const parameters = member.parameters.map((param) =>
-        extractParameterInfo(param),
-      );
+      const parameters = member.parameters.map((param) => extractParameterInfo(param));
       const constructorPosition = getNodePosition(member, sourceFile);
 
       const constructorRaw = extractRawCode(member, sourceCode);
@@ -455,9 +429,7 @@ async function processClassDeclaration({
       const memberName = extractMemberName(member.name);
       const memberPosition = getNodePosition(member, sourceFile);
 
-      const parameters = member.parameters.map((param) =>
-        extractParameterInfo(param),
-      );
+      const parameters = member.parameters.map((param) => extractParameterInfo(param));
 
       const returnType = member.type
         ? extractTypeAnnotation(member.type)
@@ -536,9 +508,7 @@ async function processClassDeclaration({
     } else if (ts.isGetAccessorDeclaration(member) && member.name) {
       const memberName = extractMemberName(member.name);
       const memberPosition = getNodePosition(member, sourceFile);
-      const returnType = member.type
-        ? extractTypeAnnotation(member.type)
-        : "any";
+      const returnType = member.type ? extractTypeAnnotation(member.type) : "any";
 
       const memberRaw = extractRawCode(member, sourceCode);
       const memberDependencies = findDependencies({
@@ -631,8 +601,7 @@ async function processClassDeclaration({
   }
 
   const isDefault =
-    classDecl.modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) ||
-    false;
+    classDecl.modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) || false;
 
   return {
     name,
@@ -677,15 +646,11 @@ async function processInterfaceDeclaration({
     ?.types.map((type) => extractExpressionType(type.expression));
 
   const typeParams = typeParameters ? `<${typeParameters.join(", ")}>` : "";
-  const extendsStr = extendsClause?.length
-    ? ` extends ${extendsClause.join(", ")}`
-    : "";
+  const extendsStr = extendsClause?.length ? ` extends ${extendsClause.join(", ")}` : "";
   const typeSignature = `interface${typeParams}${extendsStr}`;
 
   const isDefault =
-    interfaceDecl.modifiers?.some(
-      (m) => m.kind === ts.SyntaxKind.DefaultKeyword,
-    ) || false;
+    interfaceDecl.modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) || false;
 
   return {
     name,
@@ -724,9 +689,7 @@ async function processTypeAliasDeclaration({
   const typeSignature = `type${typeParams} = ${aliasedType}`;
 
   const isDefault =
-    typeAliasDecl.modifiers?.some(
-      (m) => m.kind === ts.SyntaxKind.DefaultKeyword,
-    ) || false;
+    typeAliasDecl.modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) || false;
 
   return {
     name,
@@ -756,9 +719,7 @@ async function processEnumDeclaration({
   const position = getNodePosition(enumDecl, sourceFile);
 
   const enumMembers = enumDecl.members.map((member) => {
-    const memberName = ts.isIdentifier(member.name)
-      ? member.name.text
-      : member.name.getText();
+    const memberName = ts.isIdentifier(member.name) ? member.name.text : member.name.getText();
 
     const enumMember: EnumMemberMetadata = { name: memberName };
 
@@ -770,8 +731,7 @@ async function processEnumDeclaration({
   });
 
   const isDefault =
-    enumDecl.modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) ||
-    false;
+    enumDecl.modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) || false;
 
   return {
     name,
@@ -829,9 +789,7 @@ async function processVariableStatement({
       const raw = extractRawCode(varStatement, sourceCode);
       const dependencies = findDependencies({ code: raw, importedIdentifiers });
       const isDefault =
-        varStatement.modifiers?.some(
-          (m) => m.kind === ts.SyntaxKind.DefaultKeyword,
-        ) || false;
+        varStatement.modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) || false;
 
       declarations.push({
         name,
@@ -908,9 +866,7 @@ async function processModuleDeclaration({
   }
 
   const isDefault =
-    moduleDecl.modifiers?.some(
-      (m) => m.kind === ts.SyntaxKind.DefaultKeyword,
-    ) || false;
+    moduleDecl.modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword) || false;
 
   return {
     name,
@@ -936,10 +892,7 @@ async function processExportDeclaration({
   declarations: DeclarationCodeMetadata[];
 }): Promise<void> {
   // Handle re-exports - simplified for now
-  if (
-    exportDecl.moduleSpecifier &&
-    ts.isStringLiteral(exportDecl.moduleSpecifier)
-  ) {
+  if (exportDecl.moduleSpecifier && ts.isStringLiteral(exportDecl.moduleSpecifier)) {
     const source = exportDecl.moduleSpecifier.text;
     const position = getNodePosition(exportDecl, sourceFile);
 
@@ -976,9 +929,7 @@ async function processExportAssignment({
     const referencedName = exportAssignment.expression.text;
 
     // Find the existing declaration and mark it as default
-    const existingDeclaration = declarations.find(
-      (d) => d.name === referencedName,
-    );
+    const existingDeclaration = declarations.find((d) => d.name === referencedName);
 
     if (existingDeclaration && "isDefault" in existingDeclaration) {
       existingDeclaration.isDefault = true;

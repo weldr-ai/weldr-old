@@ -5,6 +5,7 @@
 **Weldr** is an AI-powered application builder platform that enables users to create full-stack web applications through natural language conversations. Users describe their app ideas in plain English, and the AI generates complete, production-ready applications with proper architecture, database schemas, APIs, and UI components.
 
 ### Core User Journey
+
 1. **Project Creation**: Users describe their app idea or choose from templates
 2. **AI Generation**: The platform generates the complete application structure
 3. **Visual Canvas**: Interactive architecture visualization with nodes for pages, endpoints, and models
@@ -13,6 +14,7 @@
 6. **Deployment**: Automatic deployment to development and production environments
 
 ### Key Features
+
 - Multimodal input (text + file attachments)
 - Real-time streaming of AI progress
 - Visual architecture canvas
@@ -22,6 +24,7 @@
 - Subscription-based pricing model
 
 ## Current Structure
+
 - `src/app`: app router routes (landing, pricing, projects, auth flows, API handlers), shared layout/loading/not-found
 - `src/components`: auth, billing, chat, editor, integrations, projects, openapi viewer, command center, timeline, dialogs
 - `src/hooks`: event stream, workflow trigger, messages, chat visibility, editor references, scroll management, status
@@ -31,6 +34,7 @@
 ## Type Safety Requirements
 
 ### Component Props
+
 ```typescript
 // ALWAYS define explicit prop types
 interface ComponentProps {
@@ -52,6 +56,7 @@ export const MyComponent: React.FC<ComponentProps> = ({
 ```
 
 ### tRPC Usage
+
 ```typescript
 // ALWAYS use type-safe tRPC hooks
 import { api } from "@/lib/trpc/react";
@@ -79,6 +84,7 @@ export function MyComponent() {
 ```
 
 ### Form Handling with Zod
+
 ```typescript
 // ALWAYS validate forms with Zod schemas
 import { useForm } from "react-hook-form";
@@ -110,18 +116,21 @@ export function MyForm() {
 ## Core Application Components
 
 ### Project Creation Form
+
 - Main entry point for users
 - Multimodal input with text and file attachments
 - Quick-start templates for common app types
 - Loading state during project initialization
 
 ### Project View
+
 - Split view with canvas and chat interface
 - Real-time updates via SSE streaming
 - Version navigation (previous/next)
 - Integration setup flows
 
 ### Chat Interface
+
 - Message history display
 - Multimodal input for continued conversation
 - Pending message states (thinking, responding, waiting)
@@ -129,6 +138,7 @@ export function MyForm() {
 - Attachment previews
 
 ### Canvas View
+
 - Visual representation of app architecture
 - Interactive nodes for:
   - Pages (UI components)
@@ -141,6 +151,7 @@ export function MyForm() {
 ## Next.js App Router Patterns
 
 ### Server Components
+
 ```typescript
 // Default to server components
 // app/page.tsx
@@ -153,6 +164,7 @@ export default async function Page() {
 ```
 
 ### Client Components
+
 ```typescript
 // Mark client components explicitly
 "use client";
@@ -168,6 +180,7 @@ export function InteractiveComponent() {
 ```
 
 ### Route Handlers
+
 ```typescript
 // app/api/route/route.ts
 import { NextRequest, NextResponse } from "next/server";
@@ -186,15 +199,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid request" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
-    return NextResponse.json(
-      { error: "Internal error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
 ```
@@ -202,23 +209,27 @@ export async function POST(request: NextRequest) {
 ## Custom Hooks
 
 ### useEventStream
+
 - Manages SSE connection to backend
 - Handles reconnection with Last-Event-ID
 - Processes streaming messages
 - Updates UI state based on events
 
 ### useMessages
+
 - Manages chat message state
 - Handles message submission
 - Manages attachments
 - Syncs with backend
 
 ### useWorkflowTrigger
+
 - Triggers AI generation workflows
 - Manages pending states
 - Handles error recovery
 
 ### useChatVisibility
+
 - Controls chat panel visibility
 - Auto-shows on new messages
 - Handles focus management
@@ -226,6 +237,7 @@ export async function POST(request: NextRequest) {
 ## UI Component Patterns
 
 ### Multimodal Input
+
 ```typescript
 interface MultimodalInputProps {
   type: "textarea" | "editor";
@@ -240,12 +252,14 @@ interface MultimodalInputProps {
 ```
 
 ### Message Components
+
 - Support for different message roles (user, assistant, tool)
 - Rich content rendering (text, code, images)
 - Tool result displays
 - Attachment previews
 
 ### Canvas Nodes
+
 - Custom node types for different declarations
 - Status indicators (pending, completed, failed)
 - Interactive tooltips with metadata
@@ -254,6 +268,7 @@ interface MultimodalInputProps {
 ## Data Fetching
 
 ### Server-Side Data Fetching
+
 ```typescript
 // In server components
 async function getData(): Promise<DataType> {
@@ -271,16 +286,18 @@ async function getData(): Promise<DataType> {
 ```
 
 ### Client-Side with tRPC
+
 ```typescript
 // Use tRPC hooks for type-safe data fetching
 const { data, isLoading, error } = api.projects.byId.useQuery({
-  id: projectId
+  id: projectId,
 });
 ```
 
 ## Error Handling
 
 ### Error Boundaries
+
 ```typescript
 // app/error.tsx
 "use client";
@@ -302,6 +319,7 @@ export default function Error({
 ```
 
 ### Loading States
+
 ```typescript
 // app/loading.tsx
 export default function Loading() {
@@ -312,6 +330,7 @@ export default function Loading() {
 ## Styling with Tailwind
 
 ### Using cn utility
+
 ```typescript
 import { cn } from "@/lib/utils";
 
@@ -329,34 +348,33 @@ export function Component({ className }: { className?: string }) {
 ```
 
 ### Component Variants with CVA
+
 ```typescript
 import { cva, type VariantProps } from "class-variance-authority";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground",
-        outline: "border border-input bg-background",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 px-3",
-        lg: "h-11 px-8",
-      },
+const buttonVariants = cva("inline-flex items-center justify-center", {
+  variants: {
+    variant: {
+      default: "bg-primary text-primary-foreground",
+      outline: "border border-input bg-background",
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
+    size: {
+      default: "h-10 px-4 py-2",
+      sm: "h-9 px-3",
+      lg: "h-11 px-8",
     },
-  }
-);
+  },
+  defaultVariants: {
+    variant: "default",
+    size: "default",
+  },
+});
 ```
 
 ## Authentication
 
 ### Protected Routes
+
 ```typescript
 // middleware.ts
 import { auth } from "@weldr/auth";
@@ -385,6 +403,7 @@ export const config = {
 ## Real-time Features
 
 ### SSE Streaming
+
 ```typescript
 // Handle server-sent events for real-time updates
 const eventSource = new EventSource(`/api/stream/${projectId}`);
@@ -400,6 +419,7 @@ eventSource.onerror = () => {
 ```
 
 ### Optimistic Updates
+
 ```typescript
 // Update UI optimistically while mutation is pending
 const mutation = api.projects.update.useMutation({
@@ -423,6 +443,7 @@ const mutation = api.projects.update.useMutation({
 ## Performance Optimization
 
 ### Image Optimization
+
 ```typescript
 import Image from "next/image";
 
@@ -442,6 +463,7 @@ export function OptimizedImage() {
 ```
 
 ### Dynamic Imports
+
 ```typescript
 import dynamic from "next/dynamic";
 
@@ -455,6 +477,7 @@ const HeavyComponent = dynamic(
 ```
 
 ### Memoization
+
 ```typescript
 import { memo, useMemo, useCallback } from "react";
 
@@ -480,6 +503,7 @@ export const ExpensiveComponent = memo<ExpensiveComponentProps>(
 ## Accessibility
 
 ### ARIA Attributes
+
 ```typescript
 interface AccessibleButtonProps {
   isLoading?: boolean;
@@ -504,6 +528,7 @@ export function AccessibleButton({
 ```
 
 ### Keyboard Navigation
+
 ```typescript
 export function KeyboardNavigableList() {
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -532,6 +557,7 @@ export function KeyboardNavigableList() {
 ## Environment Variables
 
 ### Type-Safe Environment Variables
+
 ```typescript
 // env.ts
 import { z } from "zod";
@@ -552,6 +578,7 @@ export const env = envSchema.parse({
 ## Do's and Don'ts
 
 ### Do's
+
 ✅ Use TypeScript strict mode
 ✅ Define explicit prop types for all components
 ✅ Use Server Components by default
@@ -566,6 +593,7 @@ export const env = envSchema.parse({
 ✅ Implement version navigation
 
 ### Don'ts
+
 ❌ Use `any` type
 ❌ Mutate state directly
 ❌ Use inline styles (use Tailwind)

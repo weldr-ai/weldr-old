@@ -1,8 +1,7 @@
 import { ofetch } from "ofetch/node";
 
 import { ofetchConfig } from "../ofetch-config";
-import type { FlyAppType } from "./config";
-import { flyApiHostname, flyApiKey } from "./config";
+import { flyApiHostname, flyApiKey, type FlyAppType } from "./config";
 import type { components, paths } from "./types";
 
 export namespace Volume {
@@ -29,9 +28,7 @@ export namespace Volume {
 
       return response;
     } catch (error: unknown) {
-      if (
-        (error as { response?: { status?: number } })?.response?.status === 404
-      ) {
+      if ((error as { response?: { status?: number } })?.response?.status === 404) {
         return null;
       }
       throw error;
@@ -100,20 +97,15 @@ export namespace Volume {
     volumeId: string;
   }) => {
     try {
-      await ofetch(
-        `${flyApiHostname}/v1/apps/project-${projectId}-${type}/volumes/${volumeId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${flyApiKey}`,
-          },
-          ...ofetchConfig({ tag: `fly:volume:destroy:${projectId}` }),
+      await ofetch(`${flyApiHostname}/v1/apps/project-${projectId}-${type}/volumes/${volumeId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${flyApiKey}`,
         },
-      );
+        ...ofetchConfig({ tag: `fly:volume:destroy:${projectId}` }),
+      });
     } catch (error) {
-      if (
-        (error as { response?: { status?: number } })?.response?.status === 404
-      ) {
+      if ((error as { response?: { status?: number } })?.response?.status === 404) {
         return;
       }
       throw error;
@@ -133,20 +125,17 @@ export namespace Volume {
   }) => {
     const response = await ofetch<
       paths["/apps/{app_name}/volumes/{volume_id}/extend"]["put"]["responses"][200]["content"]["application/json"]
-    >(
-      `${flyApiHostname}/v1/apps/project-${projectId}-${type}/volumes/${volumeId}/extend`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${flyApiKey}`,
-        },
-        body: {
-          size_gb: sizeGb,
-        } satisfies components["schemas"]["ExtendVolumeRequest"],
-        ...ofetchConfig({ tag: `fly:volume:extend:${projectId}` }),
+    >(`${flyApiHostname}/v1/apps/project-${projectId}-${type}/volumes/${volumeId}/extend`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${flyApiKey}`,
       },
-    );
+      body: {
+        size_gb: sizeGb,
+      } satisfies components["schemas"]["ExtendVolumeRequest"],
+      ...ofetchConfig({ tag: `fly:volume:extend:${projectId}` }),
+    });
 
     return response;
   };

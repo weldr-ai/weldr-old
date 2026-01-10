@@ -2,12 +2,7 @@ import { z } from "zod";
 
 import { environmentVariableSchema } from "./environment-variables";
 
-export const integrationKeySchema = z.enum([
-  "orpc",
-  "tanstack-start",
-  "postgresql",
-  "better-auth",
-]);
+export const integrationKeySchema = z.enum(["orpc", "tanstack-start", "postgresql", "better-auth"]);
 
 export const integrationInstallationStatusSchema = z.enum([
   "queued",
@@ -57,9 +52,7 @@ export const betterAuthIntegrationSchema = baseIntegrationSchema.extend({
   key: z.literal("better-auth"),
   options: z.object({
     socialProviders: z.enum(["github", "google", "microsoft"]).array(),
-    plugins: z
-      .enum(["admin", "oAuthProxy", "openAPI", "organization", "stripe"])
-      .array(),
+    plugins: z.enum(["admin", "oAuthProxy", "openAPI", "organization", "stripe"]).array(),
     emailVerifiion: z.boolean().default(false),
     emailAndPassword: z.boolean().default(true),
     stripeIntegration: z.boolean().default(false),
@@ -83,9 +76,7 @@ export const createIntegrationSchema = z.object({
   projectId: z.string().min(1),
   branchId: z.string().min(1).optional(),
   integrationTemplateId: z.string().min(1),
-  environmentVariableMappings: z.array(
-    integrationEnvironmentVariableMappingSchema,
-  ),
+  environmentVariableMappings: z.array(integrationEnvironmentVariableMappingSchema),
 });
 
 export const updateIntegrationSchema = z.object({
@@ -94,9 +85,7 @@ export const updateIntegrationSchema = z.object({
   }),
   payload: z.object({
     name: z.string().min(1).optional(),
-    environmentVariableMappings: z
-      .array(integrationEnvironmentVariableMappingSchema)
-      .optional(),
+    environmentVariableMappings: z.array(integrationEnvironmentVariableMappingSchema).optional(),
   }),
 });
 
@@ -109,9 +98,7 @@ export const createBatchIntegrationsSchema = z.object({
       z.object({
         name: z.string().min(1).optional(),
         integrationTemplateId: z.string().min(1),
-        environmentVariableMappings: z.array(
-          integrationEnvironmentVariableMappingSchema,
-        ),
+        environmentVariableMappings: z.array(integrationEnvironmentVariableMappingSchema),
       }),
     )
     .min(1),

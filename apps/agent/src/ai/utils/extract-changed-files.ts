@@ -13,16 +13,7 @@ import { extractAndSaveDeclarations } from "./declarations";
 /**
  * File extensions that should have declarations extracted
  */
-const CODE_EXTENSIONS = new Set([
-  ".ts",
-  ".tsx",
-  ".js",
-  ".jsx",
-  ".mts",
-  ".mjs",
-  ".cts",
-  ".cjs",
-]);
+const CODE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mts", ".mjs", ".cts", ".cjs"]);
 
 /**
  * Directories to skip when scanning for code files
@@ -178,9 +169,7 @@ export async function trackFileChange({
   await db
     .update(versions)
     .set({
-      changedFiles: mergeJson(versions.changedFiles, [
-        { path: filePath, type },
-      ]),
+      changedFiles: mergeJson(versions.changedFiles, [{ path: filePath, type }]),
     })
     .where(eq(versions.id, branch.headVersion.id));
 }
@@ -199,9 +188,7 @@ export async function handleFileDeleted({
   filePath: string;
 }): Promise<void> {
   const { and, inArray } = await import("@weldr/db");
-  const { declarations, versionDeclarations } = await import(
-    "@weldr/db/schema"
-  );
+  const { declarations, versionDeclarations } = await import("@weldr/db/schema");
 
   const branch = context.get("branch");
 
@@ -225,8 +212,6 @@ export async function handleFileDeleted({
         eq(versionDeclarations.versionId, branch.headVersion.id),
       ),
     );
-    logger.info(
-      `Deleted ${declarationsList.length} declarations for ${filePath}`,
-    );
+    logger.info(`Deleted ${declarationsList.length} declarations for ${filePath}`);
   }
 }

@@ -35,18 +35,12 @@ export namespace Logger {
     const child = instance.child(options || {});
 
     return {
-      info: (message: string, data?: Record<string, unknown>) =>
-        child.info(data || {}, message),
-      error: (message: string, data?: Record<string, unknown>) =>
-        child.error(data || {}, message),
-      fatal: (message: string, data?: Record<string, unknown>) =>
-        child.fatal(data || {}, message),
-      trace: (message: string, data?: Record<string, unknown>) =>
-        child.trace(data || {}, message),
-      warn: (message: string, data?: Record<string, unknown>) =>
-        child.warn(data || {}, message),
-      debug: (message: string, data?: Record<string, unknown>) =>
-        child.debug(data || {}, message),
+      info: (message: string, data?: Record<string, unknown>) => child.info(data || {}, message),
+      error: (message: string, data?: Record<string, unknown>) => child.error(data || {}, message),
+      fatal: (message: string, data?: Record<string, unknown>) => child.fatal(data || {}, message),
+      trace: (message: string, data?: Record<string, unknown>) => child.trace(data || {}, message),
+      warn: (message: string, data?: Record<string, unknown>) => child.warn(data || {}, message),
+      debug: (message: string, data?: Record<string, unknown>) => child.debug(data || {}, message),
     };
   };
 }

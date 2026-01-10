@@ -1,4 +1,3 @@
-import { relations } from "drizzle-orm";
 import {
   index,
   jsonb,
@@ -17,7 +16,6 @@ import type {
 } from "@weldr/shared/types";
 
 import { users } from "./auth";
-import { declarations } from "./declarations";
 import { environmentVariables } from "./environment-variables";
 import { integrationTemplates } from "./integration-templates";
 import { projects } from "./projects";
@@ -48,27 +46,6 @@ export const integrations = pgTable(
   (t) => [index("integrations_created_at_idx").on(t.createdAt)],
 );
 
-export const integrationsRelations = relations(
-  integrations,
-  ({ one, many }) => ({
-    project: one(projects, {
-      fields: [integrations.projectId],
-      references: [projects.id],
-    }),
-    user: one(users, {
-      fields: [integrations.userId],
-      references: [users.id],
-    }),
-    integrationTemplate: one(integrationTemplates, {
-      fields: [integrations.integrationTemplateId],
-      references: [integrationTemplates.id],
-    }),
-    environmentVariableMappings: many(integrationEnvironmentVariables),
-    declarations: many(declarations),
-    installations: many(integrationInstallations),
-  }),
-);
-
 export const integrationEnvironmentVariables = pgTable(
   "integration_environment_variables",
   {
@@ -87,20 +64,6 @@ export const integrationEnvironmentVariables = pgTable(
   ],
 );
 
-export const integrationEnvironmentVariablesRelations = relations(
-  integrationEnvironmentVariables,
-  ({ one }) => ({
-    integration: one(integrations, {
-      fields: [integrationEnvironmentVariables.integrationId],
-      references: [integrations.id],
-    }),
-    environmentVariable: one(environmentVariables, {
-      fields: [integrationEnvironmentVariables.environmentVariableId],
-      references: [environmentVariables.id],
-    }),
-  }),
-);
-
 export const integrationInstallations = pgTable(
   "integration_installations",
   {
@@ -111,10 +74,7 @@ export const integrationInstallations = pgTable(
     versionId: text("version_id")
       .references(() => versions.id, { onDelete: "cascade" })
       .notNull(),
-    status: text("status")
-      .$type<IntegrationInstallationStatus>()
-      .notNull()
-      .default("installing"),
+    status: text("status").$type<IntegrationInstallationStatus>().notNull().default("installing"),
     installedAt: timestamp("installed_at"),
     installationMetadata: jsonb("installation_metadata").$type<{
       filesCreated?: string[];
@@ -129,26 +89,9 @@ export const integrationInstallations = pgTable(
       .notNull(),
   },
   (t) => [
-    uniqueIndex("integration_installations_unique_idx").on(
-      t.integrationId,
-      t.versionId,
-    ),
+    uniqueIndex("integration_installations_unique_idx").on(t.integrationId, t.versionId),
     index("integration_installations_version_idx").on(t.versionId),
     index("integration_installations_integration_idx").on(t.integrationId),
     index("integration_installations_status_idx").on(t.status),
   ],
-);
-
-export const integrationInstallationsRelations = relations(
-  integrationInstallations,
-  ({ one }) => ({
-    integration: one(integrations, {
-      fields: [integrationInstallations.integrationId],
-      references: [integrations.id],
-    }),
-    version: one(versions, {
-      fields: [integrationInstallations.versionId],
-      references: [versions.id],
-    }),
-  }),
 );

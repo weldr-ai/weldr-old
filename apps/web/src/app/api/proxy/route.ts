@@ -11,17 +11,11 @@ export async function POST(request: NextRequest) {
   const { endpoint, projectId, ...restBody } = requestBody;
 
   if (!endpoint) {
-    return NextResponse.json(
-      { error: "Endpoint is required" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Endpoint is required" }, { status: 400 });
   }
 
   if (!projectId) {
-    return NextResponse.json(
-      { error: "Project ID is required" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
   }
 
   try {
@@ -34,10 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const project = await db.query.projects.findFirst({
-      where: and(
-        eq(projects.id, projectId),
-        eq(projects.userId, session.user.id),
-      ),
+      where: and(eq(projects.id, projectId), eq(projects.userId, session.user.id)),
     });
 
     if (!project) {
@@ -71,30 +62,23 @@ export async function POST(request: NextRequest) {
 
     const body = JSON.stringify({ projectId, ...restBody });
 
-    const response = await fetch(
-      `${url}${endpoint}?${searchParams.toString()}`,
-      {
-        method: "POST",
-        headers,
-        body,
-      },
-    );
+    const response = await fetch(`${url}${endpoint}?${searchParams.toString()}`, {
+      method: "POST",
+      headers,
+      body,
+    });
 
     return new NextResponse(response.body, {
       status: response.status,
       statusText: response.statusText,
       headers: {
-        "Content-Type":
-          response.headers.get("content-type") || "application/json",
+        "Content-Type": response.headers.get("content-type") || "application/json",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Cache-Control",
       },
     });
   } catch (error) {
     console.error("Proxy error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

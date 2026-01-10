@@ -16,9 +16,7 @@ import { api } from "@/lib/trpc/server";
 
 export default async function Home() {
   const session = await auth.api.getSession({ headers: await headers() });
-  const sessions = session
-    ? await auth.api.listSessions({ headers: await headers() })
-    : null;
+  const sessions = session ? await auth.api.listSessions({ headers: await headers() }) : null;
   const projects = session ? await api.projects.list() : [];
   const activeSubscription = await getActiveSubscription();
 
@@ -30,24 +28,15 @@ export default async function Home() {
           <div className="flex gap-2">
             {!session && (
               <>
-                <Link
-                  href="/"
-                  className={buttonVariants({ variant: "ghost", size: "sm" })}
-                >
+                <Link href="/" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                   Home
                 </Link>
-                <Link
-                  href="/pricing"
-                  className={buttonVariants({ variant: "ghost", size: "sm" })}
-                >
+                <Link href="/pricing" className={buttonVariants({ variant: "ghost", size: "sm" })}>
                   Pricing
                 </Link>
               </>
             )}
-            <Link
-              href="/auth/sign-in"
-              className={buttonVariants({ variant: "ghost", size: "sm" })}
-            >
+            <Link href="/auth/sign-in" className={buttonVariants({ variant: "ghost", size: "sm" })}>
               Login
             </Link>
             <Link

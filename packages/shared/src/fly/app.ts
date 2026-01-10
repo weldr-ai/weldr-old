@@ -2,24 +2,13 @@ import { ofetch } from "ofetch/node";
 
 import { ofetchConfig } from "../ofetch-config";
 import { Tigris } from "../tigris";
-import {
-  type FlyAppType,
-  flyApiHostname,
-  flyApiKey,
-  flyOrgSlug,
-} from "./config";
+import { type FlyAppType, flyApiHostname, flyApiKey, flyOrgSlug } from "./config";
 import { Machine } from "./machine";
 import { Secret } from "./secret";
 import type { paths } from "./types";
 
 export namespace App {
-  export const get = async ({
-    type,
-    projectId,
-  }: {
-    type: FlyAppType;
-    projectId: string;
-  }) => {
+  export const get = async ({ type, projectId }: { type: FlyAppType; projectId: string }) => {
     try {
       const app = await ofetch<{ id: string }>(
         `${flyApiHostname}/v1/apps/project-${projectId}-${type}`,
@@ -32,9 +21,7 @@ export namespace App {
       );
       return app;
     } catch (error) {
-      if (
-        (error as { response?: { status?: number } })?.response?.status === 404
-      ) {
+      if ((error as { response?: { status?: number } })?.response?.status === 404) {
         return null;
       }
       throw error;
@@ -78,12 +65,8 @@ export namespace App {
       });
 
       if (options.type === "development") {
-        const projectCredentials = await Tigris.credentials.create(
-          options.projectId,
-        );
-        await Tigris.bucket.create(
-          `project-${options.projectId}-branch-${options.branchId}`,
-        );
+        const projectCredentials = await Tigris.credentials.create(options.projectId);
+        await Tigris.bucket.create(`project-${options.projectId}-branch-${options.branchId}`);
 
         const productionDeployToken = await deployToken({
           type: "production",
@@ -133,9 +116,7 @@ export namespace App {
         }),
         ...(options.type === "development"
           ? [
-              Tigris.bucket.delete(
-                `project-${options.projectId}-branch-${options.branchId}`,
-              ),
+              Tigris.bucket.delete(`project-${options.projectId}-branch-${options.branchId}`),
               Tigris.credentials.delete(options.projectId),
             ]
           : []),
@@ -213,13 +194,7 @@ export namespace App {
     }
   };
 
-  export const destroy = async ({
-    type,
-    projectId,
-  }: {
-    type: FlyAppType;
-    projectId: string;
-  }) => {
+  export const destroy = async ({ type, projectId }: { type: FlyAppType; projectId: string }) => {
     try {
       await ofetch(`${flyApiHostname}/v1/apps/project-${projectId}-${type}`, {
         method: "DELETE",
@@ -229,9 +204,7 @@ export namespace App {
         ...ofetchConfig({ tag: `fly:app:destroy:${projectId}` }),
       });
     } catch (error) {
-      if (
-        (error as { response?: { status?: number } })?.response?.status === 404
-      ) {
+      if ((error as { response?: { status?: number } })?.response?.status === 404) {
         return;
       }
       throw error;

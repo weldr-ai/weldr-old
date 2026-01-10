@@ -16,10 +16,7 @@ interface ResetPasswordEmailProps {
   resetPasswordLink: string;
 }
 
-export function ResetPasswordEmail({
-  firstName,
-  resetPasswordLink,
-}: ResetPasswordEmailProps) {
+export function ResetPasswordEmail({ firstName, resetPasswordLink }: ResetPasswordEmailProps) {
   return (
     <Html>
       <Head />
@@ -59,8 +56,8 @@ export function ResetPasswordEmail({
                 </Button>
               </Container>
               <Text className="font-bold text-red-600">
-                ⚠️ If you didn't request a password reset, please ignore this
-                email and ensure your account is secure.
+                ⚠️ If you didn't request a password reset, please ignore this email and ensure your
+                account is secure.
               </Text>
               <Text>Thanks,</Text>
               <Text>Weldr</Text>
@@ -76,5 +73,3 @@ ResetPasswordEmail.PreviewProps = {
   firstName: "Bob",
   resetPasswordLink: "http://localhost:3000/auth/reset-password",
 } as ResetPasswordEmailProps;
-
-export default ResetPasswordEmail;

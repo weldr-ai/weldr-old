@@ -1,10 +1,7 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 
-function resolveRelativePath(
-  currentFilePath: string,
-  importPath: string,
-): string {
+function resolveRelativePath(currentFilePath: string, importPath: string): string {
   // Pure string-based path resolution without filesystem dependencies
   const currentDir = currentFilePath.includes("/")
     ? currentFilePath.substring(0, currentFilePath.lastIndexOf("/"))
@@ -75,13 +72,7 @@ export async function resolveFilePath(
   }
 
   const extensions = [".ts", ".tsx", ".js", ".jsx", ".json"];
-  const indexFiles = [
-    "/index.ts",
-    "/index.tsx",
-    "/index.js",
-    "/index.jsx",
-    "/index.json",
-  ];
+  const indexFiles = ["/index.ts", "/index.tsx", "/index.js", "/index.jsx", "/index.json"];
 
   const potentialPaths: string[] = [];
 

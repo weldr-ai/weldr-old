@@ -195,9 +195,7 @@ async function deleteAccessKey(bucketName: string): Promise<Error | undefined> {
       bucketName,
       error,
     });
-    return new Error(
-      `Failed to delete access key: ${(error as Error).message}`,
-    );
+    return new Error(`Failed to delete access key: ${(error as Error).message}`);
   }
 }
 
@@ -217,9 +215,7 @@ async function createProjectPolicy(projectId: string): Promise<string> {
     });
 
     if (!policyResponse.Policy?.Arn) {
-      throw new Error(
-        "Failed to create policy: Missing policy ARN in response",
-      );
+      throw new Error("Failed to create policy: Missing policy ARN in response");
     }
 
     return policyResponse.Policy.Arn;
@@ -232,10 +228,7 @@ async function createProjectPolicy(projectId: string): Promise<string> {
   }
 }
 
-async function attachPolicyToUser(
-  accessKeyId: string,
-  policyArn: string,
-): Promise<void> {
+async function attachPolicyToUser(accessKeyId: string, policyArn: string): Promise<void> {
   try {
     await iamClient.send(
       new AttachUserPolicyCommand({
@@ -257,9 +250,7 @@ async function attachPolicyToUser(
   }
 }
 
-async function findProjectPolicyByName(
-  projectId: string,
-): Promise<string | undefined> {
+async function findProjectPolicyByName(projectId: string): Promise<string | undefined> {
   try {
     const policyName = `project-${projectId}-policy`;
     const listPoliciesResponse = await iamClient.send(
@@ -269,9 +260,7 @@ async function findProjectPolicyByName(
       }),
     );
 
-    const policy = listPoliciesResponse.Policies?.find(
-      (p) => p.PolicyName === policyName,
-    );
+    const policy = listPoliciesResponse.Policies?.find((p) => p.PolicyName === policyName);
     return policy?.Arn;
   } catch (error) {
     Logger.error("Failed to find project policy by name", {
@@ -282,9 +271,7 @@ async function findProjectPolicyByName(
   }
 }
 
-async function deleteProjectPolicy(
-  projectId: string,
-): Promise<Error | undefined> {
+async function deleteProjectPolicy(projectId: string): Promise<Error | undefined> {
   try {
     const policyName = `project-${projectId}-policy`;
     const policyArn = await findProjectPolicyByName(projectId);
@@ -343,14 +330,9 @@ async function createCredentials(projectId: string): Promise<Credentials> {
   }
 }
 
-async function deleteCredentials(
-  projectId: string,
-): Promise<Error | undefined> {
+async function deleteCredentials(projectId: string): Promise<Error | undefined> {
   const userName = `project-${projectId}`;
-  const errors = await Promise.all([
-    deleteAccessKey(userName),
-    deleteProjectPolicy(projectId),
-  ]);
+  const errors = await Promise.all([deleteAccessKey(userName), deleteProjectPolicy(projectId)]);
 
   const error = errors.find((e) => e !== undefined);
   if (error) {

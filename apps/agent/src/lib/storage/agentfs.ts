@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+
 import { AgentFS } from "agentfs-sdk";
 
 import type { SyncResult } from "./types";
@@ -28,9 +29,7 @@ export async function syncAgentFSToDisk(
   branchDir: string,
   options?: { exclude?: string[] },
 ): Promise<SyncResult> {
-  const exclude = new Set(
-    options?.exclude || ["agent.db", ".git", "node_modules"],
-  );
+  const exclude = new Set(options?.exclude || ["agent.db", ".git", "node_modules"]);
   let synced = 0;
   const errors: string[] = [];
 

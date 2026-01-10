@@ -1,5 +1,5 @@
 {
-  "id": "46a737eb-1e99-4000-9ac8-2ea10d2543fe",
+  "id": "551b6efb-9faf-4f09-914e-ec9c53ad60aa",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2710,8 +2710,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "bucket_snapshot_version": {
-          "name": "bucket_snapshot_version",
+        "snapshot_path": {
+          "name": "snapshot_path",
           "type": "text",
           "primaryKey": false,
           "notNull": false

@@ -3,11 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import { db } from "@weldr/db";
-import {
-  environmentVariables,
-  integrationEnvironmentVariables,
-  secrets,
-} from "@weldr/db/schema";
+import { environmentVariables, integrationEnvironmentVariables, secrets } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 import { getBranchDir } from "@weldr/shared/state";
 
@@ -111,10 +107,7 @@ export const betterAuthIntegration = defineIntegration<"better-auth">({
       });
 
       // Check if schema/index.ts exists and is empty
-      const schemaIndexPath = path.join(
-        branchDir,
-        "apps/server/src/db/schema/index.ts",
-      );
+      const schemaIndexPath = path.join(branchDir, "apps/server/src/db/schema/index.ts");
 
       // Read the file content to check if it's empty
       let fileContent = "";
@@ -173,28 +166,16 @@ export const dummyTable = pgTable("dummy_table", {
       if (fileExists && fileContent.trim() === "") {
         // Clear the file and add only the auth export
         try {
-          await fs.writeFile(
-            schemaIndexPath,
-            'export * from "./auth";\n',
-            "utf-8",
-          );
+          await fs.writeFile(schemaIndexPath, 'export * from "./auth";\n', "utf-8");
         } catch (error) {
-          throw new Error(
-            `Failed to write auth export to schema index: ${error instanceof Error ? error.message : String(error)}`,
-          );
+          throw new Error("Failed to write auth export to schema index", { cause: error });
         }
       } else {
         // File wasn't empty, just append the auth export
         try {
-          await fs.appendFile(
-            schemaIndexPath,
-            '\nexport * from "./auth";\n',
-            "utf-8",
-          );
+          await fs.appendFile(schemaIndexPath, '\nexport * from "./auth";\n', "utf-8");
         } catch (error) {
-          throw new Error(
-            `Failed to append auth export to schema index: ${error instanceof Error ? error.message : String(error)}`,
-          );
+          throw new Error("Failed to append auth export to schema index", { cause: error });
         }
       }
 

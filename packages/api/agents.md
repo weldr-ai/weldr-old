@@ -1,6 +1,7 @@
 # API Package Development Guidelines
 
 ## Overview
+
 The @weldr/api package provides the tRPC API layer for the Weldr platform. It handles all client-server communication with type-safe procedures, authentication, and database operations using Drizzle ORM.
 
 ## Type Safety Requirements
@@ -8,16 +9,15 @@ The @weldr/api package provides the tRPC API layer for the Weldr platform. It ha
 ### Router Definition Patterns
 
 **Pattern 1: Object with satisfies TRPCRouterRecord**
+
 ```typescript
 import { TRPCRouterRecord } from "@trpc/server";
 import { protectedProcedure } from "../init";
 
 export const myRouter = {
-  create: protectedProcedure
-    .input(insertSchema)
-    .mutation(async ({ ctx, input }) => {
-      // Implementation
-    }),
+  create: protectedProcedure.input(insertSchema).mutation(async ({ ctx, input }) => {
+    // Implementation
+  }),
   list: protectedProcedure.query(async ({ ctx }) => {
     // Implementation
   }),
@@ -25,15 +25,14 @@ export const myRouter = {
 ```
 
 **Pattern 2: Using createTRPCRouter**
+
 ```typescript
 import { createTRPCRouter, protectedProcedure } from "../init";
 
 export const myRouter = createTRPCRouter({
-  create: protectedProcedure
-    .input(insertSchema)
-    .mutation(async ({ ctx, input }) => {
-      // Implementation
-    }),
+  create: protectedProcedure.input(insertSchema).mutation(async ({ ctx, input }) => {
+    // Implementation
+  }),
 });
 ```
 
@@ -61,35 +60,30 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 ```
 
 ### Input Validation with Zod
+
 ```typescript
 import { z } from "zod";
 import { insertProjectSchema } from "@weldr/shared/validators/projects";
 
 // Use shared validators from @weldr/shared
 export const myRouter = {
-  create: protectedProcedure
-    .input(insertProjectSchema)
-    .mutation(async ({ ctx, input }) => {
-      // input is fully typed
-    }),
+  create: protectedProcedure.input(insertProjectSchema).mutation(async ({ ctx, input }) => {
+    // input is fully typed
+  }),
 
   // Or define inline schemas
-  byId: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .query(async ({ ctx, input }) => {
-      // input.id is typed as string
-    }),
+  byId: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+    // input.id is typed as string
+  }),
 } satisfies TRPCRouterRecord;
 ```
 
 ## Context and Dependencies
 
 ### Context Structure
+
 ```typescript
-export const createTRPCContext = async (opts: {
-  headers: Headers;
-  session: Session | null;
-}) => ({
+export const createTRPCContext = async (opts: { headers: Headers; session: Session | null }) => ({
   headers: opts.headers,
   session: opts.session,
   db, // Drizzle database client from @weldr/db
@@ -97,6 +91,7 @@ export const createTRPCContext = async (opts: {
 ```
 
 ### Using Context in Procedures
+
 ```typescript
 protectedProcedure.query(async ({ ctx }) => {
   // Access authenticated user
@@ -115,6 +110,7 @@ protectedProcedure.query(async ({ ctx }) => {
 ## Database Query Patterns
 
 ### Basic Queries with Relations
+
 ```typescript
 const project = await ctx.db.query.projects.findFirst({
   where: and(
@@ -140,6 +136,7 @@ if (!project) {
 ```
 
 ### Insert with Returning
+
 ```typescript
 const [newProject] = await ctx.db
   .insert(projects)
@@ -151,25 +148,19 @@ const [newProject] = await ctx.db
 ```
 
 ### Update with Conditions
+
 ```typescript
 await ctx.db
   .update(projects)
   .set({ status: "active" })
-  .where(
-    and(
-      eq(projects.id, input.id),
-      eq(projects.userId, ctx.session.user.id),
-    )
-  );
+  .where(and(eq(projects.id, input.id), eq(projects.userId, ctx.session.user.id)));
 ```
 
 ### Transactions
+
 ```typescript
 const result = await ctx.db.transaction(async (tx) => {
-  const [project] = await tx
-    .insert(projects)
-    .values(projectData)
-    .returning();
+  const [project] = await tx.insert(projects).values(projectData).returning();
 
   if (!project) {
     throw new Error("Failed to create project");
@@ -187,12 +178,16 @@ const result = await ctx.db.transaction(async (tx) => {
 ## Error Handling
 
 ### Standard Error Pattern
+
 ```typescript
+import { Logger } from "@weldr/shared";
+
 try {
   const result = await someOperation();
   return result;
 } catch (error) {
-  console.error(error);
+  const logger = Logger.get({ operation: "trpc-procedure" });
+  logger.error("Operation failed", { extra: { error: error.message } });
 
   // Re-throw tRPC errors
   if (error instanceof TRPCError) {
@@ -208,6 +203,7 @@ try {
 ```
 
 ### TRPCError Codes
+
 - `UNAUTHORIZED` - Authentication required
 - `NOT_FOUND` - Resource not found
 - `BAD_REQUEST` - Invalid request or state
@@ -216,7 +212,9 @@ try {
 - `FORBIDDEN` - Authenticated but not authorized
 
 ### Validation Error Handling
+
 The error formatter automatically flattens Zod errors:
+
 ```typescript
 errorFormatter: ({ shape, error }) => ({
   ...shape,
@@ -230,6 +228,7 @@ errorFormatter: ({ shape, error }) => ({
 ## Agent Proxy Pattern
 
 ### Proxying to Agent Service
+
 ```typescript
 import { callAgentProxy } from "../utils";
 
@@ -245,6 +244,7 @@ const result = await callAgentProxy<TriggerWorkflowResponse>(
 ```
 
 ### callAgentProxy Implementation
+
 ```typescript
 async function callAgentProxy<T = unknown>(
   endpoint: string,
@@ -271,6 +271,7 @@ async function callAgentProxy<T = unknown>(
 ## Local Mode Support
 
 ### Checking Local Mode
+
 ```typescript
 import { isLocalMode } from "@weldr/shared/state";
 
@@ -284,6 +285,7 @@ if (!isLocalMode()) {
 ## Router Organization
 
 ### File Structure
+
 ```
 src/
 ├── index.ts           # Main exports
@@ -304,6 +306,7 @@ src/
 ```
 
 ### Router Aggregation
+
 ```typescript
 // router/index.ts
 export const appRouter = createTRPCRouter({
@@ -323,6 +326,7 @@ export const appRouter = createTRPCRouter({
 ## Type Exports
 
 ### Exporting Router Types
+
 ```typescript
 // index.ts
 export { appRouter, createCaller, createTRPCContext };
@@ -338,11 +342,13 @@ type ProjectListOutput = RouterOutputs["projects"]["list"];
 ## Dependencies
 
 ### Internal Packages
+
 - `@weldr/auth` - Session types for authentication
 - `@weldr/db` - Database access, Drizzle ORM, schema definitions
 - `@weldr/shared` - Validators, utilities, types
 
 ### External Dependencies
+
 - `@trpc/server` - tRPC server implementation
 - `superjson` - Data transformer for complex types
 - `zod` - Runtime validation schemas
@@ -350,6 +356,7 @@ type ProjectListOutput = RouterOutputs["projects"]["list"];
 ## Do's and Don'ts
 
 ### Do's
+
 - Use `protectedProcedure` for authenticated routes
 - Always scope queries by user ID
 - Use transactions for multi-step operations
@@ -360,6 +367,7 @@ type ProjectListOutput = RouterOutputs["projects"]["list"];
 - Use SuperJSON transformer for complex types (Date, Map, etc.)
 
 ### Don'ts
+
 - Use `any` type
 - Skip user ownership checks in queries
 - Ignore TypeScript errors

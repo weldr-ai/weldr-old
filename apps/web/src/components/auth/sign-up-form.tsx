@@ -108,9 +108,7 @@ export function SignUpForm({
             <span className="w-full border border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground md:bg-card">
-              OR
-            </span>
+            <span className="bg-background px-2 text-muted-foreground md:bg-card">OR</span>
           </div>
         </div>
         <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
@@ -231,9 +229,7 @@ export function SignUpForm({
               aria-disabled={!form.formState.isValid || isSubmitting}
               disabled={!form.formState.isValid || isSubmitting}
             >
-              {isSubmitting && (
-                <LoaderIcon className="mr-1 size-3 animate-spin" />
-              )}
+              {isSubmitting && <LoaderIcon className="mr-1 size-3 animate-spin" />}
               Sign up
             </Button>
           </Form>
@@ -250,10 +246,7 @@ export function SignUpForm({
                 Sign in
               </Button>
             ) : (
-              <Link
-                href="/auth/sign-in"
-                className="text-primary hover:underline"
-              >
+              <Link href="/auth/sign-in" className="text-primary hover:underline">
                 Sign in
               </Link>
             )}

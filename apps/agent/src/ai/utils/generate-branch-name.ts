@@ -8,9 +8,7 @@ import { registry } from "./registry";
 const branchNameSchema = z.object({
   branchName: z
     .string()
-    .describe(
-      "A concise, kebab-case branch name (e.g., 'add-user-auth', 'fix-login-bug')",
-    ),
+    .describe("A concise, kebab-case branch name (e.g., 'add-user-auth', 'fix-login-bug')"),
 });
 
 export async function generateBranchName(messages: ModelMessage[]) {

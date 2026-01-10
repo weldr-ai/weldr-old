@@ -70,10 +70,7 @@ await db.insert(projects).values({
 });
 
 // Update
-await db
-  .update(projects)
-  .set({ name: "Updated Name" })
-  .where(eq(projects.id, projectId));
+await db.update(projects).set({ name: "Updated Name" }).where(eq(projects.id, projectId));
 
 // Delete
 await db.delete(projects).where(eq(projects.id, projectId));
@@ -85,8 +82,12 @@ await db.delete(projects).where(eq(projects.id, projectId));
 import { db } from "@weldr/db";
 
 await db.transaction(async (tx) => {
-  await tx.insert(projects).values({ /* ... */ });
-  await tx.insert(branches).values({ /* ... */ });
+  await tx.insert(projects).values({
+    /* ... */
+  });
+  await tx.insert(branches).values({
+    /* ... */
+  });
 });
 ```
 

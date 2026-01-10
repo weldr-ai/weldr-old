@@ -1,28 +1,19 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
+
 import { and, eq, not } from "drizzle-orm";
 
 import { db } from "@weldr/db";
-import {
-  declarations,
-  nodes,
-  projects,
-  versionDeclarations,
-  versions,
-} from "@weldr/db/schema";
+import { declarations, nodes, projects, versionDeclarations, versions } from "@weldr/db/schema";
 import { mergeJson } from "@weldr/db/utils";
 import { Logger } from "@weldr/shared/logger";
 import { getBranchDir } from "@weldr/shared/state";
 import type { DeclarationCodeMetadata } from "@weldr/shared/types/declarations";
 
-import { findNodePosition, type NODE_DIMENSIONS } from "./declarations";
 import { embedDeclaration } from "./embed-declarations";
 import { enrichDeclaration } from "./enrich";
-import {
-  type ExtractedSpecs,
-  extractSpecsFromCode,
-  type SpecType,
-} from "./extract-specs";
+import { type ExtractedSpecs, extractSpecsFromCode, type SpecType } from "./extract-specs";
+import { findNodePosition, type NODE_DIMENSIONS } from "./node-placement";
 
 export interface EnrichingJobData {
   declarationId: string;
@@ -38,9 +29,7 @@ const jobQueue: EnrichingJobData[] = [];
 let isProcessing = false;
 const MAX_RETRIES = 3;
 
-export async function queueEnrichingJob(
-  jobData: EnrichingJobData,
-): Promise<void> {
+export async function queueEnrichingJob(jobData: EnrichingJobData): Promise<void> {
   const logger = Logger.get({
     declarationId: jobData.declarationId,
     declarationName: jobData.codeMetadata.name,
@@ -109,10 +98,7 @@ export async function recoverEnrichingJobs(): Promise<void> {
   try {
     // Find declarations that are still in "enriching" state
     const versionsList = await db.query.versions.findMany({
-      where: and(
-        not(eq(versions.status, "planning")),
-        eq(versions.projectId, project.id),
-      ),
+      where: and(not(eq(versions.status, "planning")), eq(versions.projectId, project.id)),
       with: {
         branch: true,
       },
@@ -138,12 +124,9 @@ export async function recoverEnrichingJobs(): Promise<void> {
         .filter((declaration) => declaration.progress === "enriching");
 
       if (enrichingDeclarations.length > 0) {
-        logger.info(
-          "Found declarations in enriching state, queueing for processing",
-          {
-            extra: { count: enrichingDeclarations.length },
-          },
-        );
+        logger.info("Found declarations in enriching state, queueing for processing", {
+          extra: { count: enrichingDeclarations.length },
+        });
 
         // Add recovered declarations to queue
         for (const declaration of enrichingDeclarations) {
@@ -361,10 +344,7 @@ async function enrichDeclarationJob(jobData: EnrichingJobData): Promise<void> {
       updateData.nodeId = nodeId;
     }
 
-    await db
-      .update(declarations)
-      .set(updateData)
-      .where(eq(declarations.id, jobData.declarationId));
+    await db.update(declarations).set(updateData).where(eq(declarations.id, jobData.declarationId));
 
     logger.info("Successfully enriched declaration", {
       extra: {
@@ -377,11 +357,7 @@ async function enrichDeclarationJob(jobData: EnrichingJobData): Promise<void> {
     });
   } catch (error) {
     const errorObj = error instanceof Error ? error : new Error(String(error));
-    handleJobRetry(
-      jobData,
-      "Failed to process semantic data generation",
-      errorObj,
-    );
+    handleJobRetry(jobData, "Failed to process semantic data generation", errorObj);
   }
 }
 
@@ -418,11 +394,7 @@ async function processDeclarationsQueue(): Promise<void> {
   Logger.info("Finished processing semantic data queue");
 }
 
-function handleJobRetry(
-  jobData: EnrichingJobData,
-  reason: string,
-  error?: Error,
-): boolean {
+function handleJobRetry(jobData: EnrichingJobData, reason: string, error?: Error): boolean {
   const currentRetryCount = jobData.retryCount ?? 0;
 
   if (currentRetryCount >= MAX_RETRIES) {

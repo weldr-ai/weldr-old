@@ -32,11 +32,7 @@ export const getUnit = (number: number, range: number, index: number) => {
   return value;
 };
 
-export const getRandomColor = (
-  number: number,
-  colors: string[],
-  range: number,
-) => {
+export const getRandomColor = (number: number, colors: string[], range: number) => {
   return colors[number % range];
 };
 

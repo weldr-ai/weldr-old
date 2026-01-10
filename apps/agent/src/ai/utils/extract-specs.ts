@@ -20,10 +20,7 @@ export type ExtractedSpecs =
  * Detect if a file contains a high-level declaration based on path and content.
  * Returns the spec type if detected, or null if not a high-level declaration.
  */
-export function detectSpecType(
-  filePath: string,
-  sourceCode: string,
-): SpecType | null {
+export function detectSpecType(filePath: string, sourceCode: string): SpecType | null {
   // Database models - Drizzle schemas
   if (
     (filePath.includes("/db/schema") || filePath.includes("/schema/")) &&
@@ -51,10 +48,7 @@ export function detectSpecType(
     filePath.includes("/pages/")
   ) {
     // Must have a component export (default export or named Route)
-    if (
-      sourceCode.includes("export default") ||
-      sourceCode.includes("createFileRoute")
-    ) {
+    if (sourceCode.includes("export default") || sourceCode.includes("createFileRoute")) {
       return "page";
     }
   }

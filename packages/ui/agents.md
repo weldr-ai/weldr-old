@@ -1,11 +1,13 @@
 # UI Package Development Guidelines
 
 ## Overview
+
 The @weldr/ui package provides the component library for Weldr applications. It follows shadcn/ui patterns with Radix UI primitives, Tailwind CSS styling, and class-variance-authority (CVA) for variants.
 
 ## Type Safety Requirements
 
 ### Component Props
+
 ```typescript
 // ALWAYS define explicit prop types
 interface ButtonProps
@@ -33,6 +35,7 @@ function Button({
 ```
 
 ### Radix Component Wrapping
+
 ```typescript
 "use client";
 
@@ -65,6 +68,7 @@ function DialogContent({
 ## Component Patterns
 
 ### Simple Components
+
 ```typescript
 function Input({
   className,
@@ -91,6 +95,7 @@ function Input({
 ```
 
 ### Variant-Based Components (CVA)
+
 ```typescript
 import { cva, type VariantProps } from "class-variance-authority";
 
@@ -126,6 +131,7 @@ export { Button, buttonVariants };
 ```
 
 ### Compound Components (Context)
+
 ```typescript
 const SidebarContext = React.createContext<{
   open: boolean;
@@ -158,6 +164,7 @@ function useSidebar() {
 ```
 
 ### forwardRef Pattern
+
 ```typescript
 const Card = React.forwardRef<
   HTMLDivElement,
@@ -176,6 +183,7 @@ Card.displayName = "Card";
 ## Styling Patterns
 
 ### Using cn Utility
+
 ```typescript
 import { cn } from "../lib/utils";
 
@@ -190,6 +198,7 @@ import { cn } from "../lib/utils";
 ```
 
 ### CSS Variables (Theme System)
+
 ```css
 /* globals.css */
 :root {
@@ -213,30 +222,32 @@ import { cn } from "../lib/utils";
 ```
 
 ### Common Styling Patterns
+
 ```typescript
 // State animations
-"data-[state=open]:animate-in data-[state=closed]:animate-out"
-"data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+"data-[state=open]:animate-in data-[state=closed]:animate-out";
+"data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0";
 
 // Focus states
-"focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+"focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 // Disabled states
-"disabled:pointer-events-none disabled:opacity-50"
+"disabled:pointer-events-none disabled:opacity-50";
 
 // Aria/validation states
-"aria-invalid:border-destructive aria-invalid:ring-destructive/20"
+"aria-invalid:border-destructive aria-invalid:ring-destructive/20";
 
 // Dark mode
-"dark:bg-input/30 dark:hover:bg-accent/50"
+"dark:bg-input/30 dark:hover:bg-accent/50";
 
 // SVG sizing
-"[&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0"
+"[&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0";
 ```
 
 ## Icon Organization
 
 ### Icon Pattern
+
 ```typescript
 import type { ComponentProps } from "react";
 
@@ -251,6 +262,7 @@ export function TypescriptIcon(props: ComponentProps<"svg">) {
 ```
 
 ### Theme-Aware Icons
+
 ```typescript
 export function GithubIcon({
   theme = "dark",
@@ -265,6 +277,7 @@ export function GithubIcon({
 ```
 
 ### Icon Export Pattern
+
 ```typescript
 // src/icons/index.ts
 export { GithubIcon } from "./github-icon";
@@ -277,6 +290,7 @@ export { TypescriptIcon } from "./typescript-icon";
 ## Hooks
 
 ### useIsMobile
+
 ```typescript
 import { useIsMobile } from "@weldr/ui/hooks/use-mobile";
 
@@ -288,6 +302,7 @@ function ResponsiveComponent() {
 ```
 
 ### useToast
+
 ```typescript
 import { useToast } from "@weldr/ui/hooks/use-toast";
 
@@ -319,6 +334,7 @@ function MyComponent() {
 ```
 
 ### Import Patterns
+
 ```typescript
 // Components
 import { Button } from "@weldr/ui/components/button";
@@ -340,6 +356,7 @@ import "@weldr/ui/styles/globals.css";
 ## Adding Components
 
 ### Using shadcn CLI
+
 ```bash
 # Add a new shadcn component
 bun add-component <component-name>
@@ -348,6 +365,7 @@ bun add-component <component-name>
 ```
 
 ### Component Checklist
+
 - [ ] Define TypeScript props interface
 - [ ] Add `data-slot` attribute for identification
 - [ ] Use `cn()` for class merging
@@ -362,6 +380,7 @@ bun add-component <component-name>
 ## Component List
 
 ### Core Components (56)
+
 accordion, alert, alert-dialog, avatar, badge, breadcrumb,
 button, calendar, card, carousel, chart, checkbox,
 collapsible, command, context-menu, dialog, drawer, dropdown-menu,
@@ -373,6 +392,7 @@ table, tabs, textarea, toast, toaster, toggle, toggle-group,
 tooltip, tree-view, visually-hidden
 
 ### Custom Icons (47)
+
 Brand icons (GitHub, Google, Slack, Discord, Linear, etc.),
 Technology icons (TypeScript, JavaScript, Tailwind, Postgres),
 Custom icons (LogoIcon, GradientSparklesIcon, etc.)
@@ -380,6 +400,7 @@ Custom icons (LogoIcon, GradientSparklesIcon, etc.)
 ## Dependencies
 
 ### Core Dependencies
+
 - `@radix-ui/react-*` - Radix UI primitives
 - `class-variance-authority` - Variant styling
 - `clsx` - Class name construction
@@ -387,12 +408,14 @@ Custom icons (LogoIcon, GradientSparklesIcon, etc.)
 - `lucide-react` - Icon library
 
 ### Form/Interaction
+
 - `react-hook-form` - Form handling
 - `zod` - Validation
 - `cmdk` - Command menu
 - `vaul` - Drawer component
 
 ### Utilities
+
 - `sonner` - Toast notifications
 - `recharts` - Charts
 - `next-themes` - Theme switching
@@ -400,6 +423,7 @@ Custom icons (LogoIcon, GradientSparklesIcon, etc.)
 ## Do's and Don'ts
 
 ### Do's
+
 - Use `data-slot` attributes for component identification
 - Use `cn()` for all class merging
 - Support `className` prop for customization
@@ -411,6 +435,7 @@ Custom icons (LogoIcon, GradientSparklesIcon, etc.)
 - Export both component and variants (when applicable)
 
 ### Don'ts
+
 - Use `any` type for props
 - Hardcode colors (use CSS variables)
 - Skip accessibility attributes

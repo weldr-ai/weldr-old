@@ -1,18 +1,12 @@
 import { ShieldCheckIcon, ShieldXIcon } from "lucide-react";
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@weldr/ui/components/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@weldr/ui/components/tooltip";
 
 interface ProtectedBadgeProps {
   protected: boolean;
 }
 
-export const ProtectedBadge = ({
-  protected: isProtected,
-}: ProtectedBadgeProps) => {
+export const ProtectedBadge = ({ protected: isProtected }: ProtectedBadgeProps) => {
   return (
     <Tooltip>
       <TooltipTrigger>

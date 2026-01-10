@@ -11,9 +11,7 @@ export const environmentVariableSchema = z.object({
 });
 
 export const insertEnvironmentVariableSchema = z.object({
-  key: z
-    .string()
-    .regex(/^[A-Z][A-Z0-9_]*$/, "Key must be in SCREAMING_SNAKE_CASE format"),
+  key: z.string().regex(/^[A-Z][A-Z0-9_]*$/, "Key must be in SCREAMING_SNAKE_CASE format"),
   value: z.string().min(1, "Value is required"),
   projectId: z.string().min(1, "Project ID is required"),
 });

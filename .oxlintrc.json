@@ -1,0 +1,62 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "pedantic": "off",
+    "style": "off",
+    "nursery": "off"
+  },
+  "plugins": ["typescript", "import", "promise", "node"],
+  "jsPlugins": ["eslint-plugin-perfectionist"],
+  "rules": {
+    "perfectionist/sort-imports": [
+      "error",
+      {
+        "type": "alphabetical",
+        "order": "asc",
+        "ignoreCase": true,
+        "internalPattern": ["^@weldr/"],
+        "newlinesBetween": 1,
+        "groups": [
+          "builtin",
+          "external",
+          "internal",
+          "alias",
+          { "newlinesBetween": 0 },
+          ["parent", "sibling", "index"],
+          "unknown"
+        ],
+        "customGroups": [
+          {
+            "groupName": "alias",
+            "elementNamePattern": "^@/"
+          }
+        ]
+      }
+    ],
+    "no-unused-vars": "error",
+    "no-console": "off",
+    "no-debugger": "error",
+    "eqeqeq": "error",
+    "no-var": "error",
+    "prefer-const": "error",
+    "no-duplicate-imports": "error",
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-non-null-assertion": "warn",
+    "typescript/consistent-type-imports": "warn",
+    "import/no-cycle": "error",
+    "import/no-self-import": "error",
+    "import/no-default-export": "off",
+    "import/no-unassigned-import": "off",
+    "promise/no-return-wrap": "error"
+  },
+  "ignorePatterns": [
+    "dist/**",
+    "node_modules/**",
+    "*.config.ts",
+    "*.config.js",
+    "**/data/**",
+    "**/*.hbs"
+  ]
+}

@@ -1,14 +1,10 @@
 {
   "name": "weldr-monorepo",
   "private": true,
-  "packageManager": "bun@1.3.5",
+  "homepage": "https://github.com/weldr-ai/weldr#readme",
   "repository": {
     "type": "git",
     "url": "https://github.com/weldr-ai/weldr.git"
-  },
-  "homepage": "https://github.com/weldr-ai/weldr#readme",
-  "engines": {
-    "node": ">=22"
   },
   "workspaces": [
     "apps/*",
@@ -17,29 +13,38 @@
   ],
   "scripts": {
     "build": "turbo build",
-    "typecheck": "turbo typecheck",
-    "clean": "rm -rf .turbo node_modules",
-    "clean:ws": "turbo clean",
+    "check": "biome check",
+    "check:fix": "biome check --diagnostic-level=warn --write",
+    "clean": "turbo clean && rm -rf node_modules .turbo",
     "db:check": "bun run --cwd packages/db check",
     "db:generate": "bun run --cwd packages/db generate",
     "db:migrate": "bun run --cwd packages/db migrate",
     "db:migrate:drop": "bun run --cwd packages/db migrate:drop",
     "db:pull": "bun run --cwd packages/db pull",
     "db:push": "bun run --cwd packages/db push",
-    "db:studio": "bun run --cwd packages/db studio",
     "db:seed": "bun run --cwd packages/db seed",
+    "db:studio": "bun run --cwd packages/db studio",
     "db:up": "bun run --cwd packages/db up",
     "dev": "turbo dev",
-    "check": "biome check",
-    "check:fix": "biome check --diagnostic-level=warn --write",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix --fix-suggestions",
+    "preview": "turbo preview",
     "start": "turbo start",
-    "preview": "turbo preview"
+    "typecheck": "turbo typecheck"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.1.1",
     "@turbo/gen": "^1.13.3",
     "@weldr/tsconfig": "workspace:*",
+    "eslint-plugin-perfectionist": "^5.3.1",
+    "oxfmt": "^0.23.0",
+    "oxlint": "^1.38.0",
     "turbo": "^2.6.0",
-    "typescript": "^5.7.2"
-  }
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "bun@1.3.5"
 }

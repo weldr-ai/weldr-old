@@ -156,9 +156,7 @@ export const updateMessageItemSchema = z.object({
   id: z.string(),
   chatId: z.string(),
   content: z.custom<
-    | Exclude<AssistantContent, string>
-    | Exclude<UserContent, string>
-    | ToolContent
+    Exclude<AssistantContent, string> | Exclude<UserContent, string> | ToolContent
   >(),
 });
 

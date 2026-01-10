@@ -1,9 +1,7 @@
-import { relations } from "drizzle-orm";
 import { index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { nanoid } from "@weldr/shared/nanoid";
 
-import { declarations } from "./declarations";
 import { projects } from "./projects";
 
 export const nodes = pgTable(
@@ -22,11 +20,3 @@ export const nodes = pgTable(
   },
   (t) => [index("nodes_created_at_idx").on(t.createdAt)],
 );
-
-export const nodeRelations = relations(nodes, ({ one }) => ({
-  declaration: one(declarations),
-  project: one(projects, {
-    fields: [nodes.projectId],
-    references: [projects.id],
-  }),
-}));

@@ -31,10 +31,7 @@ async function streamToolMessageUpdate({
   const branch = context.get("branch");
 
   const message = await db.query.chatMessages.findFirst({
-    where: and(
-      eq(chatMessages.chatId, branch.headVersion.chatId),
-      eq(chatMessages.role, "tool"),
-    ),
+    where: and(eq(chatMessages.chatId, branch.headVersion.chatId), eq(chatMessages.role, "tool")),
     orderBy: (chatMessages, { desc }) => [desc(chatMessages.createdAt)],
   });
 
@@ -104,9 +101,7 @@ async function streamToolMessageUpdate({
   });
 }
 
-export async function installQueuedIntegrations(
-  context: WorkflowContext,
-): Promise<
+export async function installQueuedIntegrations(context: WorkflowContext): Promise<
   | {
       status: "completed";
       installedIntegrations: {
@@ -146,9 +141,7 @@ export async function installQueuedIntegrations(
     const queuedIntegrations = await getQueuedIntegrations(context);
 
     if (queuedIntegrations.length === 0) {
-      logger.info(
-        `Installation round ${installationRound}: No queued integrations found`,
-      );
+      logger.info(`Installation round ${installationRound}: No queued integrations found`);
       break;
     }
 
@@ -160,11 +153,7 @@ export async function installQueuedIntegrations(
 
     for (const integration of queuedIntegrations) {
       try {
-        await updateIntegrationInstallationStatus(
-          versionId,
-          integration.id,
-          "installing",
-        );
+        await updateIntegrationInstallationStatus(versionId, integration.id, "installing");
         logger.info(`Started installing ${integration.key}`);
 
         await streamToolMessageUpdate({
@@ -178,11 +167,7 @@ export async function installQueuedIntegrations(
           context,
         });
 
-        await updateIntegrationInstallationStatus(
-          versionId,
-          integration.id,
-          "installed",
-        );
+        await updateIntegrationInstallationStatus(versionId, integration.id, "installed");
         logger.info(`Successfully installed ${integration.key}`);
 
         allInstalledIntegrations.push({
@@ -203,13 +188,8 @@ export async function installQueuedIntegrations(
           extra: { error },
         });
 
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error";
-        await updateIntegrationInstallationStatus(
-          versionId,
-          integration.id,
-          "failed",
-        );
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        await updateIntegrationInstallationStatus(versionId, integration.id, "failed");
 
         await streamToolMessageUpdate({
           context,
@@ -250,9 +230,7 @@ export async function installQueuedIntegrations(
   });
 
   if (blockedIntegrations.length > 0) {
-    const blockedKeys = blockedIntegrations
-      .map((i) => i.integration.key)
-      .join(", ");
+    const blockedKeys = blockedIntegrations.map((i) => i.integration.key).join(", ");
     logger.warn(
       `Installation completed but ${blockedIntegrations.length} integrations remain blocked: ${blockedKeys}`,
     );

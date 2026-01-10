@@ -91,9 +91,7 @@ async function waitForServer(port: number, maxAttempts = 60): Promise<boolean> {
         signal: AbortSignal.timeout(1000),
       });
       // Server responded (even with error status), it's ready
-      console.log(
-        `Dev server on port ${port} is ready (attempt ${attempt + 1})`,
-      );
+      console.log(`Dev server on port ${port} is ready (attempt ${attempt + 1})`);
       return true;
     } catch {
       // Server not ready yet, wait and retry
@@ -114,19 +112,12 @@ function detectFramework(branchDir: string): {
 } {
   // Check for monorepo structure with apps/web
   const webPackageJsonPath = join(branchDir, "apps", "web", "package.json");
-  const serverPackageJsonPath = join(
-    branchDir,
-    "apps",
-    "server",
-    "package.json",
-  );
+  const serverPackageJsonPath = join(branchDir, "apps", "server", "package.json");
   const rootPackageJsonPath = join(branchDir, "package.json");
 
   // Prefer web app if it exists
   if (existsSync(webPackageJsonPath)) {
-    const webPackageJson = JSON.parse(
-      readFileSync(webPackageJsonPath, "utf-8"),
-    );
+    const webPackageJson = JSON.parse(readFileSync(webPackageJsonPath, "utf-8"));
     console.log("Detected web app structure");
 
     // Check for TanStack Start
@@ -194,11 +185,7 @@ function getLRUServer(state: DevServersState): DevServerMetadata | null {
 /**
  * Kill a dev server process
  */
-async function killProcess(
-  projectId: string,
-  branchId: string,
-  pid: number,
-): Promise<void> {
+async function killProcess(projectId: string, branchId: string, pid: number): Promise<void> {
   const key = getServerKey(projectId, branchId);
 
   try {
@@ -237,10 +224,7 @@ async function killProcess(
 /**
  * Stop a dev server
  */
-export async function stopDevServer(
-  projectId: string,
-  branchId: string,
-): Promise<void> {
+export async function stopDevServer(projectId: string, branchId: string): Promise<void> {
   console.log(`Stopping dev server for ${projectId}/${branchId}`);
 
   const state = loadMetadata();
@@ -276,9 +260,7 @@ export async function startDevServer(
   const key = getServerKey(projectId, branchId);
 
   // Check if already running
-  const existing = state.servers.find(
-    (s) => s.projectId === projectId && s.branchId === branchId,
-  );
+  const existing = state.servers.find((s) => s.projectId === projectId && s.branchId === branchId);
 
   if (existing) {
     // Verify process is still alive
@@ -352,25 +334,20 @@ export async function startDevServer(
       console.warn(`[Dev Server ${port} Error]`, data.toString().trim());
     });
 
-    childProcess.on(
-      "exit",
-      (code: number | null, signal: NodeJS.Signals | null) => {
-        console.log(
-          `Dev server process ${pid} exited with code ${code}, signal ${signal}`,
-        );
-        runningProcesses.delete(key);
+    childProcess.on("exit", (code: number | null, signal: NodeJS.Signals | null) => {
+      console.log(`Dev server process ${pid} exited with code ${code}, signal ${signal}`);
+      runningProcesses.delete(key);
 
-        // Clean up metadata
-        const currentState = loadMetadata();
-        const index = currentState.servers.findIndex(
-          (s) => s.projectId === projectId && s.branchId === branchId,
-        );
-        if (index !== -1) {
-          currentState.servers.splice(index, 1);
-          saveMetadata(currentState);
-        }
-      },
-    );
+      // Clean up metadata
+      const currentState = loadMetadata();
+      const index = currentState.servers.findIndex(
+        (s) => s.projectId === projectId && s.branchId === branchId,
+      );
+      if (index !== -1) {
+        currentState.servers.splice(index, 1);
+        saveMetadata(currentState);
+      }
+    });
 
     // Track process
     runningProcesses.set(key, childProcess);
@@ -411,14 +388,9 @@ export async function startDevServer(
 /**
  * Get dev server info
  */
-export function getDevServer(
-  projectId: string,
-  branchId: string,
-): DevServerMetadata | null {
+export function getDevServer(projectId: string, branchId: string): DevServerMetadata | null {
   const state = loadMetadata();
-  const server = state.servers.find(
-    (s) => s.projectId === projectId && s.branchId === branchId,
-  );
+  const server = state.servers.find((s) => s.projectId === projectId && s.branchId === branchId);
 
   if (!server) {
     return null;
@@ -435,14 +407,9 @@ export function getDevServer(
 /**
  * Update last accessed timestamp
  */
-export async function updateLastAccessed(
-  projectId: string,
-  branchId: string,
-): Promise<void> {
+export async function updateLastAccessed(projectId: string, branchId: string): Promise<void> {
   const state = loadMetadata();
-  const server = state.servers.find(
-    (s) => s.projectId === projectId && s.branchId === branchId,
-  );
+  const server = state.servers.find((s) => s.projectId === projectId && s.branchId === branchId);
 
   if (server !== undefined) {
     server.lastAccessed = Date.now();

@@ -26,9 +26,7 @@ export function defineIntegration<K extends IntegrationKey>(
         const branch = context.get("branch");
         const branchDir = getBranchDir(project.id, branch.id);
 
-        const options = integration?.options as
-          | ExtractOptionsForKey<K>
-          | undefined;
+        const options = integration?.options as ExtractOptionsForKey<K> | undefined;
 
         const packages = (await props.packages?.(context, options)) ?? [];
         const scripts = (await props.scripts?.(context, options)) ?? [];
@@ -53,10 +51,7 @@ export function defineIntegration<K extends IntegrationKey>(
 
         context.set("project", {
           ...project,
-          integrationCategories: new Set([
-            ...project.integrationCategories,
-            props.category,
-          ]),
+          integrationCategories: new Set([...project.integrationCategories, props.category]),
         });
 
         return combineResults(results.filter((r) => r !== undefined));

@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@weldr/ui/components/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@weldr/ui/components/dialog";
 import { VisuallyHidden } from "@weldr/ui/components/visually-hidden";
 
 import { useUIStore } from "@/lib/context/ui-store";
@@ -20,11 +16,7 @@ export function AuthDialog() {
         <VisuallyHidden asChild>
           <DialogTitle>Sign in or sign up</DialogTitle>
         </VisuallyHidden>
-        {authDialogView === "sign-in" ? (
-          <SignInForm asDialog />
-        ) : (
-          <SignUpForm asDialog />
-        )}
+        {authDialogView === "sign-in" ? <SignInForm asDialog /> : <SignUpForm asDialog />}
       </DialogContent>
     </Dialog>
   );

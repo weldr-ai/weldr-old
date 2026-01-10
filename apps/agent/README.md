@@ -17,6 +17,7 @@ Each phase has conditional steps that execute based on the current state, ensuri
 The agent uses two specialized AI agents that work together:
 
 #### Planner Agent
+
 - Analyzes user requirements and project context
 - Breaks down work into structured tasks with acceptance criteria
 - Identifies needed integrations and dependencies
@@ -24,6 +25,7 @@ The agent uses two specialized AI agents that work together:
 - Orchestrates the overall development strategy
 
 #### Coder Agent
+
 - Executes individual tasks from the execution plan
 - Implements code changes using a rich set of tools
 - Tracks progress across multiple tasks with retry logic
@@ -95,19 +97,23 @@ The agent provides real-time updates through a streaming system:
 The agent has access to a comprehensive set of tools:
 
 **File Operations**
+
 - `read_file`, `write_file`, `edit_file`, `delete_file`
 - `list_dir` for directory exploration
 
 **Code Search**
+
 - `search_codebase` for semantic code search
 - `grep` for text pattern matching
 - `fzf` for fuzzy file finding
 - `find` for file system queries
 
 **Package Management**
+
 - `install_packages`, `remove_packages` for dependency management
 
 **Development Tools**
+
 - `query_related_declarations` to understand code relationships
 - `add_integrations` to install project integrations
 - `done` to mark tasks as complete

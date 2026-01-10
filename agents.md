@@ -1,31 +1,35 @@
 # Weldr Monorepo Development Guidelines
 
 ## Project Overview
+
 Weldr is a TypeScript-based monorepo using bun workspaces, Turbo, and modern web technologies. The project consists of AI-powered web applications with a focus on code generation, project management, and integrations.
 
 ## Monorepo Structure
 
 ### Apps
-| App | Path | Description | Has agents.md |
-|-----|------|-------------|---------------|
-| `agent` | `/apps/agent` | AI-powered backend service with Hono and OpenAPI | Yes |
-| `web` | `/apps/web` | Next.js frontend application | Yes |
+
+| App     | Path          | Description                                      | Has agents.md |
+| ------- | ------------- | ------------------------------------------------ | ------------- |
+| `agent` | `/apps/agent` | AI-powered backend service with Hono and OpenAPI | Yes           |
+| `web`   | `/apps/web`   | Next.js frontend application                     | Yes           |
 
 ### Packages
-| Package | Path | Description | Has agents.md |
-|---------|------|-------------|---------------|
-| `@weldr/api` | `/packages/api` | tRPC API layer with type-safe routers | Yes |
-| `@weldr/auth` | `/packages/auth` | Authentication with Better Auth | Yes |
-| `@weldr/db` | `/packages/db` | Database schemas and Drizzle ORM | Yes |
-| `@weldr/emails` | `/packages/emails` | React email templates | Yes |
-| `@weldr/shared` | `/packages/shared` | Shared utilities, types, and validators | Yes |
-| `@weldr/ui` | `/packages/ui` | UI components with shadcn/ui | Yes |
+
+| Package         | Path               | Description                             | Has agents.md |
+| --------------- | ------------------ | --------------------------------------- | ------------- |
+| `@weldr/api`    | `/packages/api`    | tRPC API layer with type-safe routers   | Yes           |
+| `@weldr/auth`   | `/packages/auth`   | Authentication with Better Auth         | Yes           |
+| `@weldr/db`     | `/packages/db`     | Database schemas and Drizzle ORM        | Yes           |
+| `@weldr/emails` | `/packages/emails` | React email templates                   | Yes           |
+| `@weldr/shared` | `/packages/shared` | Shared utilities, types, and validators | Yes           |
+| `@weldr/ui`     | `/packages/ui`     | UI components with shadcn/ui            | Yes           |
 
 Each app and package has its own `agents.md` file with package-specific development guidelines. Refer to those files for detailed patterns and best practices specific to each package.
 
 ## Core Principles
 
 ### 1. Type Safety is Non-Negotiable
+
 - **ALWAYS** use TypeScript with strict mode enabled
 - **NEVER** use `any` type - use `unknown` and proper type guards instead
 - **NEVER** use non-null assertions (`!`) - handle null/undefined cases explicitly
@@ -38,6 +42,7 @@ Each app and package has its own `agents.md` file with package-specific developm
 - **USE** `as const` assertions for immutable data structures
 
 ### 2. Code Organization & Architecture
+
 - Follow the existing monorepo structure strictly
 - Apps in `/apps`, shared packages in `/packages`
 - Use workspace protocol for internal dependencies: `workspace:*`
@@ -49,6 +54,7 @@ Each app and package has its own `agents.md` file with package-specific developm
 - **ORGANIZE** files by feature, not by type
 
 ### 2.1. Code Reusability & Inspection Before Implementation
+
 - **ALWAYS** search and inspect existing code before implementing new functionality
 - **NEVER** assume functions, utilities, or components don't exist - always check first
 - **REUSE** existing functions, utilities, and components whenever possible
@@ -61,7 +67,8 @@ Each app and package has its own `agents.md` file with package-specific developm
 - **VALIDATE** that your implementation follows existing architectural patterns
 
 ### 3. Import Organization & Dependencies
-- Follow Biome import organization rules (already configured)
+
+- Follow oxfmt import organization rules (configured in `.oxfmtrc.json`)
 - Order: Node builtins → External packages → @weldr packages → Relative imports
 - Use blank lines to separate import groups
 - **PREFER** named imports over default imports for better tree-shaking
@@ -69,7 +76,16 @@ Each app and package has its own `agents.md` file with package-specific developm
 - **USE** type-only imports for TypeScript types: `import type { ... }`
 - **KEEP** dependencies minimal - question every new dependency
 
+### 3.1. Code Formatting & Linting
+
+- Use oxfmt for code formatting and oxlint for linting
+- Format code before committing: `bun format`
+- Check formatting: `bun format:check`
+- Lint code: `bun lint`
+- Use `// oxlint-disable-next-line [rule-name]` for intentional rule violations (with reason)
+
 ### 4. Error Handling & Resilience
+
 - **ALWAYS** use try-catch blocks for async operations
 - **ALWAYS** handle errors explicitly - no silent failures
 - Use TRPCError for API errors with appropriate codes
@@ -82,6 +98,7 @@ Each app and package has its own `agents.md` file with package-specific developm
 - **VALIDATE** error boundaries in React components
 
 ### 5. Database & Data Access Excellence
+
 - Use Drizzle ORM for all database operations
 - **ALWAYS** use transactions for multi-step operations
 - **ALWAYS** validate input with Zod schemas before database operations
@@ -95,6 +112,7 @@ Each app and package has its own `agents.md` file with package-specific developm
 - **USE** read replicas for read-heavy operations when available
 
 ### 6. Performance & Optimization
+
 - **IMPLEMENT** lazy loading for large components and routes
 - **USE** React.memo, useMemo, and useCallback judiciously
 - **OPTIMIZE** bundle size with code splitting
@@ -107,6 +125,7 @@ Each app and package has its own `agents.md` file with package-specific developm
 - **USE** CDN for static assets
 
 ### 7. Security Best Practices
+
 - **NEVER** commit secrets, API keys, or credentials
 - Use environment variables for configuration
 - **ALWAYS** validate and sanitize user input
@@ -122,12 +141,14 @@ Each app and package has its own `agents.md` file with package-specific developm
 - **AUDIT** dependencies for security vulnerabilities regularly
 
 ### 8. Logging Standards
+
 - **NEVER** use `console.log`, `console.error`, or any console methods in backend code
 - **ALWAYS** use the Logger from `@weldr/shared` package for all logging needs
 - **USE** structured logging with appropriate context data
 - **IMPLEMENT** proper log levels: debug, info, warn, error, fatal, trace
 
 #### Logger Usage Examples:
+
 ```typescript
 // Import the Logger namespace from shared package
 import { Logger } from "@weldr/shared";
@@ -143,6 +164,7 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 ```
 
 #### Logging Best Practices:
+
 - **INCLUDE** relevant context data as second parameter
 - **USE** descriptive log messages that explain what happened
 - **AVOID** logging sensitive information (passwords, tokens, personal data)
@@ -152,6 +174,7 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 - **INCLUDE** operation identifiers for traceability
 
 ### 9. Code Quality & Maintainability
+
 - **WRITE** self-documenting code with clear variable and function names
 - **KEEP** functions small and focused (max 20-30 lines)
 - **AVOID** deep nesting (max 3 levels)
@@ -163,6 +186,7 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 - **REMOVE** dead code and unused imports regularly
 
 ### 9.1. Style Consistency & Pattern Matching
+
 - **MIMIC** existing code style and patterns when implementing new features
 - **OBSERVE** how similar functionality is structured in the codebase
 - **FOLLOW** existing naming conventions for variables, functions, and files
@@ -175,6 +199,7 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 - **ALIGN** with established patterns for API design, component structure, and data flow
 
 ### 10. Monitoring & Observability
+
 - **IMPLEMENT** structured logging with appropriate log levels
 - **TRACK** key business metrics and KPIs
 - **MONITOR** application performance and errors
@@ -188,25 +213,30 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 ## Technology Stack
 
 ### Core Technologies
-- **Runtime**: Node.js >= 20
+
+- **Runtime**: Node.js >= 22
 - **Package Manager**: bun 1.3.5
-- **Build System**: Turbo
-- **Language**: TypeScript 5.7.2
-- **Linter/Formatter**: Biome 2.1.1
+- **Build System**: Turbo 2.6.0
+- **Language**: TypeScript 5.9.3
+- **Formatter**: oxfmt 0.23.0 (configured in `.oxfmtrc.json`)
+- **Linter**: oxlint 1.38.0 (configured in `.oxlintrc.json`)
 
 ### Backend
+
 - **API**: tRPC with type-safe routers
 - **Database**: PostgreSQL with Drizzle ORM
 - **Authentication**: Better Auth
 - **Validation**: Zod schemas
 
 ### Frontend
+
 - **Framework**: Next.js (web app), TanStack Start
 - **UI Components**: Custom UI package with shadcn/ui
 - **Styling**: Tailwind CSS
 - **State Management**: React Query (TanStack Query)
 
 ### AI/Agent System
+
 - **LLM Integration**: Custom AI agents for code generation
 - **Tools**: File operations, code search, package management
 - **Streaming**: Server-sent events for real-time updates
@@ -214,29 +244,34 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 ## Package-Specific Guidelines
 
 ### @weldr/db
+
 - Define all schemas with proper TypeScript types
 - Use Zod for runtime validation
 - Export both schema and validator from same module
 - Maintain migration files properly
 
 ### @weldr/api
+
 - Each router should have dedicated file
 - Use protectedProcedure for authenticated routes
 - Return consistent error responses
 - Implement proper pagination where needed
 
 ### @weldr/ui
+
 - Components must be fully typed with proper props interfaces
 - Use forwardRef for components that need ref forwarding
 - Maintain consistent styling with Tailwind classes
 - Export all icons from central index
 
 ### @weldr/shared
+
 - Place all shared types, validators, and utilities here
 - No UI code in shared package
 - Keep dependencies minimal
 
 ### @weldr/auth
+
 - Centralize all authentication logic
 - Use secure session management
 - Implement proper token refresh logic
@@ -244,6 +279,7 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 ## Code Style Rules
 
 ### **Comments Policy**
+
 - **ONLY add comments for very complex work** that requires explanation
 - **NEVER ADD** explanatory comments for simple operations:
   - ❌ `// Delete this because user requested`
@@ -254,12 +290,14 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 - Write self-documenting code with clear naming instead
 
 ### **Emoji Policy**
+
 - **NEVER** use emojis in code, comments, commit messages, or any file content
 - **AVOID** emojis in function names, variable names, file names, or documentation
 - **KEEP** code professional and text-based only
 - **REMOVE** any existing emojis when editing files
 
 ## File Naming Conventions
+
 - Use kebab-case for file names: `user-profile.tsx`
 - Use PascalCase for component files that export components
 - Use camelCase for utility files
@@ -267,18 +305,24 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 - Type definition files: `*.d.ts` or `types.ts`
 
 ## Git Workflow
+
 - Use conventional commits (enforced by commitizen)
 - Format: `type(scope): description`
 - Types: feat, fix, docs, style, refactor, test, chore
 - Run `bun commit` for guided commit creation
 
 ## Common Commands
+
 ```bash
 # Development
 bun dev          # Start all dev servers
 bun build        # Build all packages
 bun typecheck    # Run TypeScript type checking
-bun check:fix    # Fix linting issues
+
+# Code Quality
+bun format       # Format code with oxfmt
+bun format:check # Check code formatting
+bun lint         # Lint code with oxlint
 
 # Database
 bun db:push      # Push schema changes
@@ -286,12 +330,12 @@ bun db:generate  # Generate migrations
 bun db:migrate   # Run migrations
 bun db:studio    # Open Drizzle Studio
 
-# Code Quality
-bun lint:staged  # Run linter on staged files
+# Git
 bun commit       # Create conventional commit
 ```
 
 ## Anti-Patterns to Avoid
+
 - ❌ Using `any` type
 - ❌ Using non-null assertions (`!`) - handle undefined/null explicitly
 - ❌ Ignoring TypeScript errors with @ts-ignore
@@ -310,6 +354,7 @@ bun commit       # Create conventional commit
 - ❌ **Assuming function behavior without inspecting the implementation**
 
 ## Performance Guidelines
+
 - Use React.memo for expensive components
 - Implement proper loading states
 - Use pagination for large data sets
@@ -318,6 +363,7 @@ bun commit       # Create conventional commit
 - Use database indexes appropriately
 
 ## AI Agent Development
+
 - Tools must have clear, single responsibilities
 - Validate all tool inputs with Zod schemas
 - Stream responses for better UX
@@ -326,6 +372,7 @@ bun commit       # Create conventional commit
 - Use XML parsing for structured LLM responses
 
 ## Deployment & Infrastructure
+
 - Use Fly.io for deployment
 - Implement health check endpoints
 - Use proper environment variable management
@@ -333,6 +380,7 @@ bun commit       # Create conventional commit
 - Implement graceful shutdown handlers
 
 ## When Adding New Features
+
 1. **SEARCH** the codebase thoroughly for existing similar functionality
 2. **READ** and understand existing patterns, function signatures, and implementations
 3. **REUSE** existing utilities, functions, and components where applicable
@@ -346,6 +394,7 @@ bun commit       # Create conventional commit
 11. Ensure backward compatibility
 
 ## Code Review Checklist
+
 - [ ] Searched codebase for existing similar functionality before implementing
 - [ ] Reused existing utilities, functions, and components where possible
 - [ ] Function signatures and parameters read and understood correctly

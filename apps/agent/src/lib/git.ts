@@ -1,12 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import simpleGit from "simple-git";
+
+import { simpleGit } from "simple-git";
 
 import { Logger } from "@weldr/shared/logger";
-import {
-  getBranchDir,
-  getMainRepoPath as getMainRepoPathFromState,
-} from "@weldr/shared/state";
+import { getBranchDir, getMainRepoPath as getMainRepoPathFromState } from "@weldr/shared/state";
 
 const TRUNK_BRANCH = "main";
 
@@ -33,13 +31,10 @@ export namespace Git {
     branchDir?: string,
   ): Promise<string> {
     const repoPath =
-      branchDir ??
-      (projectId && branchId ? getBranchDir(projectId, branchId) : undefined);
+      branchDir ?? (projectId && branchId ? getBranchDir(projectId, branchId) : undefined);
 
     if (!repoPath) {
-      throw new Error(
-        "initRepository requires either branchDir or both projectId and branchId",
-      );
+      throw new Error("initRepository requires either branchDir or both projectId and branchId");
     }
 
     const logger = Logger.get({
@@ -131,9 +126,7 @@ export namespace Git {
       } else {
         // Branch doesn't exist, create it
         if (!startRef) {
-          throw new Error(
-            `Branch "${branchName}" does not exist and no startRef was provided`,
-          );
+          throw new Error(`Branch "${branchName}" does not exist and no startRef was provided`);
         }
         await git.checkoutBranch(branchName, startRef);
         logger.info("Created and checked out new branch", {
@@ -190,10 +183,7 @@ export namespace Git {
     const commits = await commitsBetween(targetBranch, sourceBranch, branchDir);
     const coauthors = Array.from(
       new Map(
-        commits.map((c) => [
-          c.authorEmail,
-          { name: c.authorName, email: c.authorEmail },
-        ]),
+        commits.map((c) => [c.authorEmail, { name: c.authorName, email: c.authorEmail }]),
       ).values(),
     );
 
@@ -220,9 +210,7 @@ export namespace Git {
     await git.checkout(targetBranch);
 
     // Verify we're on the target branch
-    const currentBranch = (
-      await git.raw(["rev-parse", "--abbrev-ref", "HEAD"])
-    ).trim();
+    const currentBranch = (await git.raw(["rev-parse", "--abbrev-ref", "HEAD"])).trim();
     if (currentBranch !== targetBranch) {
       throw new Error(`Expected to be on ${targetBranch}, on ${currentBranch}`);
     }
@@ -243,11 +231,7 @@ export namespace Git {
       logger.error("Merge conflict", {
         extra: { conflicted, sourceBranch, targetBranch, error },
       });
-      const err = new MergeConflictError(
-        conflicted,
-        sourceBranch,
-        targetBranch,
-      );
+      const err = new MergeConflictError(conflicted, sourceBranch, targetBranch);
       throw err;
     }
 
@@ -330,10 +314,7 @@ export namespace Git {
    * @param mainBranchId - The main branch ID
    * @returns The path to the main git repository
    */
-  export function getMainRepoPath(
-    projectId: string,
-    mainBranchId: string,
-  ): string {
+  export function getMainRepoPath(projectId: string, mainBranchId: string): string {
     return getMainRepoPathFromState(projectId, mainBranchId);
   }
 
@@ -344,10 +325,7 @@ export namespace Git {
    * @param branchId - The branch ID
    * @returns The path to the branch workspace
    */
-  export function getBranchWorkspacePath(
-    projectId: string,
-    branchId: string,
-  ): string {
+  export function getBranchWorkspacePath(projectId: string, branchId: string): string {
     return getBranchDir(projectId, branchId);
   }
 
@@ -357,10 +335,7 @@ export namespace Git {
    * @param mainBranchId - The main branch ID
    * @returns The path to the main git repository
    */
-  export async function ensureMainRepo(
-    projectId: string,
-    mainBranchId: string,
-  ): Promise<string> {
+  export async function ensureMainRepo(projectId: string, mainBranchId: string): Promise<string> {
     const repoPath = getMainRepoPath(projectId, mainBranchId);
     const logger = Logger.get({
       operation: "git-ensure-main-repo",
@@ -427,14 +402,7 @@ export namespace Git {
       // Create worktree from commit hash
       // If branchName is provided, create a named branch
       if (branchName) {
-        await git.raw([
-          "worktree",
-          "add",
-          "-b",
-          branchName,
-          worktreePath,
-          commitHash,
-        ]);
+        await git.raw(["worktree", "add", "-b", branchName, worktreePath, commitHash]);
         logger.info("Worktree created with named branch", {
           extra: { worktreePath, commitHash, branchName },
         });
@@ -554,10 +522,7 @@ export namespace Git {
    * @returns True if the branch exists, false otherwise
    * @throws {Error} When checking for branch existence fails
    */
-  async function checkBranchExists(
-    branchName: string,
-    branchDir: string,
-  ): Promise<boolean> {
+  async function checkBranchExists(branchName: string, branchDir: string): Promise<boolean> {
     const git = simpleGit(branchDir);
     try {
       // exits 0 if ref exists
@@ -592,9 +557,7 @@ export namespace Git {
     // commits that are in source but not in target (i.e., target..source)
     const range = `${fromRef}..${toRef}`;
     const format = ["%H", "%s", "%b", "%an", "%ae"].join("%x1f"); // unit sep
-    const raw = await git
-      .raw(["log", "--no-merges", `--format=${format}`, range])
-      .catch(() => "");
+    const raw = await git.raw(["log", "--no-merges", `--format=${format}`, range]).catch(() => "");
     if (!raw.trim()) return [];
     return raw
       .trim()
@@ -623,9 +586,7 @@ export namespace Git {
   }): string {
     const list =
       opts.commits.length > 0
-        ? opts.commits
-            .map((c) => `- ${c.title} (${c.hash.slice(0, 7)})`)
-            .join("\n")
+        ? opts.commits.map((c) => `- ${c.title} (${c.hash.slice(0, 7)})`).join("\n")
         : "- No distinct commits (fast squash)";
     const trailers =
       opts.coauthors.length > 0

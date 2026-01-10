@@ -1,34 +1,14 @@
-import { relations } from "drizzle-orm";
-import {
-  index,
-  integer,
-  jsonb,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { nanoid } from "@weldr/shared/nanoid";
-import type {
-  AiMessageMetadata,
-  ChatMessageContent,
-} from "@weldr/shared/types";
+import type { AiMessageMetadata, ChatMessageContent } from "@weldr/shared/types";
 
 import { users } from "./auth";
 import { projects } from "./projects";
-import { versions } from "./versions";
 
-export const messageRoles = pgEnum("message_roles", [
-  "user",
-  "assistant",
-  "tool",
-]);
+export const messageRoles = pgEnum("message_roles", ["user", "assistant", "tool"]);
 
-export const messageVisibility = pgEnum("message_visibility", [
-  "public",
-  "internal",
-]);
+export const messageVisibility = pgEnum("message_visibility", ["public", "internal"]);
 
 export const chats = pgTable(
   "chats",
@@ -47,20 +27,6 @@ export const chats = pgTable(
   (t) => [index("chats_created_at_idx").on(t.createdAt)],
 );
 
-export const chatRelations = relations(chats, ({ one, many }) => ({
-  messages: many(chatMessages),
-  streams: many(streams),
-  version: one(versions),
-  user: one(users, {
-    fields: [chats.userId],
-    references: [users.id],
-  }),
-  project: one(projects, {
-    fields: [chats.projectId],
-    references: [projects.id],
-  }),
-}));
-
 export const chatMessages = pgTable(
   "chat_messages",
   {
@@ -77,21 +43,6 @@ export const chatMessages = pgTable(
     userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
   },
   (t) => [index("chat_messages_created_at_idx").on(t.createdAt)],
-);
-
-export const chatMessageRelations = relations(
-  chatMessages,
-  ({ one, many }) => ({
-    chat: one(chats, {
-      fields: [chatMessages.chatId],
-      references: [chats.id],
-    }),
-    attachments: many(attachments),
-    user: one(users, {
-      fields: [chatMessages.userId],
-      references: [users.id],
-    }),
-  }),
 );
 
 export const attachments = pgTable(
@@ -113,17 +64,6 @@ export const attachments = pgTable(
   (t) => [index("attachments_created_at_idx").on(t.createdAt)],
 );
 
-export const attachmentsRelations = relations(attachments, ({ one }) => ({
-  user: one(users, {
-    fields: [attachments.userId],
-    references: [users.id],
-  }),
-  message: one(chatMessages, {
-    fields: [attachments.messageId],
-    references: [chatMessages.id],
-  }),
-}));
-
 export const streams = pgTable(
   "streams",
   {
@@ -137,10 +77,3 @@ export const streams = pgTable(
   },
   (t) => [index("streams_chat_id_idx").on(t.chatId)],
 );
-
-export const streamRelations = relations(streams, ({ one }) => ({
-  chat: one(chats, {
-    fields: [streams.chatId],
-    references: [chats.id],
-  }),
-}));

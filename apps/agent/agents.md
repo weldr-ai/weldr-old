@@ -1,9 +1,11 @@
 # Agent Application Development Guidelines
 
 ## Overview
+
 The Agent application is the core AI-powered backend service built with Hono and OpenAPI. It handles code generation, project planning, and integration management using LLMs with custom tools.
 
 ## Current Structure
+
 - `src/ai`: agents (planner, coder), prompts, schemas, tools, shared utils
 - `src/routes`: health, trigger, stream, revert, install-integrations (Hono OpenAPI routes)
 - `src/workflow`: engine, context, steps (generate-project-info, generate-branch-name, generate-version-details, planning, coding, finalizing)
@@ -14,6 +16,7 @@ The Agent application is the core AI-powered backend service built with Hono and
 ## Type Safety Requirements
 
 ### Hono OpenAPI Routes
+
 ```typescript
 // ALWAYS define routes with proper Zod schemas
 import { createRoute, z } from "@hono/zod-openapi";
@@ -65,6 +68,7 @@ router.openapi(route, async (c) => {
 ```
 
 ### Tool Development
+
 ```typescript
 // ALWAYS use createTool utility with proper schemas
 import { z } from "zod";
@@ -123,6 +127,7 @@ export const myTool = createTool({
 ```
 
 ### Tool Schema Patterns
+
 ```typescript
 // ALWAYS use discriminated unions for output schemas
 outputSchema: z.discriminatedUnion("success", [
@@ -134,31 +139,33 @@ outputSchema: z.discriminatedUnion("success", [
     success: z.literal(false),
     error: z.string(),
   }),
-])
+]);
 
 // Use descriptive schemas for better AI understanding
 inputSchema: z.object({
   path: z.string().describe("The file path to read"),
   encoding: z.enum(["utf-8", "ascii"]).optional().default("utf-8"),
-})
+});
 ```
 
 ### Message Handling
+
 - **ALWAYS** validate message content with Zod schemas
 - Use proper message role types: 'user' | 'assistant' | 'system'
 - Validate attachments and metadata
 - Type message content arrays properly
 
 ### Stream Processing
+
 ```typescript
 // ALWAYS use proper types for SSE streams
 interface StreamEvent {
-  type: 'chunk' | 'error' | 'done';
+  type: "chunk" | "error" | "done";
   data: unknown; // Validate with schema
 }
 
 // ALWAYS handle stream errors
-stream.on('error', (error: Error) => {
+stream.on("error", (error: Error) => {
   // Proper error handling
 });
 ```
@@ -166,12 +173,14 @@ stream.on('error', (error: Error) => {
 ## Logging Standards
 
 ### Mandatory Logger Usage
+
 - **NEVER** use `console.log`, `console.error`, `console.warn`, or any console methods
 - **ALWAYS** use the Logger from `@weldr/shared` package for all logging needs
 - **USE** structured logging with appropriate context data
 - **IMPLEMENT** proper log levels: debug, info, warn, error, fatal, trace
 
 ### Logger Import and Basic Usage
+
 ```typescript
 import { Logger } from "@weldr/shared";
 
@@ -179,19 +188,20 @@ import { Logger } from "@weldr/shared";
 Logger.info("User authentication successful");
 Logger.error("Database connection failed", {
   error: err.message,
-  connectionString: safeConnectionString
+  connectionString: safeConnectionString,
 });
 Logger.warn("High memory usage detected", { memoryUsage: process.memoryUsage() });
 ```
 
 ### Contextual Logger for Tools and Operations
+
 ```typescript
 // In tool implementations - always use Logger.get() for context
 export const myTool = createTool({
   // ... tool definition
   execute: async ({ input, context }) => {
     const project = context.get("project");
-    const branch = context.get("branch")
+    const branch = context.get("branch");
 
     const logger = Logger.get({
       projectId: project.id,
@@ -207,16 +217,16 @@ export const myTool = createTool({
       logger.info("Tool execution completed", {
         extra: {
           resultSize: result.length,
-          duration: Date.now() - startTime
-        }
+          duration: Date.now() - startTime,
+        },
       });
       return { success: true as const, data: result };
     } catch (error) {
       logger.error("Tool execution failed", {
         extra: {
           error: error.message,
-          stack: error.stack
-        }
+          stack: error.stack,
+        },
       });
       return { success: false as const, error: error.message };
     }
@@ -225,6 +235,7 @@ export const myTool = createTool({
 ```
 
 ### Route-Level Logging
+
 ```typescript
 router.openapi(route, async (c) => {
   const logger = Logger.get({
@@ -247,6 +258,7 @@ router.openapi(route, async (c) => {
 ```
 
 ### Stream and Workflow Logging
+
 ```typescript
 // In workflow steps
 const logger = Logger.get({
@@ -265,16 +277,17 @@ const logger = Logger.get({
   operation: "sse-streaming",
 });
 
-stream.on('data', (chunk) => {
+stream.on("data", (chunk) => {
   logger.debug("Stream chunk processed", { chunkSize: chunk.length });
 });
 
-stream.on('error', (error) => {
+stream.on("error", (error) => {
   logger.error("Stream error occurred", { extra: { error: error.message } });
 });
 ```
 
 ### Security-Conscious Logging
+
 ```typescript
 // DO NOT log sensitive information
 const logger = Logger.get({ userId, operation: "payment" });
@@ -282,18 +295,19 @@ const logger = Logger.get({ userId, operation: "payment" });
 // ❌ BAD - exposes sensitive data
 logger.info("Processing payment", {
   creditCard: "4111-1111-1111-1111",
-  password: userInput.password
+  password: userInput.password,
 });
 
 // ✅ GOOD - logs safe contextual data
 logger.info("Processing payment", {
   paymentMethod: "credit_card",
   amount: 100,
-  currency: "USD"
+  currency: "USD",
 });
 ```
 
 ### Performance and Debug Logging
+
 ```typescript
 const logger = Logger.get({
   operation: "declaration-extraction",
@@ -317,6 +331,7 @@ logger.info("Declaration extraction completed", {
 ## Hono-Specific Patterns
 
 ### Route Organization
+
 ```typescript
 // In src/routes/[resource].ts
 import { createRoute } from "@hono/zod-openapi";
@@ -325,15 +340,24 @@ import { createRouter } from "@/lib/utils";
 const router = createRouter();
 
 // Define multiple routes in same file
-router.openapi(getRoute, async (c) => { /* ... */ });
-router.openapi(postRoute, async (c) => { /* ... */ });
-router.openapi(putRoute, async (c) => { /* ... */ });
-router.openapi(deleteRoute, async (c) => { /* ... */ });
+router.openapi(getRoute, async (c) => {
+  /* ... */
+});
+router.openapi(postRoute, async (c) => {
+  /* ... */
+});
+router.openapi(putRoute, async (c) => {
+  /* ... */
+});
+router.openapi(deleteRoute, async (c) => {
+  /* ... */
+});
 
 export default router;
 ```
 
 ### Authentication in Routes
+
 ```typescript
 import { auth } from "@weldr/auth";
 
@@ -351,6 +375,7 @@ router.openapi(route, async (c) => {
 ```
 
 ### Error Handling in Hono
+
 ```typescript
 import { Logger } from "@weldr/shared";
 
@@ -377,8 +402,8 @@ router.openapi(route, async (c) => {
     logger.error("Unexpected server error", {
       extra: {
         error: error.message,
-        stack: error.stack
-      }
+        stack: error.stack,
+      },
     });
     return c.json({ error: "Internal server error" }, 500);
   }
@@ -386,6 +411,7 @@ router.openapi(route, async (c) => {
 ```
 
 ### SSE Streaming with Hono
+
 ```typescript
 router.openapi(streamRoute, async (c) => {
   const stream = await createSSEStream(streamId, chatId);
@@ -404,6 +430,7 @@ router.openapi(streamRoute, async (c) => {
 ## AI Agent Guidelines
 
 ### Tool Implementation Rules
+
 1. **Single Responsibility**: Each tool does ONE thing well
 2. **Input Validation**: ALWAYS use Zod schemas with descriptions
 3. **Error Messages**: Provide clear, actionable error messages
@@ -413,6 +440,7 @@ router.openapi(streamRoute, async (c) => {
 7. **Logging**: Use structured logging with Logger.get()
 
 ### XML Tool Support
+
 ```typescript
 // Tools support both JSON and XML formats
 const tool = myTool(context); // JSON format
@@ -421,6 +449,7 @@ const markdown = myTool.toMarkdown(); // Documentation format
 ```
 
 ### Declaration Extraction
+
 - Use AST parsing for accurate code analysis
 - Track dependencies between declarations
 - Maintain declaration metadata with proper types
@@ -429,6 +458,7 @@ const markdown = myTool.toMarkdown(); // Documentation format
 ## Integration System
 
 ### Adding New Integrations
+
 1. Define integration schema in `/integrations/types.ts`
 2. Create category with `defineIntegrationCategory`
 3. Implement integration with `defineIntegration`
@@ -436,6 +466,7 @@ const markdown = myTool.toMarkdown(); // Documentation format
 5. Validate all configuration with Zod
 
 ### Integration Security
+
 - **NEVER** expose API keys in responses
 - Store secrets in vault with encryption
 - Use environment variable mappings
@@ -444,6 +475,7 @@ const markdown = myTool.toMarkdown(); // Documentation format
 ## Workflow Engine
 
 ### Step Implementation
+
 ```typescript
 // ALWAYS type workflow steps
 interface StepContext {
@@ -453,7 +485,7 @@ interface StepContext {
 }
 
 export const myStep: WorkflowStep<StepContext> = {
-  name: 'myStep',
+  name: "myStep",
   execute: async (context) => {
     // Type-safe implementation
   },
@@ -461,6 +493,7 @@ export const myStep: WorkflowStep<StepContext> = {
 ```
 
 ### Workflow Context Pattern
+
 ```typescript
 // Access workflow context in tools
 const project = context.get("project");
@@ -472,6 +505,7 @@ const messages = context.get("messages");
 ## Git Operations
 
 ### Branch Workspace Management
+
 ```typescript
 // Use Git namespace for all git-related operations
 import { Git } from "@/lib/git";
@@ -487,20 +521,21 @@ await Git.initRepository();
 const commitHash = await Git.commit(
   "commit message",
   { name: "Author", email: "author@example.com" },
-  { worktreeName: branchId } // Only for feature branches
+  { worktreeName: branchId }, // Only for feature branches
 );
 
 // Create worktrees for feature branches
 const worktreePath = await Git.getOrCreateWorktree(
-  branchId,           // worktree name
+  branchId, // worktree name
   `branch-${branchId}`, // git branch name
-  "main"             // start from main
+  "main", // start from main
 );
 ```
 
 ## File Operations
 
 ### Safe File Handling
+
 ```typescript
 // For branch-aware file operations, use Git.getBranchWorkspaceDir()
 import { Git } from "@/lib/git";
@@ -509,21 +544,21 @@ import { Git } from "@/lib/git";
 const workspaceDir = Git.getBranchWorkspaceDir(branchId, isMainBranch);
 const safePath = path.resolve(workspaceDir, userInput);
 if (!safePath.startsWith(workspaceDir)) {
-  throw new Error('Path traversal attempt');
+  throw new Error("Path traversal attempt");
 }
 
 // For simple operations, use WORKSPACE_DIR constant
 import { WORKSPACE_DIR } from "@/lib/constants";
 const safePath = path.resolve(WORKSPACE_DIR, userInput);
 if (!safePath.startsWith(WORKSPACE_DIR)) {
-  throw new Error('Path traversal attempt');
+  throw new Error("Path traversal attempt");
 }
 
 // ALWAYS handle file errors
 try {
-  const content = await fs.readFile(filePath, 'utf-8');
+  const content = await fs.readFile(filePath, "utf-8");
 } catch (error) {
-  if (error.code === 'ENOENT') {
+  if (error.code === "ENOENT") {
     // File not found handling
   }
   throw error;
@@ -531,6 +566,7 @@ try {
 ```
 
 ### Command Execution
+
 ```typescript
 // Use runCommand utility for shell commands
 import { runCommand } from "@/lib/commands";
@@ -556,6 +592,7 @@ if (exitCode !== 0) {
 ## OpenAPI Documentation
 
 ### Route Documentation Best Practices
+
 ```typescript
 const route = createRoute({
   method: "post",
@@ -567,13 +604,13 @@ const route = createRoute({
     params: z.object({
       id: z.string().openapi({
         description: "Resource identifier",
-        example: "res_123"
+        example: "res_123",
       }),
     }),
     query: z.object({
       limit: z.number().optional().openapi({
         description: "Number of items to return",
-        example: 10
+        example: 10,
       }),
     }),
     body: {
@@ -601,20 +638,21 @@ const route = createRoute({
 ## Testing Guidelines
 
 ### Testing Tools
+
 ```typescript
-describe('ToolName', () => {
+describe("ToolName", () => {
   const mockContext = new WorkflowContext({
     project: { id: "test" },
     version: { id: "v1" },
   });
 
-  it('should validate input schema', () => {
+  it("should validate input schema", () => {
     const tool = myTool(mockContext);
     const result = tool.inputSchema.safeParse(invalidInput);
     expect(result.success).toBe(false);
   });
 
-  it('should execute successfully', async () => {
+  it("should execute successfully", async () => {
     const tool = myTool(mockContext);
     const result = await tool.execute(validInput);
     expect(result.success).toBe(true);
@@ -625,12 +663,14 @@ describe('ToolName', () => {
 ## Performance Optimization
 
 ### Streaming Best Practices
+
 - Use TransformStream for efficient processing
 - Implement backpressure handling
 - Stream large responses incrementally
 - Clean up streams on client disconnect
 
 ### Caching Strategy
+
 - Cache declaration extractions
 - Use memory cache for frequent lookups
 - Implement cache invalidation
@@ -639,6 +679,7 @@ describe('ToolName', () => {
 ## Monitoring & Logging
 
 ### Structured Logging
+
 ```typescript
 import { Logger } from "@weldr/shared/logger";
 
@@ -648,16 +689,17 @@ const logger = Logger.get({
   chatId,
 });
 
-logger.info('Operation completed', {
+logger.info("Operation completed", {
   extra: {
-    operationType: 'tool_execution',
-    toolName: 'grep',
+    operationType: "tool_execution",
+    toolName: "grep",
     duration: Date.now() - startTime,
   },
 });
 ```
 
 ### Metrics to Track
+
 - Tool execution times
 - LLM token usage
 - Error rates by tool
@@ -667,6 +709,7 @@ logger.info('Operation completed', {
 ## Security Considerations
 
 ### Input Sanitization
+
 - Sanitize all file paths
 - Validate command arguments
 - Escape shell commands properly
@@ -674,6 +717,7 @@ logger.info('Operation completed', {
 - Use WORKSPACE_DIR for path validation
 
 ### Resource Limits
+
 - Set timeout for tool execution
 - Limit file operation sizes
 - Cap LLM token usage
@@ -682,6 +726,7 @@ logger.info('Operation completed', {
 ## Common Patterns
 
 ### Tool Registry Pattern
+
 ```typescript
 // Tools are registered automatically via index.ts
 export const tools = {
@@ -692,10 +737,11 @@ export const tools = {
 };
 
 // Use in agent
-const availableTools = Object.values(tools).map(tool => tool(context));
+const availableTools = Object.values(tools).map((tool) => tool(context));
 ```
 
 ### Context Propagation
+
 ```typescript
 // Pass context through operations
 interface OperationContext {
@@ -706,10 +752,7 @@ interface OperationContext {
 }
 
 // Use context in all operations
-async function performOperation(
-  context: OperationContext,
-  input: Input
-): Promise<Output> {
+async function performOperation(context: OperationContext, input: Input): Promise<Output> {
   // Implementation with context
 }
 ```
@@ -717,6 +760,7 @@ async function performOperation(
 ## Middleware Usage
 
 ### Custom Middleware
+
 ```typescript
 import { MiddlewareHandler } from "hono";
 import { Logger } from "@weldr/shared";
@@ -747,12 +791,14 @@ router.use(loggingMiddleware);
 ## Debugging Tips
 
 ### Tool Debugging
+
 - Log tool inputs and outputs
 - Use structured error messages
 - Implement tool replay capability
 - Add debug mode for verbose output
 
 ### Stream Debugging
+
 - Log stream events
 - Monitor chunk sizes
 - Track stream lifecycle
@@ -761,6 +807,7 @@ router.use(loggingMiddleware);
 ## Do's and Don'ts
 
 ### Do's
+
 ✅ Use createTool utility for all tools
 ✅ Define discriminated unions for tool outputs
 ✅ Use Hono's OpenAPI for all routes
@@ -774,6 +821,7 @@ router.use(loggingMiddleware);
 ✅ Document all API endpoints
 
 ### Don'ts
+
 ❌ Use `any` type
 ❌ Create tools without createTool utility
 ❌ Ignore TypeScript errors

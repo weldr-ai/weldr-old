@@ -37,10 +37,7 @@ async function findTsFiles(dir: string): Promise<string[]> {
 
       if (entry.isDirectory()) {
         tsFiles.push(...(await findTsFiles(fullPath)));
-      } else if (
-        entry.isFile() &&
-        (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx"))
-      ) {
+      } else if (entry.isFile() && (entry.name.endsWith(".ts") || entry.name.endsWith(".tsx"))) {
         tsFiles.push(fullPath);
       }
     }
@@ -119,9 +116,7 @@ async function processFile(
     const existingFileDeclarations = existingDeclarations[key] || [];
 
     // Create a set of existing declaration URIs for quick lookup
-    const existingURIs = new Set(
-      existingFileDeclarations.map((d) => d.codeMetadata.uri),
-    );
+    const existingURIs = new Set(existingFileDeclarations.map((d) => d.codeMetadata.uri));
 
     let skippedCount = 0;
     let addedCount = 0;
@@ -129,9 +124,7 @@ async function processFile(
     for (const declaration of declarations) {
       // Check if this declaration already exists in the output
       if (existingURIs.has(declaration.uri)) {
-        logger.info(
-          `  Skipping existing: ${declaration.name} (${declaration.type})`,
-        );
+        logger.info(`  Skipping existing: ${declaration.name} (${declaration.type})`);
         skippedCount++;
         continue;
       }
@@ -158,11 +151,7 @@ async function processFile(
         addedCount++;
 
         // Write to file immediately
-        await fs.writeFile(
-          outputPath,
-          JSON.stringify(existingDeclarations, null, 2),
-          "utf-8",
-        );
+        await fs.writeFile(outputPath, JSON.stringify(existingDeclarations, null, 2), "utf-8");
 
         logger.info(`  Added ${declaration.name} and updated ${outputPath}`);
       } catch (error) {
@@ -182,15 +171,9 @@ async function processFile(
         addedCount++;
 
         // Write to file immediately
-        await fs.writeFile(
-          outputPath,
-          JSON.stringify(existingDeclarations, null, 2),
-          "utf-8",
-        );
+        await fs.writeFile(outputPath, JSON.stringify(existingDeclarations, null, 2), "utf-8");
 
-        logger.info(
-          `  Added ${declaration.name} (failed) and updated ${outputPath}`,
-        );
+        logger.info(`  Added ${declaration.name} (failed) and updated ${outputPath}`);
       }
     }
 
@@ -199,9 +182,7 @@ async function processFile(
         `  Completed ${key}: added ${addedCount} declarations (skipped ${skippedCount} existing)`,
       );
     } else if (skippedCount > 0) {
-      logger.info(
-        `  All ${skippedCount} declarations already exist for ${key}, skipping`,
-      );
+      logger.info(`  All ${skippedCount} declarations already exist for ${key}, skipping`);
     }
   } catch (error) {
     logger.error(`Failed to process ${filePath}: ${error}`);
@@ -262,12 +243,7 @@ export async function generateEnrichedDeclarations(
     const outputPath = path.join(dataFolder, "declarations.json");
     const existingDeclarations = await loadExistingDeclarations(outputPath);
 
-    await processFile(
-      absolutePath,
-      outputPath,
-      workspaceDir,
-      existingDeclarations,
-    );
+    await processFile(absolutePath, outputPath, workspaceDir, existingDeclarations);
     logger.info(`Completed processing ${absolutePath}`);
   } else {
     // Process all files grouped by data folder
@@ -309,17 +285,10 @@ export async function generateEnrichedDeclarations(
       const existingDeclarations = await loadExistingDeclarations(outputPath);
 
       for (const filePath of files) {
-        await processFile(
-          filePath,
-          outputPath,
-          workspaceDir,
-          existingDeclarations,
-        );
+        await processFile(filePath, outputPath, workspaceDir, existingDeclarations);
       }
 
-      logger.info(
-        `  Completed processing ${files.length} files in ${dataFolder}`,
-      );
+      logger.info(`  Completed processing ${files.length} files in ${dataFolder}`);
     }
   }
 

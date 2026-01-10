@@ -1,18 +1,8 @@
 "use client";
 
 import type { auth, Session, Subscription } from "@weldr/auth";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@weldr/ui/components/dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@weldr/ui/components/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@weldr/ui/components/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@weldr/ui/components/tabs";
 
 import { SubscriptionPlans } from "@/components/billing/subscription-plans";
 import { useUIStore } from "@/lib/context/ui-store";
@@ -60,10 +50,7 @@ export function AccountSettings({
             </div>
           </TabsContent>
           <TabsContent value="billing">
-            <SubscriptionPlans
-              activeSubscription={activeSubscription}
-              session={session}
-            />
+            <SubscriptionPlans activeSubscription={activeSubscription} session={session} />
           </TabsContent>
         </Tabs>
       </DialogContent>

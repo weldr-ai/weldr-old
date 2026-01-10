@@ -12,17 +12,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@weldr/ui/components/dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@weldr/ui/components/tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@weldr/ui/components/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@weldr/ui/components/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@weldr/ui/components/tooltip";
 
 import { EnvSection } from "./env-section";
 import { GeneralSection } from "./general-section";
@@ -59,11 +50,7 @@ export function ProjectSettings({
       <Tooltip>
         <TooltipTrigger asChild>
           <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-7 dark:bg-muted"
-            >
+            <Button variant="outline" size="icon" className="size-7 dark:bg-muted">
               <SettingsIcon className="size-3.5" />
             </Button>
           </DialogTrigger>

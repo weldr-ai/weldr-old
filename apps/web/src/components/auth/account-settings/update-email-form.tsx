@@ -92,8 +92,7 @@ export function UpdateEmailForm({
       <CardHeader>
         <CardTitle>Change Email</CardTitle>
         <CardDescription>
-          Update your email address. A confirmation email will be sent to verify
-          the new email.
+          Update your email address. A confirmation email will be sent to verify the new email.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -120,15 +119,9 @@ export function UpdateEmailForm({
             <div className="flex justify-end">
               <Button
                 type="submit"
-                disabled={
-                  isSubmitting ||
-                  !form.formState.isValid ||
-                  !form.formState.isDirty
-                }
+                disabled={isSubmitting || !form.formState.isValid || !form.formState.isDirty}
               >
-                {isSubmitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Update
               </Button>
             </div>

@@ -37,8 +37,7 @@ export const workflow = createWorkflow({
     condition: (context) => {
       const branch = context.get("branch");
       const hasPlaceholderName =
-        branch.name?.startsWith("variant/") ||
-        branch.name?.startsWith("stream/");
+        branch.name?.startsWith("variant/") || branch.name?.startsWith("stream/");
       return hasPlaceholderName;
     },
   })
@@ -47,8 +46,7 @@ export const workflow = createWorkflow({
       const branch = context.get("branch");
       const status = branch.headVersion.status;
       return (
-        status === "coding" &&
-        (!branch.headVersion.message || !branch.headVersion.description)
+        status === "coding" && (!branch.headVersion.message || !branch.headVersion.description)
       );
     },
   })

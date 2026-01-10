@@ -5,8 +5,7 @@ import { getProjectContext } from "@/ai/utils/get-project-context";
 import { codingGuidelines } from "./coding-guidelines";
 
 export const planner = async (project: typeof projects.$inferSelect) => {
-  const allIntegrationCategories =
-    await db.query.integrationCategories.findMany();
+  const allIntegrationCategories = await db.query.integrationCategories.findMany();
 
   const integrationCategoriesList = allIntegrationCategories
     .map(

@@ -1,4 +1,3 @@
-import { relations } from "drizzle-orm";
 import { pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 
 import { declarations } from "./declarations";
@@ -19,16 +18,3 @@ export const dependencies = pgTable(
     }),
   ],
 );
-
-export const dependenciesRelations = relations(dependencies, ({ one }) => ({
-  dependency: one(declarations, {
-    relationName: "dependency_declaration",
-    fields: [dependencies.dependencyId],
-    references: [declarations.id],
-  }),
-  dependent: one(declarations, {
-    relationName: "dependent_declaration",
-    fields: [dependencies.dependentId],
-    references: [declarations.id],
-  }),
-}));

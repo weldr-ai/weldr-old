@@ -70,10 +70,7 @@ export function ConfigureIntegrationDialog({
             )}
           >
             <div
-              className={cn(
-                "size-1.5 rounded-full",
-                isConfigured ? "bg-success" : "bg-warning",
-              )}
+              className={cn("size-1.5 rounded-full", isConfigured ? "bg-success" : "bg-warning")}
             />
             {isConfigured ? "Configured" : "Awaiting Config"}
           </div>
@@ -85,9 +82,7 @@ export function ConfigureIntegrationDialog({
             {getIntegrationIcon(integrationTemplate.key, 6)}
             <span>{integrationTemplate.name}</span>
           </DialogTitle>
-          <DialogDescription>
-            {integrationTemplate.description}
-          </DialogDescription>
+          <DialogDescription>{integrationTemplate.description}</DialogDescription>
         </DialogHeader>
         <IntegrationConfigurationFields
           integrationTemplate={integrationTemplate}

@@ -51,9 +51,7 @@ export function CreateIntegrationDialog({
   };
 
   for (const variable of requiredVariables) {
-    validationSchemaShape[variable.name] = z
-      .string()
-      .min(1, `${variable.name} is required`);
+    validationSchemaShape[variable.name] = z.string().min(1, `${variable.name} is required`);
   }
 
   const validationSchema = z.object(validationSchemaShape);
@@ -67,9 +65,8 @@ export function CreateIntegrationDialog({
 
   for (const variable of requiredVariables) {
     defaultValues[variable.name] =
-      integration?.environmentVariableMappings?.find(
-        (mapping) => mapping.mapTo === variable.name,
-      )?.environmentVariableId ?? "";
+      integration?.environmentVariableMappings?.find((mapping) => mapping.mapTo === variable.name)
+        ?.environmentVariableId ?? "";
   }
 
   const form = useForm<z.infer<typeof validationSchema>>({
@@ -87,9 +84,7 @@ export function CreateIntegrationDialog({
           duration: 2000,
         });
         setDialogOpen?.(false);
-        await queryClient.invalidateQueries(
-          trpc.integrations.list.queryFilter(),
-        );
+        await queryClient.invalidateQueries(trpc.integrations.list.queryFilter());
       },
       onError: (error) => {
         toast({
@@ -111,9 +106,7 @@ export function CreateIntegrationDialog({
           duration: 2000,
         });
         setDialogOpen?.(false);
-        await queryClient.invalidateQueries(
-          trpc.integrations.list.queryFilter(),
-        );
+        await queryClient.invalidateQueries(trpc.integrations.list.queryFilter());
       },
       onError: (error) => {
         toast({
@@ -159,10 +152,7 @@ export function CreateIntegrationDialog({
   }
 
   // Sync form field values when mappings change
-  const handleEnvironmentVariableMapping = (
-    configKey: string,
-    envVarId: string,
-  ) => {
+  const handleEnvironmentVariableMapping = (configKey: string, envVarId: string) => {
     form.setValue(configKey, envVarId, {
       shouldValidate: true,
       shouldDirty: true,
@@ -184,12 +174,9 @@ export function CreateIntegrationDialog({
             <div className="flex w-full justify-between">
               <div className="flex flex-col items-start gap-4">
                 {getIntegrationIcon(integrationTemplate.key, 10)}
-                <span className="font-semibold text-lg">
-                  {integrationTemplate.name}
-                </span>
+                <span className="font-semibold text-lg">{integrationTemplate.name}</span>
               </div>
-              {integration?.integrationTemplate.id ===
-                integrationTemplate.id && (
+              {integration?.integrationTemplate.id === integrationTemplate.id && (
                 <CheckCircle2Icon className="size-4 text-green-500" />
               )}
             </div>
@@ -204,9 +191,7 @@ export function CreateIntegrationDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {integration ? integration.name : "Add new integration"}
-          </DialogTitle>
+          <DialogTitle>{integration ? integration.name : "Add new integration"}</DialogTitle>
           <DialogDescription>
             {integration
               ? `Enter your ${integration.name} then press add.`
@@ -214,10 +199,7 @@ export function CreateIntegrationDialog({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form
-            className="flex w-full flex-col space-y-4"
-            onSubmit={form.handleSubmit(onSubmit)}
-          >
+          <form className="flex w-full flex-col space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
             <IntegrationConfigurationFields
               integrationTemplate={integrationTemplate}
               environmentVariables={environmentVariables}

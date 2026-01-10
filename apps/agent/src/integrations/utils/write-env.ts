@@ -62,9 +62,7 @@ async function writeEnvToTarget({
 }): Promise<void> {
   const envFilePath = path.join(branchDir, "apps", target, ".env");
 
-  Logger.info(
-    `Writing ${envVars.length} environment variables to ${target}/.env`,
-  );
+  Logger.info(`Writing ${envVars.length} environment variables to ${target}/.env`);
 
   let existingContent = "";
   let existingEnvMap = new Map<string, string>();
@@ -75,9 +73,7 @@ async function writeEnvToTarget({
     existingEnvMap = parseEnvFile(existingContent);
   } catch {
     // File doesn't exist, that's ok
-    Logger.info(
-      `.env file doesn't exist at ${envFilePath}, will create new one`,
-    );
+    Logger.info(`.env file doesn't exist at ${envFilePath}, will create new one`);
   }
 
   // Prepare new environment variables to add
@@ -216,9 +212,7 @@ export async function writeEnvironmentVariables({
   const targets = Array.from(targetsSet);
 
   if (targets.length === 0) {
-    logger.warn(
-      "No valid targets found in variables config, defaulting to server",
-    );
+    logger.warn("No valid targets found in variables config, defaulting to server");
     targets.push("server");
   }
 

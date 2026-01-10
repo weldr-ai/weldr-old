@@ -73,10 +73,7 @@ router.openapi(route, async (c) => {
   }
 
   const project = await db.query.projects.findFirst({
-    where: and(
-      eq(projects.id, projectId),
-      eq(projects.userId, session.user.id),
-    ),
+    where: and(eq(projects.id, projectId), eq(projects.userId, session.user.id)),
   });
 
   if (!project) {
@@ -100,10 +97,7 @@ router.openapi(route, async (c) => {
 
   const activeVersion = branch.headVersion;
 
-  if (
-    activeVersion.status === "completed" ||
-    activeVersion.status === "failed"
-  ) {
+  if (activeVersion.status === "completed" || activeVersion.status === "failed") {
     return c.json({ message: "Stream is already completed" }, 422);
   }
 

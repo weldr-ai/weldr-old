@@ -112,6 +112,7 @@ docker compose -f docker-compose.dev.yml up -d
 ```
 
 This starts MinIO on:
+
 - API: `http://localhost:19000`
 - Console: `http://localhost:19001` (login: minioadmin/minioadmin)
 
@@ -165,16 +166,19 @@ bun dev
 ```
 
 This will start:
+
 - Agent server on `http://localhost:8080`
 - Web application on `http://localhost:3000`
 
 ### Storage Architecture
 
 Weldr uses S3-compatible storage for project files:
+
 - **Local development**: MinIO (included in `docker-compose.dev.yml`)
 - **Cloud deployment**: Tigris (on Fly.io)
 
 The storage holds AgentFS database files (`.db`) which contain all project state:
+
 - `branches/{branchId}.db` - Active branch state
 - `snapshots/{versionId}.db` - Version snapshots
 

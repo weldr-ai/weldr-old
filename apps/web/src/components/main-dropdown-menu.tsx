@@ -15,9 +15,9 @@ import {
   SettingsIcon,
   SunIcon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
 
 import { authClient } from "@weldr/auth/client";
 import { Button } from "@weldr/ui/components/button";
@@ -48,8 +48,7 @@ export function MainDropdownMenu({
 }) {
   const router = useRouter();
   const { data: session } = authClient.useSession();
-  const { setCommandCenterView, setCommandCenterOpen, setAccountSettingsOpen } =
-    useUIStore();
+  const { setCommandCenterView, setCommandCenterOpen, setAccountSettingsOpen } = useUIStore();
   const { theme, setTheme } = useTheme();
 
   return (
@@ -136,10 +135,7 @@ export function MainDropdownMenu({
             Appearance
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup
-              value={theme}
-              onValueChange={(value) => setTheme(value)}
-            >
+            <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value)}>
               <DropdownMenuRadioItem value="light">
                 Light
                 <SunIcon className="ml-auto size-3.5 text-muted-foreground" />

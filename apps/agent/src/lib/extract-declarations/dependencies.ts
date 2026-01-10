@@ -92,7 +92,6 @@ export function findDependencies({
   const identifierRegex = /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\b/g;
   let match: RegExpExecArray | null;
 
-  // biome-ignore lint/suspicious/noAssignInExpressions: reason
   while ((match = identifierRegex.exec(code)) !== null) {
     const identifier = match[1];
     // Skip common keywords and built-ins

@@ -12,11 +12,7 @@ export function HubspotIcon(props: ComponentProps<"svg">) {
     >
       <title>Hubspot</title>
       <g id="SVGRepo_bgCarrier" strokeWidth="0" />
-      <g
-        id="SVGRepo_tracerCarrier"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round" />
       <g id="SVGRepo_iconCarrier">
         <circle cx="512" cy="512" r="512" style={{ fill: "#ff7a59" }} />
         <path

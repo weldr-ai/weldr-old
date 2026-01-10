@@ -30,9 +30,7 @@ export async function seedDeclarationTemplates({
     throw new Error("Project, version, or user not found in context");
   }
 
-  Logger.info(
-    `Seeding declarations for ${integration.key} to project ${project.id}`,
-  );
+  Logger.info(`Seeding declarations for ${integration.key} to project ${project.id}`);
 
   try {
     // Find the integration template
@@ -48,16 +46,11 @@ export async function seedDeclarationTemplates({
     }
 
     // Build source path filter based on selected options
-    const sourcePath = buildSourcePath(
-      integration.key,
-      integration.options || {},
-    );
+    const sourcePath = buildSourcePath(integration.key, integration.options || {});
     Logger.info(`Filtering declarations by source path: ${sourcePath}`);
 
     // Query declaration templates that match the integration and user's options
-    const conditions = [
-      eq(declarationTemplates.integrationTemplateId, integrationTemplate.id),
-    ];
+    const conditions = [eq(declarationTemplates.integrationTemplateId, integrationTemplate.id)];
 
     if (sourcePath) {
       // Filter by exact source path match or templates with no source (option-agnostic)
@@ -71,9 +64,7 @@ export async function seedDeclarationTemplates({
       .from(declarationTemplates)
       .where(and(...conditions));
 
-    Logger.info(
-      `Found ${matchingTemplates.length} matching declaration templates`,
-    );
+    Logger.info(`Found ${matchingTemplates.length} matching declaration templates`);
 
     // Insert declarations for this user's project and link them to the version
     let insertedCount = 0;
@@ -83,10 +74,7 @@ export async function seedDeclarationTemplates({
         .select({ id: declarations.id })
         .from(declarations)
         .where(
-          and(
-            eq(declarations.projectId, project.id),
-            eq(declarations.uri, template.uri || ""),
-          ),
+          and(eq(declarations.projectId, project.id), eq(declarations.uri, template.uri || "")),
         )
         .limit(1);
 
@@ -143,9 +131,7 @@ export async function seedDeclarationTemplates({
       }
     }
 
-    Logger.info(
-      `🎉 Successfully seeded ${insertedCount} new declarations to user project`,
-    );
+    Logger.info(`🎉 Successfully seeded ${insertedCount} new declarations to user project`);
   } catch (error) {
     Logger.error(`Failed to seed declarations for ${integration.key}`, {
       error,

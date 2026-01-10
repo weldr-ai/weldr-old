@@ -1,8 +1,7 @@
 import { ofetch } from "ofetch/node";
 
 import { ofetchConfig } from "../ofetch-config";
-import type { FlyAppType } from "./config";
-import { flyApiHostname, flyApiKey } from "./config";
+import { type FlyAppType, flyApiHostname, flyApiKey } from "./config";
 import { Platform } from "./platform";
 import type { components, paths } from "./types";
 import { Volume } from "./volume";
@@ -31,22 +30,14 @@ export namespace Machine {
 
       return response;
     } catch (error: unknown) {
-      if (
-        (error as { response?: { status?: number } })?.response?.status === 404
-      ) {
+      if ((error as { response?: { status?: number } })?.response?.status === 404) {
         return null;
       }
       throw error;
     }
   };
 
-  export const list = async ({
-    type,
-    projectId,
-  }: {
-    type: FlyAppType;
-    projectId: string;
-  }) => {
+  export const list = async ({ type, projectId }: { type: FlyAppType; projectId: string }) => {
     const response = await ofetch<components["schemas"]["Machine"][]>(
       `${flyApiHostname}/v1/apps/project-${projectId}-${type}/machines`,
       {
@@ -89,8 +80,7 @@ export namespace Machine {
       "lax",
     ];
 
-    const availableRegions =
-      region === "eu" ? euRegions : region === "us" ? usRegions : allRegions;
+    const availableRegions = region === "eu" ? euRegions : region === "us" ? usRegions : allRegions;
 
     let lastError: Error | null = null;
 
@@ -133,9 +123,7 @@ export namespace Machine {
       }
     }
 
-    throw (
-      lastError || new Error("Failed to create machine: All regions failed")
-    );
+    throw lastError || new Error("Failed to create machine: All regions failed");
   };
 
   /**
@@ -159,17 +147,14 @@ export namespace Machine {
     const type: FlyAppType = "development";
     const compute = config?.guest ?? Machine.presets.development.guest;
 
-    const availableRegions =
-      await Platform.getAvailableRegionsForMachineWithVolume({
-        compute,
-        volumeSizeGb,
-        preferredRegion,
-      });
+    const availableRegions = await Platform.getAvailableRegionsForMachineWithVolume({
+      compute,
+      volumeSizeGb,
+      preferredRegion,
+    });
 
     if (availableRegions.length === 0) {
-      throw new Error(
-        `No available regions found for machine with ${volumeSizeGb}GB volume`,
-      );
+      throw new Error(`No available regions found for machine with ${volumeSizeGb}GB volume`);
     }
 
     let lastError: Error | null = null;
@@ -248,10 +233,7 @@ export namespace Machine {
     }
 
     throw (
-      lastError ||
-      new Error(
-        "Failed to create machine with volume: All available regions failed",
-      )
+      lastError || new Error("Failed to create machine with volume: All available regions failed")
     );
   };
 
@@ -276,9 +258,7 @@ export namespace Machine {
         },
       );
     } catch (error) {
-      if (
-        (error as { response?: { status?: number } })?.response?.status === 404
-      ) {
+      if ((error as { response?: { status?: number } })?.response?.status === 404) {
         return;
       }
       throw error;

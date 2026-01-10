@@ -14,9 +14,7 @@ import { useUIStore } from "@/lib/context/ui-store";
 export function Socials({ asDialog }: { asDialog: boolean }) {
   const { resolvedTheme } = useTheme();
   const { setAuthDialogOpen } = useUIStore();
-  const [isSubmitting, setIsSubmitting] = useState<
-    "github" | "microsoft" | "google" | null
-  >(null);
+  const [isSubmitting, setIsSubmitting] = useState<"github" | "microsoft" | "google" | null>(null);
 
   async function onSocialSignIn(provider: "github" | "microsoft" | "google") {
     await authClient.signIn.social({
@@ -73,10 +71,7 @@ export function Socials({ asDialog }: { asDialog: boolean }) {
         {isSubmitting === "github" ? (
           <LoaderIcon className="size-4 animate-spin" />
         ) : (
-          <GithubIcon
-            className="size-4"
-            theme={resolvedTheme as "light" | "dark"}
-          />
+          <GithubIcon className="size-4" theme={resolvedTheme as "light" | "dark"} />
         )}
         <span className="sr-only">Github Logo</span>
       </Button>

@@ -321,11 +321,7 @@ export default UsersPage;
         "apps/web/src/components/ui/card.tsx",
         "apps/web/src/lib/orpc.ts",
       ],
-      external: [
-        "@tanstack/react-query",
-        "@tanstack/react-router",
-        "lucide-react",
-      ],
+      external: ["@tanstack/react-query", "@tanstack/react-router", "lucide-react"],
     },
   },
 
@@ -380,10 +376,7 @@ export default UserPage;
 `.trim(),
     expectedDeclarations: ["Route", "UserPage", "default"],
     expectedDependencies: {
-      internal: [
-        "apps/web/src/components/ui/card.tsx",
-        "apps/web/src/lib/orpc.ts",
-      ],
+      internal: ["apps/web/src/components/ui/card.tsx", "apps/web/src/lib/orpc.ts"],
       external: ["@tanstack/react-query", "@tanstack/react-router", "zod"],
     },
   },
@@ -537,12 +530,7 @@ function CreateUserPage() {
 
 export default CreateUserPage;
 `.trim(),
-    expectedDeclarations: [
-      "Route",
-      "createUserSchema",
-      "CreateUserPage",
-      "default",
-    ],
+    expectedDeclarations: ["Route", "createUserSchema", "CreateUserPage", "default"],
     expectedDependencies: {
       internal: [
         "apps/web/src/components/ui/button.tsx",

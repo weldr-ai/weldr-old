@@ -53,9 +53,7 @@ export function BranchAncestryBreadcrumb({
                       <DropdownMenuItem
                         key={ancestor.id}
                         onClick={() => {
-                          router.push(
-                            `/projects/${projectId}/branches/${ancestor.id}`,
-                          );
+                          router.push(`/projects/${projectId}/branches/${ancestor.id}`);
                         }}
                         className={cn("cursor-pointer", {
                           "text-success": ancestor.isMain,
@@ -77,13 +75,10 @@ export function BranchAncestryBreadcrumb({
                 onClick={() => {
                   router.push(`/projects/${projectId}/branches/${ancestor.id}`);
                 }}
-                className={cn(
-                  "cursor-pointer text-[10px] hover:text-foreground",
-                  {
-                    "text-success hover:text-success": ancestor.isMain,
-                    "text-muted-foreground": !ancestor.isMain,
-                  },
-                )}
+                className={cn("cursor-pointer text-[10px] hover:text-foreground", {
+                  "text-success hover:text-success": ancestor.isMain,
+                  "text-muted-foreground": !ancestor.isMain,
+                })}
               >
                 {ancestor.name}
               </BreadcrumbLink>

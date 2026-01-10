@@ -7,7 +7,7 @@
  * The pieces you will need to use are documented accordingly near the end
  */
 import { initTRPC, TRPCError } from "@trpc/server";
-import SuperJSON from "superjson";
+import { SuperJSON } from "superjson";
 import { ZodError } from "zod";
 
 import type { Session } from "@weldr/auth";
@@ -25,10 +25,7 @@ import { db } from "@weldr/db";
  *
  * @see https://trpc.io/docs/server/context
  */
-export const createTRPCContext: (opts: {
-  headers: Headers;
-  session: Session | null;
-}) => Promise<{
+export const createTRPCContext: (opts: { headers: Headers; session: Session | null }) => Promise<{
   headers: Headers;
   session: Session | null;
   db: typeof db;

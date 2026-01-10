@@ -1,9 +1,11 @@
 # Database Package Development Guidelines
 
 ## Overview
+
 The @weldr/db package manages all database operations using Drizzle ORM with PostgreSQL. It provides type-safe schema definitions, migrations, and database utilities for the entire monorepo.
 
 ## Current Structure
+
 - `src/schema`: tables for projects, branches, versions, chats/messages, declarations, declaration-templates, dependencies, nodes, tasks, integrations (and categories/templates), environment-variables, themes, vault, auth tables, ai-models
 - `src/migrations`: SQL migration history and meta tracking
 - `src/index.ts`: drizzle client setup and exports
@@ -14,6 +16,7 @@ The @weldr/db package manages all database operations using Drizzle ORM with Pos
 ## Type Safety Requirements
 
 ### Schema Definition
+
 ```typescript
 // ALWAYS define schemas with proper types and constraints
 import { pgTable, text, timestamp, boolean, integer, uuid } from "drizzle-orm/pg-core";
@@ -30,7 +33,7 @@ export const tableName = pgTable("table_name", {
 
   // Optional fields with defaults
   status: text("status", {
-    enum: ["pending", "active", "archived"]
+    enum: ["pending", "active", "archived"],
   }).default("pending"),
 
   // Timestamps
@@ -48,6 +51,7 @@ export const tableName = pgTable("table_name", {
 ```
 
 ### Relations
+
 ```typescript
 // ALWAYS define relations for better query ergonomics
 import { relations } from "drizzle-orm";
@@ -65,6 +69,7 @@ export const tableNameRelations = relations(tableName, ({ one, many }) => ({
 ```
 
 ### Type Exports
+
 ```typescript
 // ALWAYS export inferred types
 import { InferSelectModel, InferInsertModel } from "drizzle-orm";
@@ -82,6 +87,7 @@ export type UpdateTableName = Partial<InsertTableName>;
 ## Schema Organization
 
 ### File Structure
+
 ```
 src/schema/
 ├── index.ts           # Main export file
@@ -95,6 +101,7 @@ src/schema/
 ```
 
 ### Naming Conventions
+
 - Table names: Plural, snake_case in DB, camelCase in code
 - Column names: snake_case in DB, camelCase in code
 - Foreign keys: `{table}_id` pattern
@@ -103,6 +110,7 @@ src/schema/
 ## Migration Management
 
 ### Creating Migrations
+
 ```bash
 # Generate migration from schema changes
 bun db:generate
@@ -115,6 +123,7 @@ bun db:push
 ```
 
 ### Migration Best Practices
+
 ```typescript
 // ALWAYS test migrations locally first
 // NEVER modify existing migrations
@@ -125,6 +134,7 @@ bun db:push
 ## Query Patterns
 
 ### Basic Queries
+
 ```typescript
 // Select with relations
 const projectWithRelations = await db.query.projects.findFirst({
@@ -152,28 +162,19 @@ const [newProject] = await db
 await db
   .update(projects)
   .set({ status: "active" })
-  .where(
-    and(
-      eq(projects.id, projectId),
-      eq(projects.userId, userId)
-    )
-  );
+  .where(and(eq(projects.id, projectId), eq(projects.userId, userId)));
 
 // Delete with cascade
-await db
-  .delete(projects)
-  .where(eq(projects.id, projectId));
+await db.delete(projects).where(eq(projects.id, projectId));
 ```
 
 ### Transaction Patterns
+
 ```typescript
 // ALWAYS use transactions for multi-step operations
 const result = await db.transaction(async (tx) => {
   // Create project
-  const [project] = await tx
-    .insert(projects)
-    .values(projectData)
-    .returning();
+  const [project] = await tx.insert(projects).values(projectData).returning();
 
   if (!project) {
     throw new Error("Failed to create project");
@@ -191,6 +192,7 @@ const result = await db.transaction(async (tx) => {
 ```
 
 ### Complex Queries
+
 ```typescript
 // Use subqueries for complex logic
 const activeProjects = db
@@ -201,13 +203,8 @@ const activeProjects = db
       db
         .select()
         .from(versions)
-        .where(
-          and(
-            eq(versions.projectId, projects.id),
-            isNotNull(versions.publishedAt)
-          )
-        )
-    )
+        .where(and(eq(versions.projectId, projects.id), isNotNull(versions.publishedAt))),
+    ),
   );
 
 // Aggregations
@@ -224,6 +221,7 @@ const projectStats = await db
 ## Index Strategy
 
 ### Index Definition
+
 ```typescript
 import { index, uniqueIndex } from "drizzle-orm/pg-core";
 
@@ -237,18 +235,16 @@ export const tableName = pgTable(
     userIdIdx: index("user_id_idx").on(table.userId),
 
     // Composite index
-    statusCreatedIdx: index("status_created_idx").on(
-      table.status,
-      table.createdAt
-    ),
+    statusCreatedIdx: index("status_created_idx").on(table.status, table.createdAt),
 
     // Unique index
     slugIdx: uniqueIndex("slug_idx").on(table.slug),
-  })
+  }),
 );
 ```
 
 ### Index Guidelines
+
 - Index foreign keys
 - Index columns used in WHERE clauses
 - Index columns used in ORDER BY
@@ -258,13 +254,16 @@ export const tableName = pgTable(
 ## Seed Data
 
 ### Seed Script Pattern
+
 ```typescript
 // src/seed.ts
 import { db } from "./index";
 import { users, projects } from "./schema";
+import { Logger } from "@weldr/shared";
 
 async function seed() {
-  console.log("🌱 Seeding database...");
+  const logger = Logger.get({ operation: "database-seeding" });
+  logger.info("Seeding database started");
 
   try {
     // Clear existing data
@@ -291,9 +290,9 @@ async function seed() {
       },
     ]);
 
-    console.log("✅ Seeding completed");
+    logger.info("Seeding completed successfully");
   } catch (error) {
-    console.error("❌ Seeding failed:", error);
+    logger.error("Seeding failed", { extra: { error: error.message } });
     process.exit(1);
   }
 }
@@ -304,6 +303,7 @@ seed();
 ## Connection Management
 
 ### Database Client
+
 ```typescript
 // src/index.ts
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -335,6 +335,7 @@ export * from "drizzle-orm";
 ## Validation Integration
 
 ### Zod Schema Generation
+
 ```typescript
 // Generate Zod schemas from Drizzle tables
 import { createSelectSchema, createInsertSchema } from "drizzle-zod";
@@ -345,17 +346,16 @@ export const selectProjectSchema = createSelectSchema(projects);
 export const insertProjectSchema = createInsertSchema(projects);
 
 // Extend with custom validation
-export const updateProjectSchema = insertProjectSchema
-  .partial()
-  .extend({
-    title: z.string().min(1).max(100).optional(),
-    description: z.string().max(500).optional(),
-  });
+export const updateProjectSchema = insertProjectSchema.partial().extend({
+  title: z.string().min(1).max(100).optional(),
+  description: z.string().max(500).optional(),
+});
 ```
 
 ## Performance Optimization
 
 ### Query Optimization
+
 ```typescript
 // Use select specific columns
 const lightweightProjects = await db
@@ -384,12 +384,13 @@ const project = await preparedQuery.execute({ id: projectId });
 ```
 
 ### Connection Pooling
+
 ```typescript
 // Configure connection pool
 const client = postgres(connectionString, {
-  max: 20,              // Maximum connections
-  idle_timeout: 20,     // Close idle connections after 20s
-  connect_timeout: 10,  // Connection timeout
+  max: 20, // Maximum connections
+  idle_timeout: 20, // Close idle connections after 20s
+  connect_timeout: 10, // Connection timeout
   max_lifetime: 60 * 30, // Max connection lifetime (30 min)
 });
 ```
@@ -397,6 +398,7 @@ const client = postgres(connectionString, {
 ## Error Handling
 
 ### Database Error Handling
+
 ```typescript
 import { PostgresError } from "postgres";
 
@@ -422,12 +424,10 @@ try {
 ## Testing
 
 ### Test Database Setup
+
 ```typescript
 // Use separate test database
-const testDb = drizzle(
-  postgres(process.env.TEST_DATABASE_URL),
-  { schema }
-);
+const testDb = drizzle(postgres(process.env.TEST_DATABASE_URL), { schema });
 
 // Reset database before tests
 beforeEach(async () => {
@@ -440,7 +440,7 @@ test("should rollback on error", async () => {
     testDb.transaction(async (tx) => {
       await tx.insert(projects).values(data);
       throw new Error("Rollback");
-    })
+    }),
   ).rejects.toThrow("Rollback");
 
   const count = await testDb.select().from(projects);
@@ -451,27 +451,23 @@ test("should rollback on error", async () => {
 ## Security Considerations
 
 ### SQL Injection Prevention
+
 ```typescript
 // ALWAYS use parameterized queries
 // ✅ GOOD - Parameterized
-await db
-  .select()
-  .from(projects)
-  .where(eq(projects.id, userInput));
+await db.select().from(projects).where(eq(projects.id, userInput));
 
 // ❌ BAD - SQL injection vulnerable
-await db.execute(
-  sql`SELECT * FROM projects WHERE id = ${userInput}`
-);
+await db.execute(sql`SELECT * FROM projects WHERE id = ${userInput}`);
 
 // ✅ GOOD - Using placeholder for raw SQL
-await db.execute(
-  sql`SELECT * FROM projects WHERE id = ${sql.placeholder("id")}`,
-  { id: userInput }
-);
+await db.execute(sql`SELECT * FROM projects WHERE id = ${sql.placeholder("id")}`, {
+  id: userInput,
+});
 ```
 
 ### Data Sanitization
+
 ```typescript
 // Sanitize user input before insertion
 const sanitizedData = {
@@ -484,34 +480,49 @@ const sanitizedData = {
 ## Monitoring
 
 ### Query Logging
+
 ```typescript
 // Enable query logging in development
+import { Logger } from "@weldr/shared";
+
 export const db = drizzle(client, {
   schema,
-  logger: {
-    logQuery: (query, params) => {
-      console.log("Query:", query);
-      console.log("Params:", params);
-    },
-  },
+  logger:
+    process.env.NODE_ENV === "development"
+      ? {
+          logQuery: (query, params) => {
+            const logger = Logger.get({ operation: "database-query" });
+            logger.debug("Database query executed", {
+              extra: { query, params },
+            });
+          },
+        }
+      : false,
 });
 ```
 
 ### Performance Monitoring
+
 ```typescript
 // Track slow queries
+import { Logger } from "@weldr/shared";
+
+const logger = Logger.get({ operation: "database-query" });
 const startTime = Date.now();
 const result = await db.select().from(projects);
 const duration = Date.now() - startTime;
 
 if (duration > 1000) {
-  console.warn(`Slow query detected: ${duration}ms`);
+  logger.warn("Slow query detected", {
+    extra: { duration, query: "select from projects" },
+  });
 }
 ```
 
 ## Do's and Don'ts
 
 ### Do's
+
 ✅ Use transactions for multi-step operations
 ✅ Define proper indexes for performance
 ✅ Use TypeScript types from schema
@@ -523,6 +534,7 @@ if (duration > 1000) {
 ✅ Export inferred types
 
 ### Don'ts
+
 ❌ Modify existing migrations
 ❌ Use raw SQL without parameterization
 ❌ Skip transaction for related operations
@@ -530,5 +542,5 @@ if (duration > 1000) {
 ❌ Use synchronous database operations
 ❌ Store sensitive data unencrypted
 ❌ Skip index on foreign keys
-❌ Use SELECT * in production
+❌ Use SELECT \* in production
 ❌ Ignore connection limits

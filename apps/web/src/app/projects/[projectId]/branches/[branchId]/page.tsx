@@ -50,10 +50,7 @@ export default async function BranchPage({
     const initialEdges: Edge[] = Array.from(
       versionDeclarations
         .flatMap((decl) => decl.edges)
-        .filter(
-          (edge) =>
-            edge.dependencyId !== undefined && edge.dependentId !== undefined,
-        )
+        .filter((edge) => edge.dependencyId !== undefined && edge.dependentId !== undefined)
         .reduce((map, edge) => {
           const id = `${edge.dependencyId}-${edge.dependentId}`;
           if (!map.has(id)) {
@@ -81,11 +78,9 @@ export default async function BranchPage({
     console.error(error);
     if (error instanceof TRPCError) {
       switch (error.code) {
-        // biome-ignore lint/suspicious/noFallthroughSwitchClause: notFound function already returns
         case "NOT_FOUND":
           notFound();
         case "UNAUTHORIZED":
-        // biome-ignore lint/suspicious/noFallthroughSwitchClause: redirect function already returns
         case "FORBIDDEN":
           redirect("/auth/sign-in");
         default:

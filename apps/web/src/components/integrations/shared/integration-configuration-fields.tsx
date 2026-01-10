@@ -13,11 +13,7 @@ import {
   CommandList,
 } from "@weldr/ui/components/command";
 import { Input } from "@weldr/ui/components/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@weldr/ui/components/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@weldr/ui/components/popover";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { CreateEnvironmentVariableDialog } from "@/components/create-environment-variable-dialog";
@@ -32,9 +28,7 @@ export function IntegrationConfigurationFields({
   onNameChange,
   showNameField = false,
 }: IntegrationConfigurationProps) {
-  const [envVarPopoverStates, setEnvVarPopoverStates] = useState<
-    Record<string, boolean>
-  >({});
+  const [envVarPopoverStates, setEnvVarPopoverStates] = useState<Record<string, boolean>>({});
 
   const requiredVariables = integrationTemplate.variables || [];
 
@@ -75,9 +69,7 @@ export function IntegrationConfigurationFields({
               <div className="flex">
                 <Popover
                   open={envVarPopoverStates[variable.name] || false}
-                  onOpenChange={(isOpen) =>
-                    toggleEnvVarPopover(variable.name, isOpen)
-                  }
+                  onOpenChange={(isOpen) => toggleEnvVarPopover(variable.name, isOpen)}
                 >
                   <PopoverTrigger asChild>
                     <Button
@@ -86,9 +78,7 @@ export function IntegrationConfigurationFields({
                     >
                       {environmentVariableMappings[variable.name]
                         ? environmentVariables.find(
-                            (env) =>
-                              env.id ===
-                              environmentVariableMappings[variable.name],
+                            (env) => env.id === environmentVariableMappings[variable.name],
                           )?.key
                         : "Select environment variable"}
                     </Button>
@@ -109,10 +99,7 @@ export function IntegrationConfigurationFields({
                               key={env.id}
                               value={env.key}
                               onSelect={() => {
-                                onEnvironmentVariableMapping(
-                                  variable.name,
-                                  env.id,
-                                );
+                                onEnvironmentVariableMapping(variable.name, env.id);
                                 toggleEnvVarPopover(variable.name, false);
                               }}
                               className="text-xs"
@@ -120,10 +107,8 @@ export function IntegrationConfigurationFields({
                               <CheckIcon
                                 className={cn(
                                   "mr-1.5 size-3.5 opacity-0",
-                                  env.id ===
-                                    environmentVariableMappings[
-                                      variable.name
-                                    ] && "opacity-100",
+                                  env.id === environmentVariableMappings[variable.name] &&
+                                    "opacity-100",
                                 )}
                               />
                               {env.key}

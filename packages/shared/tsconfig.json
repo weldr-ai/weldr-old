@@ -1,10 +1,12 @@
 {
   "extends": "@weldr/tsconfig/node.json",
   "compilerOptions": {
-    "rootDir": "./src",
     "baseUrl": ".",
-    "outDir": "./dist",
-    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json"
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

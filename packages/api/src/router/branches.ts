@@ -1,14 +1,10 @@
 import { TRPCError } from "@trpc/server";
-import z from "zod";
+import { z } from "zod";
 
 import { and, desc, eq, type SQL } from "@weldr/db";
 import { branches, versions } from "@weldr/db/schema";
 import { nanoid } from "@weldr/shared/nanoid";
-import type {
-  AssistantMessage,
-  ChatMessage,
-  ToolMessage,
-} from "@weldr/shared/types";
+import type { AssistantMessage, ChatMessage, ToolMessage } from "@weldr/shared/types";
 
 import { protectedProcedure } from "../init";
 
@@ -57,10 +53,7 @@ export const branchRouter = {
       }
 
       const existingBranch = await ctx.db.query.branches.findFirst({
-        where: and(
-          eq(branches.projectId, input.projectId),
-          eq(branches.name, input.name),
-        ),
+        where: and(eq(branches.projectId, input.projectId), eq(branches.name, input.name)),
       });
 
       if (existingBranch) {
@@ -95,8 +88,7 @@ export const branchRouter = {
           description: input.description,
           projectId: input.projectId,
           type: input.type,
-          parentBranchId:
-            input.type === "stream" ? forkedVersion.branchId : null,
+          parentBranchId: input.type === "stream" ? forkedVersion.branchId : null,
           forkedFromVersionId: input.forkedFromVersionId,
           forksetId,
           userId: ctx.session.user.id,
@@ -196,32 +188,21 @@ export const branchRouter = {
           message: "Branch not found",
         });
       }
-      const getMessagesWithAttachments = async (
-        version: typeof branch.headVersion,
-      ) => {
+      const getMessagesWithAttachments = async (version: typeof branch.headVersion) => {
         const results = [];
 
         for (const message of version.chat.messages) {
           // Filter assistant messages for call_coder tool calls
-          let content = message.content as
-            | ToolMessage["content"]
-            | AssistantMessage["content"];
+          let content = message.content as ToolMessage["content"] | AssistantMessage["content"];
 
           // Skip tool messages with call_coder results
           if (message.role === "tool" && Array.isArray(message.content)) {
             content = content.filter(
-              (item) =>
-                !(
-                  item?.type === "tool-result" &&
-                  item?.toolName === "call_coder"
-                ),
+              (item) => !(item?.type === "tool-result" && item?.toolName === "call_coder"),
             );
           } else if (message.role === "assistant") {
             content = content.filter(
-              (item) =>
-                !(
-                  item?.type === "tool-call" && item?.toolName === "call_coder"
-                ),
+              (item) => !(item?.type === "tool-call" && item?.toolName === "call_coder"),
             );
           }
 
@@ -252,10 +233,7 @@ export const branchRouter = {
 
       while (currentBranchId) {
         const parentBranch = await ctx.db.query.branches.findFirst({
-          where: and(
-            eq(branches.id, currentBranchId),
-            eq(branches.userId, ctx.session.user.id),
-          ),
+          where: and(eq(branches.id, currentBranchId), eq(branches.userId, ctx.session.user.id)),
           columns: {
             id: true,
             name: true,
@@ -304,10 +282,7 @@ export const branchRouter = {
       } | null = null;
       if (branch.parentBranchId) {
         const integration = await ctx.db.query.versions.findFirst({
-          where: and(
-            eq(versions.appliedFromBranchId, branch.id),
-            eq(versions.kind, "integration"),
-          ),
+          where: and(eq(versions.appliedFromBranchId, branch.id), eq(versions.kind, "integration")),
           columns: {
             number: true,
             branchId: true,
@@ -381,8 +356,7 @@ export const branchRouter = {
 
       for (const b of allBranchesInProject) {
         if (b.forkedFromVersionId && versionIds.has(b.forkedFromVersionId)) {
-          const existing =
-            versionToBranchesMap.get(b.forkedFromVersionId) || [];
+          const existing = versionToBranchesMap.get(b.forkedFromVersionId) || [];
           existing.push({
             id: b.id,
             name: b.name,
@@ -458,9 +432,7 @@ export const branchRouter = {
             ...version,
             chat: {
               ...version.chat,
-              messages: (await getMessagesWithAttachments(
-                version,
-              )) as ChatMessage[],
+              messages: (await getMessagesWithAttachments(version)) as ChatMessage[],
             },
           };
         }
@@ -472,9 +444,7 @@ export const branchRouter = {
           ...branch.headVersion,
           chat: {
             ...branch.headVersion.chat,
-            messages: (await getMessagesWithAttachments(
-              branch.headVersion,
-            )) as ChatMessage[],
+            messages: (await getMessagesWithAttachments(branch.headVersion)) as ChatMessage[],
           },
         },
         selectedVersion,

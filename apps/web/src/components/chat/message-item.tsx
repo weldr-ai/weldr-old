@@ -38,10 +38,7 @@ const PureMessageItem = ({
 }) => {
   return (
     <div
-      className={cn(
-        "flex flex-col text-sm",
-        message.role === "user" && "items-end",
-      )}
+      className={cn("flex flex-col text-sm", message.role === "user" && "items-end")}
       key={message.id}
     >
       {message.role === "assistant" && (
@@ -53,19 +50,14 @@ const PureMessageItem = ({
 
       <div
         className={cn("flex flex-col gap-2", {
-          "rounded-md bg-primary p-2 text-primary-foreground":
-            message.role === "user",
+          "rounded-md bg-primary p-2 text-primary-foreground": message.role === "user",
         })}
       >
         {message.content.map((content) => {
           switch (content.type) {
             case "reasoning": {
               return (
-                <Reasoning
-                  key="reasoning"
-                  className="w-full"
-                  isStreaming={true}
-                >
+                <Reasoning key="reasoning" className="w-full" isStreaming={true}>
                   <ReasoningTrigger />
                   <ReasoningContent>{content.text}</ReasoningContent>
                 </Reasoning>
@@ -109,15 +101,13 @@ const PureMessageItem = ({
               }
               return null;
             }
+            default:
+              return null;
           }
         })}
         {message.role === "tool" &&
-          message.content.some(
-            (content) => content.toolName === "add_integrations",
-          ) && (
-            <IntegrationsInstallationStatus
-              message={message as IntegrationToolMessage}
-            />
+          message.content.some((content) => content.toolName === "add_integrations") && (
+            <IntegrationsInstallationStatus message={message as IntegrationToolMessage} />
           )}
       </div>
     </div>
@@ -127,10 +117,7 @@ const PureMessageItem = ({
 export const MessageItem = memo(PureMessageItem, (prevProps, nextProps) => {
   if (
     !fastDeepEqual(prevProps.message, nextProps.message) ||
-    !fastDeepEqual(
-      prevProps.environmentVariables,
-      nextProps.environmentVariables,
-    )
+    !fastDeepEqual(prevProps.environmentVariables, nextProps.environmentVariables)
   ) {
     return false;
   }

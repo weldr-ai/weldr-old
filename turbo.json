@@ -5,6 +5,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*", "src/**", "tsconfig.json", "tsdown.config.ts"],
       "outputs": [
         ".next/**",
         "!.next/cache/**",
@@ -14,28 +15,20 @@
         "dist/**"
       ]
     },
+    "clean": {
+      "cache": false
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "test/**", "tsconfig.json"],
+      "outputs": [".tsbuildinfo"]
+    },
     "dev": {
       "cache": false,
       "persistent": true
     },
-    "//#check": {},
-    "//#check:fix": {
-      "cache": false
-    },
-    "typecheck": {
-      "dependsOn": ["^build", "^typecheck"]
-    },
-    "clean": {
-      "cache": false
-    },
-    "//#clean": {
-      "cache": false
-    },
     "start": {
       "dependsOn": ["^build"],
-      "cache": false
-    },
-    "preview": {
       "cache": false
     }
   }

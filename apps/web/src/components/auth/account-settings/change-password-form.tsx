@@ -40,13 +40,10 @@ const changePasswordSchema = z
       .max(100, {
         message: "Password cannot be longer than 100 characters.",
       })
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/,
-        {
-          message:
-            "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.",
-        },
-      ),
+      .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/, {
+        message:
+          "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.",
+      }),
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
@@ -101,9 +98,7 @@ export function ChangePasswordForm() {
     <Card>
       <CardHeader>
         <CardTitle>Change Password</CardTitle>
-        <CardDescription>
-          Enter your current password and a new password.
-        </CardDescription>
+        <CardDescription>Enter your current password and a new password.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -165,15 +160,9 @@ export function ChangePasswordForm() {
             <div className="flex justify-end">
               <Button
                 type="submit"
-                disabled={
-                  isSubmitting ||
-                  !form.formState.isValid ||
-                  !form.formState.isDirty
-                }
+                disabled={isSubmitting || !form.formState.isValid || !form.formState.isDirty}
               >
-                {isSubmitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Update
               </Button>
             </div>

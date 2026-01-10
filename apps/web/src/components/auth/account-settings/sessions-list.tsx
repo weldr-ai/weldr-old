@@ -81,9 +81,7 @@ export function SessionsList({
     <Card>
       <CardHeader>
         <CardTitle>Sessions</CardTitle>
-        <CardDescription>
-          Manage your active sessions and revoke access.
-        </CardDescription>
+        <CardDescription>Manage your active sessions and revoke access.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-4">
@@ -93,15 +91,8 @@ export function SessionsList({
             const isCurrentSession = session.id === currentSession.session.id;
 
             return (
-              <Card
-                key={session.id}
-                className="flex w-full flex-row items-center gap-3 px-4 py-3"
-              >
-                {isMobile ? (
-                  <Smartphone className="size-4" />
-                ) : (
-                  <Laptop className="size-4" />
-                )}
+              <Card key={session.id} className="flex w-full flex-row items-center gap-3 px-4 py-3">
+                {isMobile ? <Smartphone className="size-4" /> : <Laptop className="size-4" />}
 
                 <div className="flex flex-col">
                   <span className="font-semibold text-sm">
