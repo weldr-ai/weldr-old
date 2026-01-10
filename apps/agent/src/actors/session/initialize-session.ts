@@ -1,14 +1,44 @@
+import type { ToolSet } from "ai";
 import { fromPromise } from "xstate";
 
 import { Logger } from "@weldr/shared/logger";
 
+import { agentPrompt } from "@/ai/prompts";
+import {
+  addIntegrationsTool,
+  bashTool,
+  completeTool,
+  queryRelatedDeclarationsTool,
+  searchCodebaseTool,
+  spawnAgentsTool,
+} from "@/ai/tools";
 import { ensureBranchDir } from "@/lib/branch-state";
 import { stream } from "@/lib/stream-utils";
 import type { SessionMachineContext } from "@/machines/session-types";
+import { createSessionContext } from "@/session";
+
+const buildToolSet = (context: SessionMachineContext): ToolSet => {
+  const sessionContext = createSessionContext({
+    project: context.project,
+    branch: context.branch,
+    user: context.user,
+  });
+
+  return {
+    bash: bashTool(sessionContext),
+    search_codebase: searchCodebaseTool(sessionContext),
+    query_related_declarations: queryRelatedDeclarationsTool(sessionContext),
+    spawn_agents: spawnAgentsTool(sessionContext),
+    add_integrations: addIntegrationsTool(sessionContext),
+    complete: completeTool(sessionContext),
+  };
+};
 
 type InitializeResult = {
   branchDir: string;
   status: "created" | "reused" | "forked";
+  tools: ToolSet;
+  systemPrompt: string;
 };
 
 export const initializeSessionActor = fromPromise<
@@ -37,5 +67,8 @@ export const initializeSessionActor = fromPromise<
     status: "thinking",
   });
 
-  return result;
+  const tools = buildToolSet(input.context);
+  const systemPrompt = await agentPrompt(project);
+
+  return { ...result, tools, systemPrompt };
 });

@@ -1,7 +1,10 @@
+import type { ToolSet } from "ai";
 import type { AnyActorRef } from "xstate";
 
 import type { branches, projects, versions } from "@weldr/db/schema";
 import type { UserMessage } from "@weldr/shared/types";
+
+import type { User } from "@/lib/auth";
 
 export type AgentResult = {
   success: boolean;
@@ -16,12 +19,6 @@ export type BranchWithVersion = typeof branches.$inferSelect & {
   headVersion: typeof versions.$inferSelect;
 };
 
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-};
-
 export type SessionMachineContext = {
   project: ProjectWithConfig;
   branch: BranchWithVersion;
@@ -29,6 +26,8 @@ export type SessionMachineContext = {
   message: UserMessage | null;
   error: Error | null;
   agentRef: AnyActorRef | null;
+  tools: ToolSet;
+  systemPrompt: string;
 };
 
 export type SessionMachineInput = {

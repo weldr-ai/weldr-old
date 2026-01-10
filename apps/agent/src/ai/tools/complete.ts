@@ -13,12 +13,7 @@ export const completeTool = createTool({
 
 When you have successfully completed all the requirements of the current task or multiple tasks. Do not call this until ALL subtasks and acceptance criteria are satisfied. You can mark multiple tasks as complete in a single call if you completed them together.`,
   inputSchema: z.object({
-    taskIds: z
-      .array(z.string())
-      .optional()
-      .describe(
-        "Optional array of specific task IDs to mark as complete. If not provided, marks the current task as complete.",
-      ),
+    taskIds: z.array(z.string()).min(1).describe("Array of task IDs to mark as complete."),
     summary: z.string().optional().describe("Optional summary of what was accomplished"),
   }),
   outputSchema: z.object({
@@ -29,32 +24,13 @@ When you have successfully completed all the requirements of the current task or
   execute: async ({ input, context }) => {
     const project = context.project;
     const branch = context.branch;
-    const currentTaskId = context.currentTaskId;
-    const activeTasks = context.activeTasks;
 
     const logger = Logger.get({
       projectId: project.id,
       versionId: branch.headVersion.id,
     });
 
-    const taskIdsToComplete = input.taskIds?.length
-      ? input.taskIds
-      : currentTaskId
-        ? [currentTaskId]
-        : null;
-
-    if (!taskIdsToComplete) {
-      throw new Error("No task ID provided and no current task set in context");
-    }
-
-    if (activeTasks) {
-      const invalidTasks = taskIdsToComplete.filter((id: string) => !activeTasks.includes(id));
-      if (invalidTasks.length > 0) {
-        throw new Error(
-          `Cannot complete tasks that are not in the current execution plan: ${invalidTasks.join(", ")}`,
-        );
-      }
-    }
+    const taskIdsToComplete = input.taskIds;
 
     logger.info("Marking tasks as complete", {
       extra: { taskIds: taskIdsToComplete, summary: input.summary },

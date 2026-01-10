@@ -1,5 +1,9 @@
 import type { branches, projects, versions } from "@weldr/db/schema";
 
+import type { User } from "@/lib/auth";
+
+export type { User };
+
 // =============================================================================
 // Core Types
 // =============================================================================
@@ -16,16 +20,6 @@ export type Project = typeof projects.$inferSelect & {
  */
 export type Branch = typeof branches.$inferSelect & {
   headVersion: typeof versions.$inferSelect;
-};
-
-/**
- * User type - minimal fields needed for session context.
- * Uses a simple type to be compatible with both database user and auth session user.
- */
-export type User = {
-  id: string;
-  name: string;
-  email: string;
 };
 
 // =============================================================================

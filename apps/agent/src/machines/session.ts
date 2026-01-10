@@ -7,6 +7,7 @@ import { finalizeSessionActor } from "@/actors/session/finalize-session";
 import { initializeSessionActor } from "@/actors/session/initialize-session";
 import { markFailedSessionActor } from "@/actors/session/mark-failed-session";
 import { stream } from "@/lib/stream-utils";
+import { agentMachine } from "@/machines/agent";
 import type {
   SessionMachineContext,
   SessionMachineEvents,
@@ -33,6 +34,7 @@ export const sessionMachine = setup({
     finalize: finalizeSessionActor,
     markFailed: markFailedSessionActor,
     cleanup: cleanupSessionActor,
+    agentMachine,
   },
   actions: {
     logTransition: ({ context, event }, params: { from: string; to: string }) => {
@@ -70,6 +72,29 @@ export const sessionMachine = setup({
         return new Error(String(params.error));
       },
     }),
+    assignAgentSetup: assign(
+      (_, params: { tools: SessionMachineContext["tools"]; systemPrompt: string }) => ({
+        tools: params.tools,
+        systemPrompt: params.systemPrompt,
+      }),
+    ),
+    assignAgentRef: assign({
+      agentRef: ({ context, spawn }) =>
+        spawn("agentMachine", {
+          input: {
+            project: context.project,
+            branch: context.branch,
+            user: context.user,
+            tools: context.tools,
+            systemPrompt: context.systemPrompt,
+          },
+        }),
+    }),
+    startAgentActor: ({ context }) => {
+      if (context.agentRef) {
+        context.agentRef.send({ type: "PROCESS" });
+      }
+    },
     stopAgentActor: ({ context }) => {
       if (context.agentRef) {
         stopChild(context.agentRef);
@@ -106,6 +131,8 @@ export const sessionMachine = setup({
     message: null,
     error: null,
     agentRef: null,
+    tools: {} as SessionMachineContext["tools"],
+    systemPrompt: "",
   }),
   states: {
     idle: {
@@ -127,7 +154,16 @@ export const sessionMachine = setup({
         input: ({ context }) => ({ context }),
         onDone: {
           target: "running",
-          actions: [{ type: "logTransition", params: { from: "initializing", to: "running" } }],
+          actions: [
+            {
+              type: "assignAgentSetup",
+              params: ({ event }) => ({
+                tools: event.output.tools,
+                systemPrompt: event.output.systemPrompt,
+              }),
+            },
+            { type: "logTransition", params: { from: "initializing", to: "running" } },
+          ],
         },
         onError: {
           target: "failed",
@@ -149,26 +185,19 @@ export const sessionMachine = setup({
     },
 
     running: {
-      entry: ({ context }) => {
-        const logger = Logger.get({
-          projectId: context.project.id,
-          branchId: context.branch.id,
-          versionId: context.branch.headVersion.id,
-          actor: "session-machine",
-        });
-        logger.info("Session running - agent actor will be spawned here");
-        assign({
-          agentRef: ({ spawn }) =>
-            spawn("agentMachine", {
-              input: {
-                project: context.project,
-                branch: context.branch,
-                user: context.user,
-                message: context.message,
-              },
-            }),
-        });
-      },
+      entry: [
+        ({ context }) => {
+          const logger = Logger.get({
+            projectId: context.project.id,
+            branchId: context.branch.id,
+            versionId: context.branch.headVersion.id,
+            actor: "session-machine",
+          });
+          logger.info("Session running - agent actor will be spawned here");
+        },
+        { type: "assignAgentRef" },
+        { type: "startAgentActor" },
+      ],
       on: {
         AGENT_COMPLETE: {
           target: "finalizing",

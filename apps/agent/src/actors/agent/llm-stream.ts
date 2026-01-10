@@ -132,10 +132,10 @@ export const llmStreamActor = fromPromise<LLMStreamResult, LLMStreamInput>(async
       }
       case "tool-result": {
         assistantContent.push({
-          type: "tool-call",
+          type: "tool-result",
           toolCallId: part.toolCallId,
           toolName: part.toolName,
-          input: part.input,
+          output: part.output,
         });
 
         if (part.toolName === "done" || part.toolName === "complete") {
