@@ -9,7 +9,6 @@ import {
 import { Logger } from "@weldr/shared/logger";
 
 import { extractAndSaveDeclarations } from "@/ai/utils/declarations";
-import { createTasks } from "@/ai/utils/tasks";
 import { getInstalledCategories } from "@/integrations/utils/get-installed-categories";
 import type { WorkflowContext } from "@/workflow/context";
 import { fixtures } from "./test-fixtures";
@@ -82,56 +81,6 @@ function createWorkflowContext(
   } as WorkflowContext;
 }
 
-async function createDeclarationTasksFromFixture(
-  context: WorkflowContext,
-  declarationTasks: (typeof fixtures)[0]["declarationTasks"],
-) {
-  if (!declarationTasks || declarationTasks.length === 0) {
-    return [];
-  }
-
-  logger.info(`\n📝 Creating ${declarationTasks.length} declaration tasks...`);
-  for (const task of declarationTasks) {
-    if (task.type === "declaration") {
-      const specs = task.specs;
-      if (specs && typeof specs === "object" && "type" in specs) {
-        logger.info(`  Task: ${task.summary}`);
-        logger.info(`    Spec Type: ${specs.type}`);
-        logger.info(`    File: ${task.filePath}`);
-        if (specs.type === "endpoint" && "path" in specs) {
-          logger.info(`    Endpoint: ${specs.path}`);
-        }
-      }
-    }
-  }
-
-  await createTasks({
-    context,
-    taskList: declarationTasks,
-  });
-
-  const project = context.get("project");
-
-  // Check what was actually saved
-  const savedDeclarations = await db.query.declarations.findMany({
-    where: eq(declarations.projectId, project.id),
-  });
-
-  logger.info(
-    `\n💾 Declarations saved to database (total: ${savedDeclarations.length}):`,
-  );
-  for (const decl of savedDeclarations) {
-    if (decl.taskId) {
-      logger.info(`  URI: ${decl.uri}`);
-      logger.info(`    Task ID: ${decl.taskId}`);
-      logger.info(`    Progress: ${decl.progress}`);
-      logger.info(`    Path: ${decl.path || "N/A"}\n`);
-    }
-  }
-
-  return declarationTasks;
-}
-
 /**
  * Clean up test data (declarations and tasks) created during the test
  */
@@ -173,7 +122,6 @@ async function testExtractionAndDependencies(
   filePath: string,
   sourceCode: string,
   expectedDeclarations?: string[],
-  declarationTasks?: (typeof fixtures)[0]["declarationTasks"],
 ) {
   const project = context.get("project");
   const branch = context.get("branch");
@@ -189,31 +137,6 @@ async function testExtractionAndDependencies(
   const taskIdsBeforeTest = tasksBeforeTest.map((t) => t.id);
 
   try {
-    if (declarationTasks && declarationTasks.length > 0) {
-      await createDeclarationTasksFromFixture(context, declarationTasks);
-    }
-
-    const declarationsBefore = await db.query.declarations.findMany({
-      where: eq(declarations.projectId, project.id),
-      with: {
-        task: true,
-      },
-    });
-
-    const plannedDeclarations = declarationsBefore.filter(
-      (d) => d.path === filePath,
-    );
-
-    if (plannedDeclarations.length > 0) {
-      logger.info(`\n📋 Planned declarations (from tasks):`);
-      for (const decl of plannedDeclarations) {
-        logger.info(`  URI: ${decl.uri}`);
-        logger.info(`  Task ID: ${decl.taskId}`);
-        logger.info(`  Progress: ${decl.progress}`);
-        logger.info(`  Declaration ID: ${decl.id}\n`);
-      }
-    }
-
     await extractAndSaveDeclarations({
       context,
       filePath,
@@ -229,7 +152,6 @@ async function testExtractionAndDependencies(
             dependency: true,
           },
         },
-        task: true,
       },
     });
 
@@ -244,64 +166,10 @@ async function testExtractionAndDependencies(
         logger.info(`  URI: ${decl.uri}`);
         logger.info(`  Name: ${metadata?.name || "N/A"}`);
         logger.info(`  Type: ${metadata?.type || "N/A"}`);
-        logger.info(`  Task ID: ${decl.taskId || "NONE"}`);
         logger.info(`  Progress: ${decl.progress}`);
         logger.info(`  Declaration ID: ${decl.id}\n`);
       }
     }
-
-    let linkedCount = 0;
-    let unlinkedCount = 0;
-    const linkageResults: Array<{
-      uri: string;
-      hasTask: boolean;
-      taskId?: string;
-      wasPlanned: boolean;
-    }> = [];
-
-    for (const declaration of fileDeclarations) {
-      if (!declaration.uri) continue;
-
-      const wasPlanned = plannedDeclarations.some(
-        (pd) => pd.uri === declaration.uri,
-      );
-      const hasTask = !!declaration.taskId;
-
-      linkageResults.push({
-        uri: declaration.uri,
-        hasTask,
-        taskId: declaration.taskId || undefined,
-        wasPlanned,
-      });
-
-      if (hasTask) {
-        linkedCount++;
-        logger.info(
-          `✅ Linked: ${declaration.uri} → Task ${declaration.taskId}`,
-        );
-      } else {
-        unlinkedCount++;
-        if (wasPlanned) {
-          const plannedDecl = plannedDeclarations.find(
-            (pd) => pd.uri === declaration.uri,
-          );
-          logger.warn(
-            `❌ Unlinked: ${declaration.uri} (expected task: ${plannedDecl?.taskId})`,
-          );
-          logger.warn(
-            `   Planned ID: ${plannedDecl?.id}, Extracted ID: ${declaration.id}`,
-          );
-        } else {
-          logger.info(`ℹ️  Not planned: ${declaration.uri}`);
-        }
-      }
-    }
-
-    logger.info(`\n📊 Linkage Analysis:`);
-    logger.info(`  Total declarations in file: ${fileDeclarations.length}`);
-    logger.info(`  Planned (from tasks): ${plannedDeclarations.length}`);
-    logger.info(`  Linked: ${linkedCount}`);
-    logger.info(`  Unlinked: ${unlinkedCount}`);
 
     let totalExpected = 0;
     let totalResolved = 0;
@@ -335,9 +203,6 @@ async function testExtractionAndDependencies(
       totalResolved,
       totalUnresolved,
       fileDeclarations,
-      linkedCount,
-      unlinkedCount,
-      linkageResults,
       expectedDeclarations: expectedDeclarations?.length || 0,
     };
   } finally {
@@ -399,7 +264,6 @@ async function main() {
         fixture.filePath,
         fixture.sourceCode,
         fixture.expectedDeclarations,
-        fixture.declarationTasks,
       );
 
       results.push({
@@ -412,12 +276,6 @@ async function main() {
       }
     }
 
-    const totalExpectedDecls = results.reduce(
-      (sum, r) => sum + r.expectedDeclarations,
-      0,
-    );
-    const totalLinked = results.reduce((sum, r) => sum + r.linkedCount, 0);
-    const totalUnlinked = results.reduce((sum, r) => sum + r.unlinkedCount, 0);
     const totalExpected = results.reduce((sum, r) => sum + r.totalExpected, 0);
     const totalResolved = results.reduce((sum, r) => sum + r.totalResolved, 0);
     const totalUnresolved = results.reduce(
@@ -427,15 +285,9 @@ async function main() {
 
     logger.info("\n=== SUMMARY ===");
     logger.info(
-      `Task Linkage: ${totalLinked}/${totalExpectedDecls} (${totalExpectedDecls > 0 ? ((totalLinked / totalExpectedDecls) * 100).toFixed(1) : 0}%)`,
-    );
-    logger.info(
       `Dependency Resolution: ${totalResolved}/${totalExpected} (${totalExpected > 0 ? ((totalResolved / totalExpected) * 100).toFixed(1) : 0}%)`,
     );
 
-    if (totalUnlinked > 0) {
-      logger.warn(`${totalUnlinked} declarations not linked to tasks`);
-    }
     if (totalUnresolved > 0) {
       logger.warn(`${totalUnresolved} dependencies unresolved`);
     }

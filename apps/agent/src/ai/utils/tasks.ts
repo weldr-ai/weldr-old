@@ -1,23 +1,10 @@
 import { db, eq } from "@weldr/db";
-import {
-  type declarations,
-  dependencies,
-  taskDependencies,
-  tasks,
-} from "@weldr/db/schema";
+import { taskDependencies, tasks } from "@weldr/db/schema";
 import type { Task } from "@weldr/shared/types";
 
 import type { WorkflowContext } from "@/workflow/context";
-import { createDeclarationFromTask } from "./declarations";
 
 export type TaskWithRelations = typeof tasks.$inferSelect & {
-  declaration:
-    | (typeof declarations.$inferSelect & {
-        dependencies: {
-          dependency: typeof declarations.$inferSelect;
-        }[];
-      })
-    | null;
   dependencies: {
     dependency: typeof tasks.$inferSelect;
   }[];
@@ -30,25 +17,19 @@ export async function createTasks({
   context: WorkflowContext;
   taskList: Task[];
 }) {
-  const project = context.get("project");
   const branch = context.get("branch");
 
   return await db.transaction(async (tx) => {
-    const taskToDeclaration = new Map<
-      number,
-      typeof declarations.$inferSelect
-    >();
     const tasksMap = new Map<
       number,
       {
         numericId: number;
-        type: "declaration" | "generic";
         dbId: string;
         dependencies: number[];
       }
     >();
 
-    // First pass: Create all tasks sequentially to avoid foreign key constraint issues
+    // Single pass: Create all tasks
     for (const task of taskList) {
       const [insertedTask] = await tx
         .insert(tasks)
@@ -66,55 +47,17 @@ export async function createTasks({
       tasksMap.set(task.id, {
         numericId: task.id,
         dbId: insertedTask.id,
-        type: task.type,
         dependencies: task.dependencies || [],
       });
     }
 
-    // Second pass: Create declarations for declaration tasks
-    for (const task of taskList) {
-      if (task.type === "declaration") {
-        const taskInfo = tasksMap.get(task.id);
-        if (!taskInfo) {
-          throw new Error("Task not found in map");
-        }
-
-        const [fullTask] = await tx
-          .select()
-          .from(tasks)
-          .where(eq(tasks.id, taskInfo.dbId));
-
-        if (!fullTask) {
-          throw new Error("Failed to retrieve inserted task");
-        }
-
-        const declaration = await createDeclarationFromTask({
-          context,
-          task: fullTask,
-          tx,
-        });
-
-        if (!declaration) {
-          throw new Error("Failed to create declaration");
-        }
-
-        taskToDeclaration.set(task.id, declaration);
-      }
-    }
-
+    // Create task dependencies
     const taskDependenciesInserts: Array<{
       dependentId: string;
       dependencyId: string;
     }> = [];
 
-    const declarationDependenciesInserts: Array<{
-      dependentId: string;
-      dependencyId: string;
-    }> = [];
-
-    const insertedTasks = tasksMap.values();
-
-    for (const insertedTask of insertedTasks) {
+    for (const insertedTask of tasksMap.values()) {
       for (const depId of insertedTask.dependencies) {
         const dependency = tasksMap.get(depId);
 
@@ -126,35 +69,11 @@ export async function createTasks({
           dependentId: insertedTask.dbId,
           dependencyId: dependency.dbId,
         });
-
-        // Create declaration dependencies
-        if (
-          insertedTask.type === "declaration" &&
-          dependency.type === "declaration"
-        ) {
-          const dependentId = taskToDeclaration.get(insertedTask.numericId);
-          const dependencyId = taskToDeclaration.get(dependency.numericId);
-
-          if (!dependentId || !dependencyId) {
-            throw new Error(
-              `[createTasks:project_${project.id}:version_${branch.headVersion.id}] Declaration ID not found for dependency mapping`,
-            );
-          }
-
-          declarationDependenciesInserts.push({
-            dependentId: dependentId.id,
-            dependencyId: dependencyId.id,
-          });
-        }
       }
     }
 
     if (taskDependenciesInserts.length > 0) {
       await tx.insert(taskDependencies).values(taskDependenciesInserts);
-    }
-
-    if (declarationDependenciesInserts.length > 0) {
-      await tx.insert(dependencies).values(declarationDependenciesInserts);
     }
   });
 }
@@ -168,15 +87,6 @@ export async function getTasksWithDependencies(
       dependencies: {
         with: {
           dependency: true,
-        },
-      },
-      declaration: {
-        with: {
-          dependencies: {
-            with: {
-              dependency: true,
-            },
-          },
         },
       },
     },
