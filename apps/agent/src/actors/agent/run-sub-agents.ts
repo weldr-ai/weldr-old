@@ -7,7 +7,9 @@ import { Logger } from "@weldr/shared/logger";
 import type {
   Branch,
   PendingAgentTask,
+  PendingSpawnRequest,
   ProjectWithConfig,
+  SubAgentBatchResult,
   SubAgentResult,
 } from "@/actors/agent/agent-actor-types";
 import type { User } from "@/lib/auth";
@@ -29,43 +31,75 @@ type RunSubAgentsInput = {
   branch: Branch;
   user: User;
   tools: ToolSet;
-  agents: PendingAgentTask[];
+  pendingSpawnRequests: PendingSpawnRequest[];
   modelId: AiModel;
   cooldownMs: number;
   runSubAgent: RunSubAgent;
 };
 
-export const runSubAgentsActor = fromPromise<SubAgentResult[], RunSubAgentsInput>(
+export const runSubAgentsActor = fromPromise<SubAgentBatchResult[], RunSubAgentsInput>(
   async ({ input }) => {
     const logger = Logger.get({
       projectId: input.project.id,
       versionId: input.branch.headVersion.id,
     });
 
-    logger.info(`Running ${input.agents.length} sub-agents concurrently`);
-
-    const results = await Promise.all(
-      input.agents.map((agentTask) =>
-        input.runSubAgent({
-          project: input.project,
-          branch: input.branch,
-          user: input.user,
-          tools: input.tools,
-          agentTask,
-          modelId: input.modelId,
-          cooldownMs: input.cooldownMs,
-        }),
-      ),
+    const totalAgents = input.pendingSpawnRequests.reduce(
+      (count, request) => count + request.agents.length,
+      0,
     );
 
-    logger.info(`All ${input.agents.length} sub-agents completed`, {
+    logger.info(`Running ${totalAgents} sub-agents concurrently`, {
+      extra: { requestCount: input.pendingSpawnRequests.length },
+    });
+
+    const batches = await Promise.all(
+      input.pendingSpawnRequests.map(async (request) => {
+        const results = await Promise.all(
+          request.agents.map(async (agentTask) => {
+            try {
+              return await input.runSubAgent({
+                project: input.project,
+                branch: input.branch,
+                user: input.user,
+                tools: input.tools,
+                agentTask,
+                modelId: input.modelId,
+                cooldownMs: input.cooldownMs,
+              });
+            } catch (error) {
+              const errorMessage =
+                error instanceof Error ? error.message : "Sub-agent execution failed";
+              return {
+                task: agentTask.task,
+                success: false,
+                result: errorMessage,
+              } satisfies SubAgentResult;
+            }
+          }),
+        );
+
+        return {
+          toolCallId: request.toolCallId,
+          results,
+        } satisfies SubAgentBatchResult;
+      }),
+    );
+
+    const successCount = batches
+      .flatMap((batch) => batch.results)
+      .filter((result) => result.success).length;
+    const failureCount = totalAgents - successCount;
+
+    logger.info(`All ${totalAgents} sub-agents completed`, {
       extra: {
-        successCount: results.filter((result) => result.success).length,
-        failureCount: results.filter((result) => !result.success).length,
+        requestCount: input.pendingSpawnRequests.length,
+        successCount,
+        failureCount,
       },
     });
 
-    return results;
+    return batches;
   },
 );
 

@@ -4,7 +4,7 @@ import { Logger } from "@weldr/shared/logger";
 
 import { agentFSManager } from "@/lib/storage";
 import { stream } from "@/lib/stream-utils";
-import type { SessionMachineContext } from "@/machines/session-types";
+import type { SessionMachineContext } from "@/machines/types";
 
 export const cleanupSessionActor = fromPromise<void, { context: SessionMachineContext }>(
   async ({ input }) => {

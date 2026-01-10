@@ -12,16 +12,15 @@ import type {
   SessionMachineContext,
   SessionMachineEvents,
   SessionMachineInput,
-} from "@/machines/session-types";
+} from "@/machines/types";
 
 export type {
-  AgentResult,
   BranchWithVersion,
   ProjectWithConfig,
   SessionMachineContext,
   SessionMachineEvents,
   SessionMachineInput,
-} from "@/machines/session-types";
+} from "@/machines/types";
 
 export const sessionMachine = setup({
   types: {
@@ -118,9 +117,7 @@ export const sessionMachine = setup({
       });
     },
   },
-  guards: {
-    hasAgentRef: ({ context }) => context.agentRef !== null,
-  },
+  guards: {},
 }).createMachine({
   id: "session",
   initial: "idle",
@@ -250,7 +247,6 @@ export const sessionMachine = setup({
     },
 
     completed: {
-      type: "final",
       entry: [
         ({ context }) => {
           const logger = Logger.get({
@@ -262,6 +258,9 @@ export const sessionMachine = setup({
           logger.info("Session completed successfully");
         },
       ],
+      always: {
+        target: "cleaningUp",
+      },
     },
 
     failed: {

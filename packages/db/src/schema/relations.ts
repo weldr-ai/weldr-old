@@ -15,7 +15,6 @@ import {
 } from "./integrations";
 import { nodes } from "./nodes";
 import { projects } from "./projects";
-import { taskDependencies, tasks } from "./tasks";
 import { versionDeclarations } from "./version-declarations";
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -125,7 +124,6 @@ export const versionsRelations = relations(versions, ({ one, many }) => ({
     fields: [versions.revertedVersionId],
     references: [versions.id],
   }),
-  tasks: many(tasks),
   children: many(versions, {
     relationName: "version_children",
   }),
@@ -156,36 +154,6 @@ export const versionDeclarationsRelations = relations(versionDeclarations, ({ on
   }),
 }));
 
-export const taskRelations = relations(tasks, ({ one, many }) => ({
-  version: one(versions, {
-    fields: [tasks.versionId],
-    references: [versions.id],
-  }),
-  dependencies: many(taskDependencies, {
-    relationName: "taskDependencies",
-  }),
-  dependents: many(taskDependencies, {
-    relationName: "taskDependents",
-  }),
-  declaration: one(declarations, {
-    fields: [tasks.id],
-    references: [declarations.taskId],
-  }),
-}));
-
-export const taskDependencyRelations = relations(taskDependencies, ({ one }) => ({
-  dependent: one(tasks, {
-    fields: [taskDependencies.dependentId],
-    references: [tasks.id],
-    relationName: "taskDependencies",
-  }),
-  dependency: one(tasks, {
-    fields: [taskDependencies.dependencyId],
-    references: [tasks.id],
-    relationName: "taskDependents",
-  }),
-}));
-
 export const declarationsRelations = relations(declarations, ({ one, many }) => ({
   node: one(nodes, {
     fields: [declarations.nodeId],
@@ -195,10 +163,6 @@ export const declarationsRelations = relations(declarations, ({ one, many }) => 
   project: one(projects, {
     fields: [declarations.projectId],
     references: [projects.id],
-  }),
-  task: one(tasks, {
-    fields: [declarations.taskId],
-    references: [tasks.id],
   }),
   user: one(users, {
     fields: [declarations.userId],

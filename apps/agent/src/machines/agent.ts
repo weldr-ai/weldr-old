@@ -1,5 +1,5 @@
 import type { ModelMessage, ToolSet } from "ai";
-import { assign, createActor, setup } from "xstate";
+import { assign, createActor, sendParent, setup } from "xstate";
 
 import type { AiModel } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
@@ -12,6 +12,7 @@ import type {
   LLMUsage,
   PendingSpawnRequest,
   ProjectWithConfig,
+  SubAgentBatchResult,
   SubAgentResult,
 } from "@/actors/agent/agent-actor-types";
 import { cooldownActor } from "@/actors/agent/cooldown";
@@ -19,8 +20,9 @@ import { llmStreamActor } from "@/actors/agent/llm-stream";
 import { loadMessagesActor } from "@/actors/agent/load-messages";
 import { runSubAgentsActor, type RunSubAgentInput } from "@/actors/agent/run-sub-agents";
 import { saveMessagesActor } from "@/actors/agent/save-messages";
-import { SUB_AGENT_ACTIVE_TOOLS } from "@/ai/tools/spawn-agent";
 import type { User } from "@/lib/auth";
+
+const SUB_AGENT_ACTIVE_TOOLS = ["bash", "search_codebase", "query_related_declarations"] as const;
 
 const DEFAULT_MAX_SUB_AGENTS = 5;
 
@@ -41,7 +43,6 @@ type AgentContext = {
   modelId: AiModel;
   error: Error | null;
   shouldContinue: boolean;
-  calledComplete: boolean;
   lastUsage: LLMUsage | null;
   lastFinishReason: FinishReason | null;
   pendingSpawnRequests: PendingSpawnRequest[];
@@ -61,12 +62,7 @@ type AgentInput = {
   activeTools?: string[];
 };
 
-type AgentEvent =
-  | { type: "PROCESS" }
-  | { type: "CANCEL" }
-  | { type: "ERROR"; error: Error }
-  | { type: "SUB_AGENT_DONE"; toolCallId: string; result: string }
-  | { type: "SUB_AGENT_ERROR"; toolCallId: string; error: string };
+type AgentEvent = { type: "PROCESS" } | { type: "CANCEL" } | { type: "ERROR"; error: Error };
 
 // ============================================================================
 // Helpers
@@ -102,8 +98,8 @@ ${agentTask.context ? `\nCONTEXT: ${agentTask.context}` : ""}
 RULES:
 1. Focus ONLY on the assigned task
 2. You CANNOT spawn other agents
-3. Call "complete" tool when finished
-4. Be efficient - complete in as few steps as possible`;
+3. Be efficient - complete in as few steps as possible
+4. When you have completed the task, simply stop and provide your final response`;
 
   const subAgent = createActor(agentMachine, {
     input: {
@@ -122,14 +118,32 @@ RULES:
   return new Promise((resolve) => {
     subAgent.subscribe((snapshot) => {
       if (snapshot.status === "done") {
+        const isFailed = snapshot.value === "failed";
+        const errorMessage = snapshot.context.error?.message ?? "Sub-agent failed to complete task";
+
+        if (isFailed) {
+          logger.error(`Sub-agent ${subAgentId} failed`, {
+            extra: { error: errorMessage },
+          });
+          resolve({
+            task: agentTask.task,
+            success: false,
+            result: errorMessage,
+          });
+          return;
+        }
+
         logger.info(`Sub-agent ${subAgentId} completed`);
         resolve({
           task: agentTask.task,
           success: true,
           result: "Sub-agent completed task successfully",
         });
-      } else if (snapshot.status === "error") {
-        logger.error(`Sub-agent ${subAgentId} failed`);
+        return;
+      }
+
+      if (snapshot.status === "error") {
+        logger.error(`Sub-agent ${subAgentId} failed with unexpected error`);
         resolve({
           task: agentTask.task,
           success: false,
@@ -205,11 +219,7 @@ export const agentMachine = setup({
   },
   guards: {
     shouldContinueLoop: ({ context }) =>
-      context.shouldContinue &&
-      !context.calledComplete &&
-      context.iterationCount < context.maxIterations,
-    calledCompleteTool: ({ context }) => context.calledComplete,
-    hasPendingSpawnRequests: ({ context }) => context.pendingSpawnRequests.length > 0,
+      context.shouldContinue && context.iterationCount < context.maxIterations,
   },
 }).createMachine({
   id: "agent",
@@ -223,7 +233,7 @@ export const agentMachine = setup({
     messageId: nanoid(),
     iterationCount: 0,
     maxIterations: input.maxIterations ?? 100,
-    maxSubAgents: input.maxSubAgents ?? DEFAULT_MAX_SUB_AGENTS,
+    maxSubAgents: Math.min(input.maxSubAgents ?? DEFAULT_MAX_SUB_AGENTS, DEFAULT_MAX_SUB_AGENTS),
     cooldownMs: input.cooldownMs ?? 100,
     tools: input.tools,
     activeTools: input.activeTools,
@@ -231,7 +241,6 @@ export const agentMachine = setup({
     modelId: input.modelId ?? "google:gemini-2.5-pro",
     error: null,
     shouldContinue: false,
-    calledComplete: false,
     lastUsage: null,
     lastFinishReason: null,
     pendingSpawnRequests: [],
@@ -297,7 +306,6 @@ export const agentMachine = setup({
             guard: ({ event }) => event.output.pendingSpawnRequests.length > 0,
             actions: assign({
               shouldContinue: ({ event }) => event.output.shouldContinue,
-              calledComplete: ({ event }) => event.output.calledComplete,
               assistantContent: ({ event }) => event.output.assistantContent,
               lastUsage: ({ event }) => event.output.usage,
               lastFinishReason: ({ event }) => event.output.finishReason,
@@ -308,7 +316,6 @@ export const agentMachine = setup({
             target: "savingMessages",
             actions: assign({
               shouldContinue: ({ event }) => event.output.shouldContinue,
-              calledComplete: ({ event }) => event.output.calledComplete,
               assistantContent: ({ event }) => event.output.assistantContent,
               lastUsage: ({ event }) => event.output.usage,
               lastFinishReason: ({ event }) => event.output.finishReason,
@@ -337,7 +344,7 @@ export const agentMachine = setup({
           branch: context.branch,
           user: context.user,
           tools: context.tools,
-          agents: context.pendingSpawnRequests[0]?.agents ?? [],
+          pendingSpawnRequests: context.pendingSpawnRequests,
           modelId: context.modelId,
           cooldownMs: context.cooldownMs,
           runSubAgent: runSingleSubAgent,
@@ -346,47 +353,53 @@ export const agentMachine = setup({
           target: "savingMessages",
           actions: assign({
             assistantContent: ({ context, event }) => {
-              const results = event.output as SubAgentResult[];
-              const toolCallId = context.pendingSpawnRequests[0]?.toolCallId ?? "";
-              return [
-                ...context.assistantContent,
-                {
-                  type: "tool-result" as const,
-                  toolCallId,
-                  toolName: "spawn_agents",
-                  output: {
-                    type: "json" as const,
-                    value: { results },
-                  },
+              const batches = event.output as SubAgentBatchResult[];
+              const toolResults = batches.map((batch) => ({
+                type: "tool-result" as const,
+                toolCallId: batch.toolCallId,
+                toolName: "spawn_agents",
+                output: {
+                  type: "json" as const,
+                  value: { results: batch.results },
                 },
-              ];
+              }));
+              return [...context.assistantContent, ...toolResults];
             },
-            subAgentResults: ({ event }) => event.output as SubAgentResult[],
+            subAgentResults: ({ event }) =>
+              (event.output as SubAgentBatchResult[]).flatMap((batch) => batch.results),
             shouldContinue: () => true,
             pendingSpawnRequests: () => [],
           }),
         },
         onError: {
           target: "savingMessages",
-          actions: assign({
-            assistantContent: ({ context }) => {
-              const toolCallId = context.pendingSpawnRequests[0]?.toolCallId ?? "";
-              return [
-                ...context.assistantContent,
-                {
+          actions: [
+            ({ context, event }) => {
+              const logger = Logger.get({
+                projectId: context.project.id,
+                versionId: context.branch.headVersion.id,
+              });
+              logger.error("Sub-agent execution failed", {
+                extra: { error: (event.error as Error)?.message },
+              });
+            },
+            assign({
+              assistantContent: ({ context }) => {
+                const toolResults = context.pendingSpawnRequests.map((request) => ({
                   type: "tool-result" as const,
-                  toolCallId,
+                  toolCallId: request.toolCallId,
                   toolName: "spawn_agents",
                   output: {
                     type: "error-json" as const,
                     value: { success: false, error: "Sub-agent execution failed" },
                   },
-                },
-              ];
-            },
-            shouldContinue: () => true,
-            pendingSpawnRequests: () => [],
-          }),
+                }));
+                return [...context.assistantContent, ...toolResults];
+              },
+              shouldContinue: () => true,
+              pendingSpawnRequests: () => [],
+            }),
+          ],
         },
       },
     },
@@ -405,11 +418,6 @@ export const agentMachine = setup({
           finishReason: context.lastFinishReason,
         }),
         onDone: [
-          {
-            target: "completed",
-            guard: "calledCompleteTool",
-            actions: ["logComplete"],
-          },
           {
             target: "cooldown",
             guard: "shouldContinueLoop",
@@ -446,18 +454,27 @@ export const agentMachine = setup({
 
     completed: {
       type: "final",
-      entry: () => {
-        Logger.info("Agent completed successfully");
-      },
+      entry: [
+        () => {
+          Logger.info("Agent completed successfully");
+        },
+        sendParent({ type: "AGENT_COMPLETE" }),
+      ],
     },
 
     failed: {
       type: "final",
-      entry: ({ context }) => {
-        Logger.error("Agent failed", {
-          extra: { error: context.error?.message },
-        });
-      },
+      entry: [
+        ({ context }) => {
+          Logger.error("Agent failed", {
+            extra: { error: context.error?.message },
+          });
+        },
+        sendParent(({ context }) => ({
+          type: "AGENT_ERROR" as const,
+          error: context.error ?? new Error("Unknown agent error"),
+        })),
+      ],
     },
   },
 

@@ -4,6 +4,29 @@ import { Logger } from "@weldr/shared/logger";
 
 import { executeToolActor, type ToolExecutor } from "@/actors/tool/execute-tool";
 
+const isToolFailure = (output: unknown): output is { success: false; error?: string } => {
+  if (typeof output !== "object" || output === null) {
+    return false;
+  }
+
+  if (!("success" in output)) {
+    return false;
+  }
+
+  return (output as { success?: unknown }).success === false;
+};
+
+const getToolFailureError = (output: unknown): Error => {
+  if (typeof output === "object" && output !== null && "error" in output) {
+    const errorValue = (output as { error?: unknown }).error;
+    if (typeof errorValue === "string") {
+      return new Error(errorValue);
+    }
+  }
+
+  return new Error("Tool returned failure");
+};
+
 type ToolMachineContext = {
   toolName: string;
   input: unknown;
@@ -73,6 +96,12 @@ export const toolMachine = setup({
     setEndTime: assign({
       endTime: () => Date.now(),
     }),
+    setToolName: assign({
+      toolName: (_, params: { toolName: string }) => params.toolName,
+    }),
+    setInput: assign({
+      input: (_, params: { input: unknown }) => params.input,
+    }),
     setOutput: assign({
       output: (_, params: { output: unknown }) => params.output,
     }),
@@ -106,7 +135,18 @@ export const toolMachine = setup({
       on: {
         EXECUTE: {
           target: "executing",
-          actions: ["setStartTime", "logStart"],
+          actions: [
+            {
+              type: "setToolName",
+              params: ({ event }) => ({ toolName: event.toolName }),
+            },
+            {
+              type: "setInput",
+              params: ({ event }) => ({ input: event.input }),
+            },
+            "setStartTime",
+            "logStart",
+          ],
         },
       },
     },
@@ -120,17 +160,31 @@ export const toolMachine = setup({
           input: context.input,
           toolExecutor: context.toolExecutor,
         }),
-        onDone: {
-          target: "completed",
-          actions: [
-            "setEndTime",
-            {
-              type: "setOutput",
-              params: ({ event }) => ({ output: event.output }),
-            },
-            "logComplete",
-          ],
-        },
+        onDone: [
+          {
+            target: "failed",
+            guard: ({ event }) => isToolFailure(event.output),
+            actions: [
+              "setEndTime",
+              {
+                type: "setError",
+                params: ({ event }) => ({ error: getToolFailureError(event.output) }),
+              },
+              "logError",
+            ],
+          },
+          {
+            target: "completed",
+            actions: [
+              "setEndTime",
+              {
+                type: "setOutput",
+                params: ({ event }) => ({ output: event.output }),
+              },
+              "logComplete",
+            ],
+          },
+        ],
         onError: {
           target: "failed",
           actions: [

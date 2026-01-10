@@ -26,6 +26,11 @@ export type SubAgentResult = {
   result: string;
 };
 
+export type SubAgentBatchResult = {
+  toolCallId: string;
+  results: SubAgentResult[];
+};
+
 export type FinishReason =
   | "length"
   | "stop"

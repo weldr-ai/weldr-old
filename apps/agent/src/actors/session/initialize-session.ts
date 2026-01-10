@@ -7,14 +7,13 @@ import { agentPrompt } from "@/ai/prompts";
 import {
   addIntegrationsTool,
   bashTool,
-  completeTool,
   queryRelatedDeclarationsTool,
   searchCodebaseTool,
   spawnAgentsTool,
 } from "@/ai/tools";
 import { ensureBranchDir } from "@/lib/branch-state";
 import { stream } from "@/lib/stream-utils";
-import type { SessionMachineContext } from "@/machines/session-types";
+import type { SessionMachineContext } from "@/machines/types";
 import { createSessionContext } from "@/session";
 
 const buildToolSet = (context: SessionMachineContext): ToolSet => {
@@ -30,7 +29,6 @@ const buildToolSet = (context: SessionMachineContext): ToolSet => {
     query_related_declarations: queryRelatedDeclarationsTool(sessionContext),
     spawn_agents: spawnAgentsTool(sessionContext),
     add_integrations: addIntegrationsTool(sessionContext),
-    complete: completeTool(sessionContext),
   };
 };
 

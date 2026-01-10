@@ -5,7 +5,6 @@ export { toolMachine, type ToolMachine, type ToolActorRef } from "./tool";
 
 // Export session machine types
 export type {
-  AgentResult,
   ProjectWithConfig,
   BranchWithVersion,
   SessionMachineContext,
@@ -21,9 +20,6 @@ export type {
   ToolMachineOutput,
   ToolExecutor,
 } from "./tool";
-
-// Export all types
-export * from "./types";
 
 // Export utility functions for creating actors
 export { createActor } from "xstate";

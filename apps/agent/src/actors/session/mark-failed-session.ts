@@ -5,7 +5,7 @@ import { versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
 import { stream } from "@/lib/stream-utils";
-import type { SessionMachineContext } from "@/machines/session-types";
+import type { SessionMachineContext } from "@/machines/types";
 
 export const markFailedSessionActor = fromPromise<void, { context: SessionMachineContext }>(
   async ({ input }) => {

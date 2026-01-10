@@ -29,7 +29,6 @@ import type { dataTypeSchema } from "../validators/json-schema";
 import type { nodeSchema, nodeTypeSchema } from "../validators/nodes";
 import type { openApiEndpointSpecSchema } from "../validators/openapi";
 import type { packageSchema } from "../validators/packages";
-import type { planSchema, taskSchema } from "../validators/plans";
 import type { projectSchema } from "../validators/projects";
 import type { themeDataSchema, themeSchema } from "../validators/themes";
 import type { versionSchema } from "../validators/versions";
@@ -64,9 +63,6 @@ export type Node = z.infer<typeof nodeSchema>;
 export type Theme = z.infer<typeof themeSchema>;
 export type ThemeData = z.infer<typeof themeDataSchema>;
 export type ThemeMode = keyof Theme;
-
-export type Plan = z.infer<typeof planSchema>;
-export type Task = z.infer<typeof taskSchema>;
 
 export type TStatus =
   | "thinking"

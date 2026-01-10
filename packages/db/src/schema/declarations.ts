@@ -15,7 +15,6 @@ import type { DeclarationMetadata } from "@weldr/shared/types/declarations";
 import { users } from "./auth";
 import { nodes } from "./nodes";
 import { projects } from "./projects";
-import { tasks } from "./tasks";
 
 export const declarations = pgTable(
   "declarations",
@@ -31,9 +30,6 @@ export const declarations = pgTable(
     embedding: vector("embedding", { dimensions: 1536 }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     previousId: text("previous_id").references((): AnyPgColumn => declarations.id),
-    taskId: text("task_id").references(() => tasks.id, {
-      onDelete: "cascade",
-    }),
     projectId: text("project_id")
       .references(() => projects.id, { onDelete: "cascade" })
       .notNull(),

@@ -12,7 +12,6 @@ export * from "./integrations";
 export * from "./nodes";
 export * from "./projects";
 export * from "./relations";
-export * from "./tasks";
 export * from "./themes";
 export * from "./vault";
 export * from "./version-declarations";

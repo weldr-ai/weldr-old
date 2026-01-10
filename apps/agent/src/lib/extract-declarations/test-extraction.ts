@@ -1,5 +1,5 @@
 import { db, eq, inArray } from "@weldr/db";
-import { branches, declarations, projects, tasks, users } from "@weldr/db/schema";
+import { branches, declarations, projects, users } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
 import { extractAndSaveDeclarations } from "@/ai/utils/declarations";
@@ -67,14 +67,9 @@ function createSessionContextForTest(
 }
 
 /**
- * Clean up test data (declarations and tasks) created during the test
+ * Clean up test data (declarations) created during the test
  */
-async function cleanupTestData(
-  versionId: string,
-  projectId: string,
-  declarationIdsBefore: string[],
-  taskIdsBefore: string[],
-) {
+async function cleanupTestData(projectId: string, declarationIdsBefore: string[]) {
   const currentDeclarations = await db.query.declarations.findMany({
     where: eq(declarations.projectId, projectId),
   });
@@ -83,18 +78,8 @@ async function cleanupTestData(
     .filter((d) => !declarationIdsBefore.includes(d.id))
     .map((d) => d.id);
 
-  const currentTasks = await db.query.tasks.findMany({
-    where: eq(tasks.versionId, versionId),
-  });
-
-  const tasksToDelete = currentTasks.filter((t) => !taskIdsBefore.includes(t.id)).map((t) => t.id);
-
   if (declarationsToDelete.length > 0) {
     await db.delete(declarations).where(inArray(declarations.id, declarationsToDelete));
-  }
-
-  if (tasksToDelete.length > 0) {
-    await db.delete(tasks).where(inArray(tasks.id, tasksToDelete));
   }
 }
 
@@ -104,17 +89,12 @@ async function testExtractionAndDependencies(
   sourceCode: string,
   expectedDeclarations?: string[],
 ) {
-  const { project, branch } = context;
+  const { project } = context;
 
   const declarationsBeforeTest = await db.query.declarations.findMany({
     where: eq(declarations.projectId, project.id),
   });
   const declarationIdsBeforeTest = declarationsBeforeTest.map((d) => d.id);
-
-  const tasksBeforeTest = await db.query.tasks.findMany({
-    where: eq(tasks.versionId, branch.headVersion.id),
-  });
-  const taskIdsBeforeTest = tasksBeforeTest.map((t) => t.id);
 
   try {
     await extractAndSaveDeclarations({
@@ -182,12 +162,7 @@ async function testExtractionAndDependencies(
       expectedDeclarations: expectedDeclarations?.length || 0,
     };
   } finally {
-    await cleanupTestData(
-      branch.headVersion.id,
-      project.id,
-      declarationIdsBeforeTest,
-      taskIdsBeforeTest,
-    );
+    await cleanupTestData(project.id, declarationIdsBeforeTest);
   }
 }
 

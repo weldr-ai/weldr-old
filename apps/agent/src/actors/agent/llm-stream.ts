@@ -8,9 +8,9 @@ import {
   type AssistantContentArray,
   type FinishReason,
   type LLMUsage,
-  type PendingAgentTask,
   type PendingSpawnRequest,
 } from "@/actors/agent/agent-actor-types";
+import { spawnAgentsInputSchema } from "@/ai/tools/spawn-agent";
 import { registry } from "@/ai/utils/registry";
 import { stream } from "@/lib/stream-utils";
 
@@ -27,7 +27,6 @@ type LLMStreamInput = {
 
 type LLMStreamResult = {
   shouldContinue: boolean;
-  calledComplete: boolean;
   assistantContent: AssistantContentArray;
   usage: LLMUsage | null;
   finishReason: FinishReason | null;
@@ -38,11 +37,11 @@ export const llmStreamActor = fromPromise<LLMStreamResult, LLMStreamInput>(async
   const logger = Logger.get({ chatId: input.chatId });
 
   let shouldContinue = false;
-  let calledComplete = false;
   const pendingSpawnRequests: PendingSpawnRequest[] = [];
   const assistantContent: AssistantContentArray = [];
   let usage: LLMUsage | null = null;
   let finishReason: FinishReason | null = null;
+  let streamError: Error | null = null;
 
   const result = streamText({
     model: registry.languageModel(input.modelId),
@@ -51,7 +50,9 @@ export const llmStreamActor = fromPromise<LLMStreamResult, LLMStreamInput>(async
     experimental_activeTools: input.activeTools,
     messages: input.messages,
     onError: (error) => {
-      logger.error("Error in LLM stream", { extra: { error } });
+      const errorValue = error instanceof Error ? error : new Error(String(error));
+      streamError = errorValue;
+      logger.error("Error in LLM stream", { extra: { error: errorValue.message } });
     },
   });
 
@@ -88,31 +89,44 @@ export const llmStreamActor = fromPromise<LLMStreamResult, LLMStreamInput>(async
         break;
       }
       case "tool-call": {
+        assistantContent.push({
+          type: "tool-call",
+          toolCallId: part.toolCallId,
+          toolName: part.toolName,
+          input: part.input,
+        });
+
         if (part.toolName === "spawn_agents") {
-          const toolInput = part.input as { agents: PendingAgentTask[] };
-          const agentCount = toolInput.agents.length;
+          const parsedInput = spawnAgentsInputSchema.safeParse(part.input);
+
+          if (!parsedInput.success) {
+            assistantContent.push({
+              type: "tool-result",
+              toolCallId: part.toolCallId,
+              toolName: part.toolName,
+              output: {
+                type: "error-text" as const,
+                value: "Invalid spawn_agents input.",
+              },
+            });
+            logger.warn("spawn_agents input validation failed", {
+              extra: { toolCallId: part.toolCallId, issues: parsedInput.error.issues },
+            });
+            shouldContinue = true;
+            break;
+          }
+
+          const agentCount = parsedInput.data.agents.length;
 
           if (agentCount <= input.maxSubAgents) {
             pendingSpawnRequests.push({
               toolCallId: part.toolCallId,
-              agents: toolInput.agents,
-            });
-            assistantContent.push({
-              type: "tool-call",
-              toolCallId: part.toolCallId,
-              toolName: part.toolName,
-              input: part.input,
+              agents: parsedInput.data.agents,
             });
             logger.info("spawn_agents tool call detected, will spawn sub-agents", {
               extra: { toolCallId: part.toolCallId, agentCount },
             });
           } else {
-            assistantContent.push({
-              type: "tool-call",
-              toolCallId: part.toolCallId,
-              toolName: part.toolName,
-              input: part.input,
-            });
             assistantContent.push({
               type: "tool-result",
               toolCallId: part.toolCallId,
@@ -138,18 +152,26 @@ export const llmStreamActor = fromPromise<LLMStreamResult, LLMStreamInput>(async
           output: part.output,
         });
 
-        if (part.toolName === "done" || part.toolName === "complete") {
-          calledComplete = true;
-        } else {
-          shouldContinue = true;
-        }
+        shouldContinue = true;
         break;
       }
       case "error": {
+        const errorValue =
+          part.error instanceof Error
+            ? part.error
+            : new Error(String(part.error ?? "LLM stream error"));
+        streamError = errorValue;
+        logger.error("LLM stream error received", {
+          extra: { error: errorValue.message },
+        });
         shouldContinue = true;
         break;
       }
     }
+  }
+
+  if (streamError) {
+    throw streamError;
   }
 
   const resultUsage = await result.usage;
@@ -172,7 +194,6 @@ export const llmStreamActor = fromPromise<LLMStreamResult, LLMStreamInput>(async
 
   return {
     shouldContinue,
-    calledComplete,
     assistantContent,
     usage,
     finishReason,

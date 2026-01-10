@@ -8,7 +8,6 @@ import {
   chats,
   integrationInstallations,
   projects,
-  tasks,
   versionDeclarations,
   versions,
 } from "@weldr/db/schema";
@@ -269,7 +268,6 @@ export const versionRouter = {
           branch: true,
           declarations: true,
           integrationInstallations: true,
-          tasks: true,
         },
       });
 
@@ -358,16 +356,6 @@ export const versionRouter = {
             version.integrationInstallations.map((installation) => ({
               versionId: revertedVersion.id,
               integrationId: installation.integrationId,
-            })),
-          );
-        }
-
-        if (version.tasks.length > 0) {
-          await tx.insert(tasks).values(
-            version.tasks.map((task) => ({
-              versionId: revertedVersion.id,
-              status: task.status,
-              data: task.data,
             })),
           );
         }

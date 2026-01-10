@@ -2,41 +2,31 @@ import { z } from "zod";
 
 import { createTool } from "./utils";
 
-export const SUB_AGENT_ACTIVE_TOOLS = [
-  "bash",
-  "search_codebase",
-  "query_related_declarations",
-  "complete",
-] as const;
-
-export type SubAgentToolType = (typeof SUB_AGENT_ACTIVE_TOOLS)[number];
-
-const agentTaskSchema = z.object({
-  task: z.string().describe("Clear description of what this sub-agent should accomplish"),
-  context: z.string().optional().describe("Additional context or constraints for this sub-agent"),
-});
-
 export const spawnAgentsInputSchema = z.object({
   agents: z
-    .array(agentTaskSchema)
+    .object({
+      task: z.string().describe("Clear description of what this sub-agent should accomplish"),
+      context: z
+        .string()
+        .optional()
+        .describe("Additional context or constraints for this sub-agent"),
+    })
+    .array()
     .min(1)
     .max(5)
     .describe("One or more agents to spawn (max 5). All agents run concurrently."),
 });
 
-const agentResultSchema = z.object({
-  task: z.string().describe("The task that was assigned to this agent"),
-  success: z.boolean().describe("Whether the agent completed successfully"),
-  result: z.string().describe("Result or error message from the agent"),
-});
-
 export const spawnAgentsOutputSchema = z.object({
-  results: z.array(agentResultSchema).describe("Results from all spawned agents"),
+  results: z
+    .object({
+      task: z.string().describe("The task that was assigned to this agent"),
+      success: z.boolean().describe("Whether the agent completed successfully"),
+      result: z.string().describe("Result or error message from the agent"),
+    })
+    .array()
+    .describe("Results from all spawned agents"),
 });
-
-export type SpawnAgentsInput = z.infer<typeof spawnAgentsInputSchema>;
-export type SpawnAgentsOutput = z.infer<typeof spawnAgentsOutputSchema>;
-export type AgentTask = z.infer<typeof agentTaskSchema>;
 
 export const spawnAgentsTool = createTool({
   name: "spawn_agents",

@@ -1,5 +1,5 @@
 {
-  "id": "551b6efb-9faf-4f09-914e-ec9c53ad60aa",
+  "id": "51aaef94-af90-4168-be00-4fd087e9941f",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1442,12 +1442,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "task_id": {
-          "name": "task_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "project_id": {
           "name": "project_id",
           "type": "text",
@@ -1508,15 +1502,6 @@
           "columnsFrom": ["previous_id"],
           "columnsTo": ["id"],
           "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "declarations_task_id_tasks_id_fk": {
-          "name": "declarations_task_id_tasks_id_fk",
-          "tableFrom": "declarations",
-          "tableTo": "tasks",
-          "columnsFrom": ["task_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "declarations_project_id_projects_id_fk": {
@@ -2419,134 +2404,6 @@
           "columns": ["subdomain"]
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.task_dependencies": {
-      "name": "task_dependencies",
-      "schema": "",
-      "columns": {
-        "dependent_id": {
-          "name": "dependent_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "dependency_id": {
-          "name": "dependency_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "task_dependencies_dependent_id_idx": {
-          "name": "task_dependencies_dependent_id_idx",
-          "columns": [
-            {
-              "expression": "dependent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "task_dependencies_dependency_id_idx": {
-          "name": "task_dependencies_dependency_id_idx",
-          "columns": [
-            {
-              "expression": "dependency_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "task_dependencies_dependent_id_tasks_id_fk": {
-          "name": "task_dependencies_dependent_id_tasks_id_fk",
-          "tableFrom": "task_dependencies",
-          "tableTo": "tasks",
-          "columnsFrom": ["dependent_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "task_dependencies_dependency_id_tasks_id_fk": {
-          "name": "task_dependencies_dependency_id_tasks_id_fk",
-          "tableFrom": "task_dependencies",
-          "tableTo": "tasks",
-          "columnsFrom": ["dependency_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "task_dependencies_dependent_id_dependency_id_pk": {
-          "name": "task_dependencies_dependent_id_dependency_id_pk",
-          "columns": ["dependent_id", "dependency_id"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.tasks": {
-      "name": "tasks",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "data": {
-          "name": "data",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "version_id": {
-          "name": "version_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "tasks_version_id_versions_id_fk": {
-          "name": "tasks_version_id_versions_id_fk",
-          "tableFrom": "tasks",
-          "tableTo": "versions",
-          "columnsFrom": ["version_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

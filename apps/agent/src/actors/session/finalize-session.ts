@@ -10,7 +10,7 @@ import { build } from "@/lib/build";
 import { Git } from "@/lib/git";
 import { agentFSManager, createSnapshotService, syncAgentFSToDisk } from "@/lib/storage";
 import { stream } from "@/lib/stream-utils";
-import type { SessionMachineContext } from "@/machines/session-types";
+import type { SessionMachineContext } from "@/machines/types";
 
 type FinalizeResult = {
   commitHash: string | null;
