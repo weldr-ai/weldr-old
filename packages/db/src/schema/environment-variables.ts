@@ -1,10 +1,8 @@
-import { relations } from "drizzle-orm";
 import { pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 import { nanoid } from "@weldr/shared/nanoid";
 
 import { users } from "./auth";
-import { integrationEnvironmentVariables } from "./integrations";
 import { projects } from "./projects";
 import { secrets } from "./vault";
 
@@ -29,19 +27,4 @@ export const environmentVariables = pgTable(
       .notNull(),
   },
   (t) => [unique("unique_key").on(t.projectId, t.key)],
-);
-
-export const environmentVariablesRelations = relations(
-  environmentVariables,
-  ({ one, many }) => ({
-    project: one(projects, {
-      fields: [environmentVariables.projectId],
-      references: [projects.id],
-    }),
-    user: one(users, {
-      fields: [environmentVariables.userId],
-      references: [users.id],
-    }),
-    integrations: many(integrationEnvironmentVariables),
-  }),
 );

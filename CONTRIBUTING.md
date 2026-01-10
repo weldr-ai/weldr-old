@@ -67,6 +67,7 @@ bun dev
 ```
 
 This will start:
+
 - Agent server on `http://localhost:8080`
 - Web application on `http://localhost:3000`
 

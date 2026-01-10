@@ -43,7 +43,7 @@ export async function callAgentProxy<T = unknown>(
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+    const errorData = (await response.json().catch(() => ({}))) as { error?: string };
     console.error("Agent proxy request failed:", errorData);
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",

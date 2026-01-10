@@ -82,8 +82,7 @@ export function ForgotPasswordForm({ className }: { className?: string }) {
           <span className="text-xl">Reset your password</span>
         </CardTitle>
         <CardDescription>
-          Enter your email address and we&apos;ll send you a link to reset your
-          password.
+          Enter your email address and we&apos;ll send you a link to reset your password.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -108,9 +107,7 @@ export function ForgotPasswordForm({ className }: { className?: string }) {
               aria-disabled={!form.formState.isValid || isSubmitting}
               disabled={!form.formState.isValid || isSubmitting}
             >
-              {isSubmitting && (
-                <LoaderIcon className="mr-1 size-3 animate-spin" />
-              )}
+              {isSubmitting && <LoaderIcon className="mr-1 size-3 animate-spin" />}
               Send reset link
             </Button>
           </form>

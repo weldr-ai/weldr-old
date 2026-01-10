@@ -1,8 +1,0 @@
-{
-  "$schema": "https://json.schemastore.org/tsconfig",
-  "extends": "./base.json",
-  "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "jsx": "preserve"
-  }
-}

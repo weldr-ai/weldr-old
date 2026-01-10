@@ -9,10 +9,7 @@ export const config = {
   runtime: "edge",
 };
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ name: string }> },
-) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
   const maskID = nanoid();
   const size = 120;
@@ -33,14 +30,7 @@ export async function GET(
       width={size}
       height={size}
     >
-      <mask
-        id={maskID}
-        maskUnits="userSpaceOnUse"
-        x={0}
-        y={0}
-        width={size}
-        height={size}
-      >
+      <mask id={maskID} maskUnits="userSpaceOnUse" x={0} y={0} width={size} height={size}>
         <rect width={size} height={size} fill="#FFFFFF" />
       </mask>
       <g mask={`url(#${maskID})`}>

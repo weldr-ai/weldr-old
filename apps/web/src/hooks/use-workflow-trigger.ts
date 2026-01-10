@@ -1,10 +1,6 @@
 import { useCallback, useRef } from "react";
 
-import type {
-  TriggerWorkflowResponse,
-  TStatus,
-  UserMessage,
-} from "@weldr/shared/types";
+import type { TriggerWorkflowResponse, TStatus, UserMessage } from "@weldr/shared/types";
 
 interface UseWorkflowTriggerOptions {
   projectId: string;
@@ -33,10 +29,7 @@ export function useWorkflowTrigger({
   connectToEventStreamRef.current = connectToEventStream;
 
   const triggerWorkflow = useCallback(
-    async (message?: {
-      content: UserMessage["content"];
-      attachmentIds?: string[];
-    }) => {
+    async (message?: { content: UserMessage["content"]; attachmentIds?: string[] }) => {
       try {
         const triggerResponse = await fetch("/api/proxy", {
           method: "POST",
@@ -55,8 +48,7 @@ export function useWorkflowTrigger({
           throw new Error("Failed to trigger workflow");
         }
 
-        const triggerResult: TriggerWorkflowResponse =
-          await triggerResponse.json();
+        const triggerResult: TriggerWorkflowResponse = await triggerResponse.json();
         return triggerResult;
       } catch (error) {
         console.error("Failed to trigger workflow:", error);
@@ -67,10 +59,7 @@ export function useWorkflowTrigger({
   );
 
   const triggerGeneration = useCallback(
-    async (message?: {
-      content: UserMessage["content"];
-      attachmentIds?: string[];
-    }) => {
+    async (message?: { content: UserMessage["content"]; attachmentIds?: string[] }) => {
       // Prevent multiple simultaneous triggers
       if (isTriggeringRef.current) {
         console.warn("Trigger already in progress, ignoring duplicate request");

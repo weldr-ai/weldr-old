@@ -12,13 +12,7 @@ import {
   versionDeclarations,
   versions,
 } from "@weldr/db/schema";
-import { isLocalMode } from "@weldr/shared/state";
-import { Tigris } from "@weldr/shared/tigris";
-import type {
-  AssistantMessage,
-  ChatMessage,
-  ToolMessage,
-} from "@weldr/shared/types";
+import type { AssistantMessage, ChatMessage, ToolMessage } from "@weldr/shared/types";
 
 import { protectedProcedure } from "../init";
 import { callAgentProxy } from "../utils";
@@ -48,10 +42,7 @@ export const versionRouter = {
 
       if (!branchId) {
         const branch = await ctx.db.query.branches.findFirst({
-          where: and(
-            eq(branches.projectId, input.projectId),
-            eq(branches.isMain, true),
-          ),
+          where: and(eq(branches.projectId, input.projectId), eq(branches.isMain, true)),
           with: {
             headVersion: {
               columns: {
@@ -100,181 +91,150 @@ export const versionRouter = {
         projectId: input.projectId,
         userId: ctx.session.user.id,
         number: headVersionNumber ? headVersionNumber + 1 : 1,
-        sequenceNumber: headVersionSequenceNumber
-          ? headVersionSequenceNumber + 1
-          : 1,
+        sequenceNumber: headVersionSequenceNumber ? headVersionSequenceNumber + 1 : 1,
         chatId: chat.id,
         branchId,
       });
 
       return version;
     }),
-  byId: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .query(async ({ ctx, input }) => {
-      const versionResult = await ctx.db.query.versions.findFirst({
-        where: eq(versions.id, input.id),
-        columns: {
-          id: true,
-          message: true,
-          createdAt: true,
-          parentVersionId: true,
-          number: true,
-          status: true,
-          description: true,
-          projectId: true,
-          publishedAt: true,
-        },
-        with: {
-          chat: {
-            with: {
-              messages: {
-                orderBy: (messages, { asc }) => [asc(messages.createdAt)],
-                with: {
-                  attachments: {
-                    columns: {
-                      name: true,
-                      key: true,
-                    },
+  byId: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+    const versionResult = await ctx.db.query.versions.findFirst({
+      where: eq(versions.id, input.id),
+      columns: {
+        id: true,
+        message: true,
+        createdAt: true,
+        parentVersionId: true,
+        number: true,
+        status: true,
+        description: true,
+        projectId: true,
+        publishedAt: true,
+      },
+      with: {
+        chat: {
+          with: {
+            messages: {
+              orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+              with: {
+                attachments: {
+                  columns: {
+                    name: true,
+                    key: true,
                   },
-                  user: {
-                    columns: {
-                      name: true,
-                    },
+                },
+                user: {
+                  columns: {
+                    name: true,
                   },
                 },
               },
             },
           },
-          declarations: {
-            with: {
-              declaration: {
-                columns: {
-                  id: true,
-                  metadata: true,
-                  nodeId: true,
-                  progress: true,
-                },
-                with: {
-                  node: true,
-                  dependencies: true,
-                },
+        },
+        declarations: {
+          with: {
+            declaration: {
+              columns: {
+                id: true,
+                metadata: true,
+                nodeId: true,
+                progress: true,
+              },
+              with: {
+                node: true,
+                dependencies: true,
               },
             },
           },
         },
-      });
+      },
+    });
 
-      if (!versionResult) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Version not found",
+    if (!versionResult) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Version not found",
+      });
+    }
+
+    const getMessagesWithAttachments = async (version: typeof versionResult) => {
+      const results = [];
+
+      for (const message of version.chat.messages) {
+        // Filter assistant messages for call_coder tool calls
+        let content = message.content as ToolMessage["content"] | AssistantMessage["content"];
+
+        // Skip tool messages with call_coder results
+        if (message.role === "tool" && Array.isArray(message.content)) {
+          content = content.filter(
+            (item) => !(item?.type === "tool-result" && item?.toolName === "call_coder"),
+          );
+        } else if (message.role === "assistant") {
+          content = content.filter(
+            (item) => !(item?.type === "tool-call" && item?.toolName === "call_coder"),
+          );
+        }
+
+        if (content.length === 0) continue;
+
+        // For attachments, just return the key - the client can handle URL generation
+        const attachmentsWithUrls = message.attachments.map((attachment) => ({
+          name: attachment.name,
+          url: `/api/attachments/${attachment.key}`,
+        }));
+
+        results.push({
+          ...message,
+          content,
+          attachments: attachmentsWithUrls,
         });
       }
 
-      const getMessagesWithAttachments = async (
-        version: typeof versionResult,
-      ) => {
-        const results = [];
+      return results;
+    };
 
-        for (const message of version.chat.messages) {
-          // Filter assistant messages for call_coder tool calls
-          let content = message.content as
-            | ToolMessage["content"]
-            | AssistantMessage["content"];
+    const getVersionDeclarations = (version: typeof versionResult) => {
+      const declarations = version.declarations
+        .filter((declaration) => declaration.declaration.node)
+        .map((declaration) => declaration.declaration);
 
-          // Skip tool messages with call_coder results
-          if (message.role === "tool" && Array.isArray(message.content)) {
-            content = content.filter(
-              (item) =>
-                !(
-                  item?.type === "tool-result" &&
-                  item?.toolName === "call_coder"
-                ),
-            );
-          } else if (message.role === "assistant") {
-            content = content.filter(
-              (item) =>
-                !(
-                  item?.type === "tool-call" && item?.toolName === "call_coder"
-                ),
-            );
-          }
+      const declarationToCanvasNodeMap = new Map(
+        declarations.map((declaration) => [declaration.id, declaration.node?.id]),
+      );
 
-          if (content.length === 0) continue;
+      return declarations.map((declaration) => ({
+        declaration,
+        edges: declaration.dependencies.map((dependency) => ({
+          dependencyId: declarationToCanvasNodeMap.get(dependency.dependencyId),
+          dependentId: declarationToCanvasNodeMap.get(dependency.dependentId),
+        })),
+      }));
+    };
 
-          // Get attachment URLs
-          const attachmentsWithUrls = await Promise.all(
-            message.attachments.map(async (attachment) => ({
-              name: attachment.name,
-              url: await Tigris.object.getSignedUrl(
-                // biome-ignore lint/style/noNonNullAssertion: reason
-                process.env.GENERAL_BUCKET!,
-                attachment.key,
-              ),
-            })),
-          );
+    const versionDeclarations = getVersionDeclarations(versionResult);
 
-          results.push({
-            ...message,
-            content,
-            attachments: attachmentsWithUrls,
-          });
-        }
+    const edges = Array.from(
+      new Map(
+        versionDeclarations
+          .flatMap((decl) => decl.edges)
+          .map((edge) => [`${edge.dependencyId}-${edge.dependentId}`, edge]),
+      ).values(),
+    ).filter((edge) => edge.dependencyId !== undefined && edge.dependentId !== undefined) as {
+      dependencyId: string;
+      dependentId: string;
+    }[];
 
-        return results;
-      };
-
-      const getVersionDeclarations = (version: typeof versionResult) => {
-        const declarations = version.declarations
-          .filter((declaration) => declaration.declaration.node)
-          .map((declaration) => declaration.declaration);
-
-        const declarationToCanvasNodeMap = new Map(
-          declarations.map((declaration) => [
-            declaration.id,
-            declaration.node?.id,
-          ]),
-        );
-
-        return declarations.map((declaration) => ({
-          declaration,
-          edges: declaration.dependencies.map((dependency) => ({
-            dependencyId: declarationToCanvasNodeMap.get(
-              dependency.dependencyId,
-            ),
-            dependentId: declarationToCanvasNodeMap.get(dependency.dependentId),
-          })),
-        }));
-      };
-
-      const versionDeclarations = getVersionDeclarations(versionResult);
-
-      const edges = Array.from(
-        new Map(
-          versionDeclarations
-            .flatMap((decl) => decl.edges)
-            .map((edge) => [`${edge.dependencyId}-${edge.dependentId}`, edge]),
-        ).values(),
-      ).filter(
-        (edge) =>
-          edge.dependencyId !== undefined && edge.dependentId !== undefined,
-      ) as {
-        dependencyId: string;
-        dependentId: string;
-      }[];
-
-      return {
-        ...versionResult,
-        edges,
-        chat: {
-          ...versionResult.chat,
-          messages: (await getMessagesWithAttachments(
-            versionResult,
-          )) as ChatMessage[],
-        },
-      };
-    }),
+    return {
+      ...versionResult,
+      edges,
+      chat: {
+        ...versionResult.chat,
+        messages: (await getMessagesWithAttachments(versionResult)) as ChatMessage[],
+      },
+    };
+  }),
   list: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -320,39 +280,12 @@ export const versionRouter = {
         });
       }
 
-      // In local mode, require commitHash for git revert
-      // In cloud mode, require bucketSnapshotVersion for Tigris snapshot revert
-      if (isLocalMode()) {
-        if (!version.commitHash) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message:
-              "Version does not have a commit hash. Cannot revert in local mode without a commit hash.",
-          });
-        }
-      } else {
-        if (!version.bucketSnapshotVersion) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Version does not have a snapshot",
-          });
-        }
-      }
-
-      // In cloud mode, revert Tigris snapshot first
-      let newSnapshotVersion: string | undefined;
-      if (!isLocalMode()) {
-        // We already checked that bucketSnapshotVersion exists above
-        if (!version.bucketSnapshotVersion) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Version does not have a snapshot",
-          });
-        }
-        newSnapshotVersion = await Tigris.bucket.snapshot.revert(
-          `project-${input.projectId}-branch-${version.branch.id}`,
-          version.bucketSnapshotVersion,
-        );
+      // Require snapshotPath for revert (same for both local and cloud modes)
+      if (!version.snapshotPath) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Version does not have a snapshot. Cannot revert.",
+        });
       }
 
       const revertedVersion = await db.transaction(async (tx) => {
@@ -391,8 +324,7 @@ export const versionRouter = {
             sequenceNumber: version.sequenceNumber + 1,
             projectId: input.projectId,
             userId: ctx.session.user.id,
-            // Only set bucketSnapshotVersion in cloud mode
-            bucketSnapshotVersion: newSnapshotVersion,
+            snapshotPath: version.snapshotPath,
             kind: "revert",
             revertedVersionId: version.id,
             message: `revert: revert to #${version.sequenceNumber} ${version.message}`,
@@ -450,9 +382,13 @@ export const versionRouter = {
         return revertedVersion;
       });
 
+      // Call agent to perform the actual revert (restore snapshot + git commit)
       let commitHash: string | undefined;
       try {
-        const result = await callAgentProxy<{ commitHash: string }>(
+        const result = await callAgentProxy<{
+          commitHash: string;
+          snapshotPath: string;
+        }>(
           "/revert",
           {
             projectId: input.projectId,
@@ -465,57 +401,30 @@ export const versionRouter = {
         commitHash = result.commitHash;
 
         if (commitHash) {
-          await db
-            .update(versions)
-            .set({ commitHash })
-            .where(eq(versions.id, revertedVersion.id));
+          await db.update(versions).set({ commitHash }).where(eq(versions.id, revertedVersion.id));
 
           revertedVersion.commitHash = commitHash;
         }
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
 
-        if (isLocalMode()) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `Failed to perform git revert: ${errorMessage}`,
-          });
-        } else {
-          console.error(
-            "Failed to sync workspace and commit after snapshot revert:",
-            error,
-          );
+        // Cleanup on failure
+        try {
+          await db
+            .update(branches)
+            .set({ headVersionId: version.branch.headVersionId })
+            .where(eq(branches.id, version.branch.id));
 
-          try {
-            await db
-              .update(branches)
-              .set({ headVersionId: version.branch.headVersionId })
-              .where(eq(branches.id, version.branch.id));
+          await db.delete(versions).where(eq(versions.id, revertedVersion.id));
 
-            await db
-              .delete(versions)
-              .where(eq(versions.id, revertedVersion.id));
-
-            await db.delete(chats).where(eq(chats.id, revertedVersion.chatId));
-          } catch (cleanupError) {
-            console.error(
-              "Failed to cleanup after revert failure:",
-              cleanupError,
-            );
-          }
-
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `Failed to perform git revert: ${errorMessage}`,
-          });
+          await db.delete(chats).where(eq(chats.id, revertedVersion.chatId));
+        } catch (cleanupError) {
+          console.error("Failed to cleanup after revert failure:", cleanupError);
         }
-      }
 
-      if (isLocalMode() && !commitHash) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Git revert completed but no commit hash was returned",
+          message: `Failed to perform revert: ${errorMessage}`,
         });
       }
 

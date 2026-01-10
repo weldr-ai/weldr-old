@@ -1,12 +1,12 @@
 {
   "extends": "@weldr/tsconfig/react-library.json",
   "compilerOptions": {
-    "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
       "@weldr/ui/*": ["./src/*"]
     },
-    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json"
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

@@ -19,19 +19,15 @@ const attachmentSchema = z.object({
     .refine((file) => file.size <= 5 * 1024 * 1024, {
       message: "File size should be less than 5MB",
     })
-    .refine(
-      (file) =>
-        ["image/jpeg", "image/png", "application/pdf"].includes(file.type),
-      {
-        message: "File type should be JPEG, PNG, or PDF",
-      },
-    ),
+    .refine((file) => ["image/jpeg", "image/png", "application/pdf"].includes(file.type), {
+      message: "File type should be JPEG, PNG, or PDF",
+    }),
 });
 
 const tigrisConfig = {
-  // biome-ignore lint/style/noNonNullAssertion: reason
+  // oxlint-disable-next-line no-non-null-assertion
   accessKeyId: process.env.TIGRIS_ACCESS_KEY_ID!,
-  // biome-ignore lint/style/noNonNullAssertion: reason
+  // oxlint-disable-next-line no-non-null-assertion
   secretAccessKey: process.env.TIGRIS_SECRET_ACCESS_KEY!,
   bucket: BUCKET_NAME,
 };
@@ -64,8 +60,8 @@ export async function POST(request: Request) {
     });
 
     if (!validatedAttachment.success) {
-      const errorMessage = validatedAttachment.error.errors
-        .map((error) => error.message)
+      const errorMessage = validatedAttachment.error.issues
+        .map((issue) => issue.message)
         .join(", ");
 
       return NextResponse.json({ error: errorMessage }, { status: 400 });
@@ -111,10 +107,7 @@ export async function POST(request: Request) {
           error: presignedUrlResponse.error,
           key,
         });
-        return NextResponse.json(
-          { error: "Failed to generate URL" },
-          { status: 500 },
-        );
+        return NextResponse.json({ error: "Failed to generate URL" }, { status: 500 });
       }
 
       return NextResponse.json({
@@ -129,10 +122,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Upload failed" }, { status: 500 });
     }
   } catch {
-    return NextResponse.json(
-      { error: "Failed to process request" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
   }
 }
 
@@ -152,10 +142,7 @@ export async function DELETE(request: Request) {
   const validated = deleteAttachmentSchema.safeParse(await request.json());
 
   if (!validated.success) {
-    return NextResponse.json(
-      { error: "Filename is required" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Filename is required" }, { status: 400 });
   }
 
   try {
@@ -168,18 +155,12 @@ export async function DELETE(request: Request) {
         error: deleteResponse.error,
         filename: validated.data.filename,
       });
-      return NextResponse.json(
-        { error: "Failed to delete file" },
-        { status: 500 },
-      );
+      return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
     }
 
     return NextResponse.json({ message: "File deleted successfully" });
   } catch (error) {
     Logger.error("Error deleting file", { error });
-    return NextResponse.json(
-      { error: "Failed to delete file" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
   }
 }

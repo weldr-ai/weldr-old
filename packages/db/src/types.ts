@@ -1,9 +1,9 @@
 import type { db } from ".";
 
 export type Tx = typeof db.transaction extends (
-  // biome-ignore lint/suspicious/noExplicitAny: reason
+  // oxlint-disable-next-line no-explicit-any
   callback: (tx: infer T) => any,
-  // biome-ignore lint/suspicious/noExplicitAny: reason
+  // oxlint-disable-next-line no-explicit-any
 ) => any
   ? T
   : never;

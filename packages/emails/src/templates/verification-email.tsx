@@ -16,10 +16,7 @@ interface VerificationEmailProps {
   verificationLink: string;
 }
 
-export function VerificationEmail({
-  firstName,
-  verificationLink,
-}: VerificationEmailProps) {
+export function VerificationEmail({ firstName, verificationLink }: VerificationEmailProps) {
   return (
     <Html>
       <Head />
@@ -50,8 +47,8 @@ export function VerificationEmail({
             <Section>
               <Text>Hi {firstName},</Text>
               <Text>
-                Welcome to Weldr! We're thrilled to have you join our community
-                of innovative thinkers and problem solvers.
+                Welcome to Weldr! We're thrilled to have you join our community of innovative
+                thinkers and problem solvers.
               </Text>
               <Container className="flex justify-center">
                 <Button
@@ -62,8 +59,7 @@ export function VerificationEmail({
                 </Button>
               </Container>
               <Text>
-                If you have any questions or need assistance, our support team
-                is here to help.
+                If you have any questions or need assistance, our support team is here to help.
               </Text>
               <Text>Thanks,</Text>
               <Text>Weldr</Text>
@@ -79,5 +75,3 @@ VerificationEmail.PreviewProps = {
   firstName: "Bob",
   verificationLink: "http://localhost:3000/auth/verify-email",
 } as VerificationEmailProps;
-
-export default VerificationEmail;

@@ -14,9 +14,7 @@ export function toKebabCase(str: string): string {
 }
 
 export function toSentence(str: string): string {
-  return str.replace(/([A-Z])/g, (_match, p1, offset) =>
-    offset > 0 ? ` ${p1}` : p1,
-  );
+  return str.replace(/([A-Z])/g, (_match, p1, offset) => (offset > 0 ? ` ${p1}` : p1));
 }
 
 export function toTitle(str: string): string {

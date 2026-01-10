@@ -1,11 +1,5 @@
 import { db, eq, inArray } from "@weldr/db";
-import {
-  branches,
-  declarations,
-  projects,
-  tasks,
-  users,
-} from "@weldr/db/schema";
+import { branches, declarations, projects, tasks, users } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
 import { extractAndSaveDeclarations } from "@/ai/utils/declarations";
@@ -102,14 +96,10 @@ async function cleanupTestData(
     where: eq(tasks.versionId, versionId),
   });
 
-  const tasksToDelete = currentTasks
-    .filter((t) => !taskIdsBefore.includes(t.id))
-    .map((t) => t.id);
+  const tasksToDelete = currentTasks.filter((t) => !taskIdsBefore.includes(t.id)).map((t) => t.id);
 
   if (declarationsToDelete.length > 0) {
-    await db
-      .delete(declarations)
-      .where(inArray(declarations.id, declarationsToDelete));
+    await db.delete(declarations).where(inArray(declarations.id, declarationsToDelete));
   }
 
   if (tasksToDelete.length > 0) {
@@ -155,9 +145,7 @@ async function testExtractionAndDependencies(
       },
     });
 
-    const fileDeclarations = declarationsAfter.filter(
-      (d) => d.path === filePath,
-    );
+    const fileDeclarations = declarationsAfter.filter((d) => d.path === filePath);
 
     if (fileDeclarations.length > 0) {
       logger.info(`\n🔍 Extracted declarations (from code):`);
@@ -179,9 +167,7 @@ async function testExtractionAndDependencies(
       const codeMetadata = declaration.metadata?.codeMetadata;
       if (!codeMetadata?.dependencies) continue;
 
-      const internalDeps = codeMetadata.dependencies.filter(
-        (d) => d.type === "internal",
-      );
+      const internalDeps = codeMetadata.dependencies.filter((d) => d.type === "internal");
 
       for (const dep of internalDeps) {
         for (const expectedIdentifier of dep.dependsOn) {
@@ -250,9 +236,7 @@ async function main() {
       process.exit(1);
     }
 
-    logger.info(
-      `Testing ${fixturesToTest.length} fixture(s) on project ${project.subdomain}`,
-    );
+    logger.info(`Testing ${fixturesToTest.length} fixture(s) on project ${project.subdomain}`);
 
     const results = [];
 
@@ -278,10 +262,7 @@ async function main() {
 
     const totalExpected = results.reduce((sum, r) => sum + r.totalExpected, 0);
     const totalResolved = results.reduce((sum, r) => sum + r.totalResolved, 0);
-    const totalUnresolved = results.reduce(
-      (sum, r) => sum + r.totalUnresolved,
-      0,
-    );
+    const totalUnresolved = results.reduce((sum, r) => sum + r.totalUnresolved, 0);
 
     logger.info("\n=== SUMMARY ===");
     logger.info(
@@ -312,8 +293,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     });
 }
 
-export {
-  testExtractionAndDependencies,
-  loadRealContext,
-  createWorkflowContext,
-};
+export { testExtractionAndDependencies, loadRealContext, createWorkflowContext };

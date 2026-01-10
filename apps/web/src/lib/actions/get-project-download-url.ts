@@ -8,11 +8,7 @@ import { auth } from "@weldr/auth";
 import { and, db, eq, isNotNull } from "@weldr/db";
 import { versions } from "@weldr/db/schema";
 
-export async function getProjectDownloadUrl({
-  projectId,
-}: {
-  projectId: string;
-}) {
+export async function getProjectDownloadUrl({ projectId }: { projectId: string }) {
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session) {

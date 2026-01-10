@@ -1,11 +1,5 @@
 // Component to render styled commit type badge
-export function CommitTypeBadge({
-  type,
-  className,
-}: {
-  type: string | null;
-  className?: string;
-}) {
+export function CommitTypeBadge({ type, className }: { type: string | null; className?: string }) {
   if (!type) return null;
 
   const getTypeStyles = (type: string) => {

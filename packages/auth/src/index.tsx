@@ -4,11 +4,11 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { admin, oAuthProxy, openAPI, organization } from "better-auth/plugins";
 import { Resend } from "resend";
-import Stripe from "stripe";
+import { Stripe } from "stripe";
 
 import { db } from "@weldr/db";
-import ResetPasswordEmail from "@weldr/emails/reset-password";
-import VerificationEmail from "@weldr/emails/verification-email";
+import { ResetPasswordEmail } from "@weldr/emails/reset-password";
+import { VerificationEmail } from "@weldr/emails/verification-email";
 import { nanoid } from "@weldr/shared/nanoid";
 
 const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY as string, {

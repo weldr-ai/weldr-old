@@ -13,8 +13,7 @@ export function getPreviewUrl(
   // Detect local mode by checking if we're on localhost
   const isLocal =
     typeof window !== "undefined" &&
-    (window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1");
+    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
   if (isLocal) {
     // Local mode: use the preview proxy
@@ -25,9 +24,5 @@ export function getPreviewUrl(
 
   // Cloud mode: use the Fly.io preview subdomain
   const base = `https://${versionId}.preview.weldr.app`;
-  return path
-    ? path.startsWith("/")
-      ? `${base}${path}`
-      : `${base}/${path}`
-    : base;
+  return path ? (path.startsWith("/") ? `${base}${path}` : `${base}/${path}`) : base;
 }

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "clean": "git clean -xdf .next .turbo node_modules dist",
+    "clean": "git clean -xdf .next .turbo node_modules dist tsconfig.tsbuildinfo",
     "dev": "bun with-env next dev --turbopack -p 3000",
     "start": "next start",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false",
@@ -58,7 +58,7 @@
     "superjson": "^2.2.2",
     "ua-parser-js": "^2.0.3",
     "unique-names-generator": "^4.7.1",
-    "zod": "^3.25.76"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@types/d3-hierarchy": "^3.1.7",
@@ -69,6 +69,6 @@
     "@types/react-dom": "^19.2.3",
     "@weldr/tsconfig": "workspace:*",
     "dotenv-cli": "^7.4.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.3"
   }
 }

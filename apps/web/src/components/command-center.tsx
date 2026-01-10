@@ -32,12 +32,8 @@ export function CommandCenter({
 }) {
   const { data: session } = authClient.useSession();
 
-  const {
-    commandCenterOpen,
-    commandCenterView,
-    setCommandCenterOpen,
-    setCommandCenterView,
-  } = useUIStore();
+  const { commandCenterOpen, commandCenterView, setCommandCenterOpen, setCommandCenterView } =
+    useUIStore();
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -58,8 +54,7 @@ export function CommandCenter({
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown, { capture: true });
-    return () =>
-      document.removeEventListener("keydown", handleKeyDown, { capture: true });
+    return () => document.removeEventListener("keydown", handleKeyDown, { capture: true });
   }, [handleKeyDown]);
 
   return (
@@ -69,11 +64,7 @@ export function CommandCenter({
       dialogClassName="min-h-[600px] min-w-[896px] max-w-4xl"
       commandClassName="size-full [&_[cmdk-group-heading]]:px-0 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-0"
     >
-      <CommandCenterContent
-        view={commandCenterView}
-        projects={_projects}
-        session={session}
-      />
+      <CommandCenterContent view={commandCenterView} projects={_projects} session={session} />
     </CommandDialog>
   );
 }
@@ -119,11 +110,7 @@ function CreateContent({ session }: { session: Session | null }) {
   );
 }
 
-function ProjectsContent({
-  projects: _projects,
-}: {
-  projects: RouterOutputs["projects"]["list"];
-}) {
+function ProjectsContent({ projects: _projects }: { projects: RouterOutputs["projects"]["list"] }) {
   const { setCommandCenterView, setCommandCenterOpen } = useUIStore();
   const [deleteProjectOpen, setDeleteProjectOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<
@@ -162,10 +149,7 @@ function ProjectsContent({
   return (
     <>
       <div className="border-r">
-        <CommandInput
-          className="border-0 focus:ring-0"
-          placeholder="Search projects..."
-        />
+        <CommandInput className="border-0 focus:ring-0" placeholder="Search projects..." />
         <CommandList className="scrollbar-thin scrollbar-thumb-muted-foreground scrollbar-track-muted max-h-[calc(100%-84px)] w-[320px] overflow-y-auto">
           <CommandEmpty>No projects found.</CommandEmpty>
           <CommandGroup className="p-0 [&_[cmdk-group-heading]]:px-0 [&_[cmdk-group-heading]]:py-0">
@@ -183,9 +167,7 @@ function ProjectsContent({
                 <div className="flex size-8 items-center justify-center rounded-md border bg-muted/30">
                   <LogoIcon className="size-6" />
                 </div>
-                <span className="font-medium">
-                  {project.title ?? "Untitled Project"}
-                </span>
+                <span className="font-medium">{project.title ?? "Untitled Project"}</span>
               </CommandItem>
             ))}
           </CommandGroup>

@@ -16,13 +16,7 @@ export function TanstackIcon(props: ComponentProps<"svg">) {
           <stop offset="70.627%" stopColor="#FFA770" />
           <stop offset="100%" stopColor="#FF7373" />
         </linearGradient>
-        <linearGradient
-          id="tanstack__d"
-          x1="43.996%"
-          x2="53.441%"
-          y1="8.54%"
-          y2="93.872%"
-        >
+        <linearGradient id="tanstack__d" x1="43.996%" x2="53.441%" y1="8.54%" y2="93.872%">
           <stop offset="0%" stopColor="#673800" />
           <stop offset="100%" stopColor="#B65E00" />
         </linearGradient>
@@ -50,23 +44,11 @@ export function TanstackIcon(props: ComponentProps<"svg">) {
           <stop offset="0%" stopColor="#2F8A00" />
           <stop offset="100%" stopColor="#90FF57" />
         </linearGradient>
-        <linearGradient
-          id="tanstack__k"
-          x1="92.9%"
-          x2="8.641%"
-          y1="45.768%"
-          y2="54.892%"
-        >
+        <linearGradient id="tanstack__k" x1="92.9%" x2="8.641%" y1="45.768%" y2="54.892%">
           <stop offset="0%" stopColor="#EE2700" />
           <stop offset="100%" stopColor="#FF008E" />
         </linearGradient>
-        <linearGradient
-          id="tanstack__l"
-          x1="61.109%"
-          x2="43.717%"
-          y1="3.633%"
-          y2="43.072%"
-        >
+        <linearGradient id="tanstack__l" x1="61.109%" x2="43.717%" y1="3.633%" y2="43.072%">
           <stop offset="0%" stopColor="#FFF400" />
           <stop offset="100%" stopColor="#3C8700" />
         </linearGradient>
@@ -74,83 +56,35 @@ export function TanstackIcon(props: ComponentProps<"svg">) {
           <stop offset="0%" stopColor="#FFDF00" />
           <stop offset="100%" stopColor="#FF9D00" />
         </linearGradient>
-        <linearGradient
-          id="tanstack__n"
-          x1="127.279%"
-          x2="0%"
-          y1="49.778%"
-          y2="50.222%"
-        >
+        <linearGradient id="tanstack__n" x1="127.279%" x2="0%" y1="49.778%" y2="50.222%">
           <stop offset="0%" stopColor="#FFA400" />
           <stop offset="100%" stopColor="#FF5E00" />
         </linearGradient>
-        <linearGradient
-          id="tanstack__o"
-          x1="127.279%"
-          x2="0%"
-          y1="47.531%"
-          y2="52.469%"
-        >
+        <linearGradient id="tanstack__o" x1="127.279%" x2="0%" y1="47.531%" y2="52.469%">
           <stop offset="0%" stopColor="#FFA400" />
           <stop offset="100%" stopColor="#FF5E00" />
         </linearGradient>
-        <linearGradient
-          id="tanstack__p"
-          x1="127.279%"
-          x2="0%"
-          y1="46.195%"
-          y2="53.805%"
-        >
+        <linearGradient id="tanstack__p" x1="127.279%" x2="0%" y1="46.195%" y2="53.805%">
           <stop offset="0%" stopColor="#FFA400" />
           <stop offset="100%" stopColor="#FF5E00" />
         </linearGradient>
-        <linearGradient
-          id="tanstack__q"
-          x1="127.279%"
-          x2="0%"
-          y1="35.33%"
-          y2="64.67%"
-        >
+        <linearGradient id="tanstack__q" x1="127.279%" x2="0%" y1="35.33%" y2="64.67%">
           <stop offset="0%" stopColor="#FFA400" />
           <stop offset="100%" stopColor="#FF5E00" />
         </linearGradient>
-        <linearGradient
-          id="tanstack__r"
-          x1="127.279%"
-          x2="0%"
-          y1="4.875%"
-          y2="95.125%"
-        >
+        <linearGradient id="tanstack__r" x1="127.279%" x2="0%" y1="4.875%" y2="95.125%">
           <stop offset="0%" stopColor="#FFA400" />
           <stop offset="100%" stopColor="#FF5E00" />
         </linearGradient>
-        <linearGradient
-          id="tanstack__s"
-          x1="78.334%"
-          x2="31.668%"
-          y1="0%"
-          y2="100%"
-        >
+        <linearGradient id="tanstack__s" x1="78.334%" x2="31.668%" y1="0%" y2="100%">
           <stop offset="0%" stopColor="#FFA400" />
           <stop offset="100%" stopColor="#FF5E00" />
         </linearGradient>
-        <linearGradient
-          id="tanstack__t"
-          x1="57.913%"
-          x2="44.88%"
-          y1="0%"
-          y2="100%"
-        >
+        <linearGradient id="tanstack__t" x1="57.913%" x2="44.88%" y1="0%" y2="100%">
           <stop offset="0%" stopColor="#FFA400" />
           <stop offset="100%" stopColor="#FF5E00" />
         </linearGradient>
-        <linearGradient
-          id="tanstack__u"
-          x1="50.495%"
-          x2="49.68%"
-          y1="0%"
-          y2="100%"
-        >
+        <linearGradient id="tanstack__u" x1="50.495%" x2="49.68%" y1="0%" y2="100%">
           <stop offset="0%" stopColor="#FFA400" />
           <stop offset="100%" stopColor="#FF5E00" />
         </linearGradient>

@@ -91,9 +91,7 @@ export namespace Secret {
         ...ofetchConfig({ tag: `fly:secret:destroy:${projectId}` }),
       });
     } catch (error) {
-      if (
-        (error as { response?: { status?: number } })?.response?.status === 404
-      ) {
+      if ((error as { response?: { status?: number } })?.response?.status === 404) {
         return;
       }
       throw error;

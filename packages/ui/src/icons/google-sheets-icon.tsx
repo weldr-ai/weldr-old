@@ -65,17 +65,8 @@ export function GoogleSheetsIcon(props: ComponentProps<"svg">) {
           <stop stopColor="#FFFFFF" stopOpacity="0" offset="100%" />
         </radialGradient>
       </defs>
-      <g
-        id="Page-1"
-        stroke="none"
-        strokeWidth="1"
-        fill="none"
-        fillRule="evenodd"
-      >
-        <g
-          id="Consumer-Apps-Sheets-Large-VD-R8-"
-          transform="translate(-451.000000, -451.000000)"
-        >
+      <g id="Page-1" stroke="none" strokeWidth="1" fill="none" fillRule="evenodd">
+        <g id="Consumer-Apps-Sheets-Large-VD-R8-" transform="translate(-451.000000, -451.000000)">
           <g id="Hero" transform="translate(0.000000, 63.000000)">
             <g id="Personal" transform="translate(277.000000, 299.000000)">
               <g id="Sheets-icon" transform="translate(174.833333, 89.958333)">

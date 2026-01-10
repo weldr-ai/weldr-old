@@ -4,16 +4,7 @@ import { Logger } from "@weldr/shared/logger";
 import { nanoid } from "@weldr/shared/nanoid";
 
 import { prompts } from "@/ai/prompts";
-import {
-  addIntegrationsTool,
-  callCoderTool,
-  findTool,
-  fzfTool,
-  grepTool,
-  listDirTool,
-  readFileTool,
-  searchCodebaseTool,
-} from "@/ai/tools";
+import { addIntegrationsTool, bashTool, callCoderTool, searchCodebaseTool } from "@/ai/tools";
 import { getMessages } from "@/ai/utils/get-messages";
 import { registry } from "@/ai/utils/registry";
 import { stream } from "@/lib/stream-utils";
@@ -40,13 +31,9 @@ export async function plannerAgent({
   });
 
   const tools: ToolSet = {
-    list_dir: listDirTool(context),
-    read_file: readFileTool(context),
+    bash: bashTool(context),
     search_codebase: searchCodebaseTool(context),
     query_related_declarations: queryRelatedDeclarationsTool(context),
-    fzf: fzfTool(context),
-    grep: grepTool(context),
-    find: findTool(context),
     call_coder: callCoderTool(context),
     add_integrations: addIntegrationsTool(context),
   };
@@ -129,13 +116,9 @@ export async function plannerAgent({
           }
 
           if (
-            part.toolName === "list_dir" ||
-            part.toolName === "read_file" ||
+            part.toolName === "bash" ||
             part.toolName === "search_codebase" ||
-            part.toolName === "query_related_declarations" ||
-            part.toolName === "fzf" ||
-            part.toolName === "grep" ||
-            part.toolName === "find"
+            part.toolName === "query_related_declarations"
           ) {
             shouldRecur = true;
             assistantContent.push({

@@ -16,9 +16,7 @@ export function VariantSiblingsNav({ siblings }: VariantSiblingsNavProps) {
 
   return (
     <div className="scrollbar-thin scrollbar-thumb-rounded-full scrollbar-thumb-muted-foreground scrollbar-track-transparent flex items-center gap-2 overflow-x-auto border-b bg-orange-500/10 px-3 py-1.5">
-      <span className="shrink-0 text-[10px] text-muted-foreground">
-        Variants:
-      </span>
+      <span className="shrink-0 text-[10px] text-muted-foreground">Variants:</span>
       <div className="flex items-center gap-1">
         {siblings.map((sibling) => {
           const isArchived = sibling.status === "archived";
@@ -38,9 +36,7 @@ export function VariantSiblingsNav({ siblings }: VariantSiblingsNavProps) {
             >
               {sibling.name}
               {isArchived && (
-                <span className="ml-1 text-[9px] no-underline opacity-80">
-                  (archived)
-                </span>
+                <span className="ml-1 text-[9px] no-underline opacity-80">(archived)</span>
               )}
             </Button>
           );

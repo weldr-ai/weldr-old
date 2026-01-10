@@ -1,17 +1,6 @@
-import { relations } from "drizzle-orm";
-import {
-  boolean,
-  integer,
-  pgTable,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { nanoid } from "@weldr/shared/nanoid";
-
-import { chatMessages, chats } from "./chats";
-import { environmentVariables } from "./environment-variables";
-import { projects } from "./projects";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey().$defaultFn(nanoid),
@@ -30,13 +19,6 @@ export const users = pgTable("users", {
     .$onUpdate(() => new Date())
     .notNull(),
 });
-
-export const usersRelations = relations(users, ({ many }) => ({
-  projects: many(projects),
-  environmentVariables: many(environmentVariables),
-  chats: many(chats),
-  chatMessages: many(chatMessages),
-}));
 
 export const sessions = pgTable("sessions", {
   id: text("id").primaryKey().$defaultFn(nanoid),

@@ -16,15 +16,9 @@ interface UseMessagesOptions {
   } | null;
 }
 
-export function useMessages({
-  initialMessages,
-  chatId,
-  session,
-}: UseMessagesOptions) {
+export function useMessages({ initialMessages, chatId, session }: UseMessagesOptions) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
-  const [userMessageContent, setUserMessageContent] = useState<
-    UserMessage["content"]
-  >([]);
+  const [userMessageContent, setUserMessageContent] = useState<UserMessage["content"]>([]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   useEffect(() => {

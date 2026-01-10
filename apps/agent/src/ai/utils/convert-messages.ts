@@ -46,13 +46,7 @@ export async function convertMessages(messages: ChatMessage[]) {
 
     const parts = message.content ?? [];
 
-    const messageContent: (
-      | TextPart
-      | FilePart
-      | ImagePart
-      | ToolCallPart
-      | ToolResultPart
-    )[] = [];
+    const messageContent: (TextPart | FilePart | ImagePart | ToolCallPart | ToolResultPart)[] = [];
 
     let currentTextContent = "";
 
@@ -73,11 +67,7 @@ export async function convertMessages(messages: ChatMessage[]) {
           if (p.type === "text") {
             currentTextContent += p.text;
           }
-          if (
-            p.type === "db-model" ||
-            p.type === "page" ||
-            p.type === "endpoint"
-          ) {
+          if (p.type === "db-model" || p.type === "page" || p.type === "endpoint") {
             const reference = await db.query.declarations.findFirst({
               where: eq(declarations.id, p.id),
             });

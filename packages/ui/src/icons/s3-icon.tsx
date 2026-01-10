@@ -13,20 +13,13 @@ export function S3Icon(props: ComponentProps<"svg">) {
     >
       <title>S3</title>
       <g id="SVGRepo_bgCarrier" strokeWidth="0" />
-      <g
-        id="SVGRepo_tracerCarrier"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round" />
       <g id="SVGRepo_iconCarrier">
         <path
           d="M20.624 53.686L0 64v181.02l20.624 10.254.124-.149V53.828l-.124-.142"
           fill="#8C3123"
         />
-        <path
-          d="M131 229L20.624 255.274V53.686L131 79.387V229"
-          fill="#E05243"
-        />
+        <path d="M131 229L20.624 255.274V53.686L131 79.387V229" fill="#E05243" />
         <path
           d="M81.178 187.866l46.818 5.96.294-.678.263-76.77-.557-.6-46.818 5.874v66.214"
           fill="#8C3123"
@@ -35,10 +28,7 @@ export function S3Icon(props: ComponentProps<"svg">) {
           d="M127.996 229.295l107.371 26.035.169-.269-.003-201.195-.17-.18-107.367 25.996v149.613"
           fill="#8C3123"
         />
-        <path
-          d="M174.827 187.866l-46.831 5.96v-78.048l46.831 5.874v66.214"
-          fill="#E05243"
-        />
+        <path d="M174.827 187.866l-46.831 5.96v-78.048l46.831 5.874v66.214" fill="#E05243" />
         <path
           d="M174.827 89.631l-46.831 8.535-46.818-8.535 46.759-12.256 46.89 12.256"
           fill="#5E1F18"
@@ -51,10 +41,7 @@ export function S3Icon(props: ComponentProps<"svg">) {
           d="M81.178 89.631l46.818-11.586.379-.117V.313L127.996 0 81.178 23.413v66.218"
           fill="#8C3123"
         />
-        <path
-          d="M174.827 89.631l-46.831-11.586V0l46.831 23.413v66.218"
-          fill="#E05243"
-        />
+        <path d="M174.827 89.631l-46.831-11.586V0l46.831 23.413v66.218" fill="#E05243" />
         <path
           d="M127.996 309.428l-46.823-23.405v-66.217l46.823 11.582.689.783-.187 75.906-.502 1.351"
           fill="#8C3123"

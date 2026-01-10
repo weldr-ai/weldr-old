@@ -1,6 +1,4 @@
-export function AppleIcon(
-  props: React.SVGProps<SVGSVGElement> & { theme?: "light" | "dark" },
-) {
+export function AppleIcon(props: React.SVGProps<SVGSVGElement> & { theme?: "light" | "dark" }) {
   return (
     <>
       {props.theme === "light" ? (

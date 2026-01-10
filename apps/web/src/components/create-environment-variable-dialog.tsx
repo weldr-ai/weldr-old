@@ -31,11 +31,7 @@ import { toast } from "@weldr/ui/hooks/use-toast";
 
 import { useTRPC } from "@/lib/trpc/react";
 
-export function CreateEnvironmentVariableDialog({
-  children,
-}: {
-  children?: React.ReactNode;
-}) {
+export function CreateEnvironmentVariableDialog({ children }: { children?: React.ReactNode }) {
   const { projectId } = useParams<{ projectId: string }>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [showValue, setShowValue] = useState(false);
@@ -77,9 +73,7 @@ export function CreateEnvironmentVariableDialog({
     }),
   );
 
-  const onSubmit = async (
-    data: z.infer<typeof insertEnvironmentVariableSchema>,
-  ) => {
+  const onSubmit = async (data: z.infer<typeof insertEnvironmentVariableSchema>) => {
     createEnvironmentVariable.mutate({
       value: data.value,
       key: data.key,
@@ -100,9 +94,7 @@ export function CreateEnvironmentVariableDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Environment Variable</DialogTitle>
-          <DialogDescription>
-            Add a new environment variable to your project.
-          </DialogDescription>
+          <DialogDescription>Add a new environment variable to your project.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -113,11 +105,7 @@ export function CreateEnvironmentVariableDialog({
                 <FormItem>
                   <FormLabel>Key</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Enter key"
-                      autoComplete="off"
-                    />
+                    <Input {...field} placeholder="Enter key" autoComplete="off" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

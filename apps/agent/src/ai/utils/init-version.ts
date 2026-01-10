@@ -1,10 +1,5 @@
 import { and, db, eq } from "@weldr/db";
-import {
-  branches,
-  chats,
-  versionDeclarations,
-  versions,
-} from "@weldr/db/schema";
+import { branches, chats, versionDeclarations, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
 export const initVersion = async ({
@@ -15,9 +10,7 @@ export const initVersion = async ({
   projectId: string;
   branchId: string;
   userId: string;
-}): Promise<
-  typeof versions.$inferSelect & { branch: typeof branches.$inferSelect }
-> => {
+}): Promise<typeof versions.$inferSelect & { branch: typeof branches.$inferSelect }> => {
   const logger = Logger.get({
     projectId,
   });
@@ -74,9 +67,7 @@ export const initVersion = async ({
       throw new Error("Version not found");
     }
 
-    logger.info(
-      `Copying ${branch.headVersion?.declarations.length} declarations...`,
-    );
+    logger.info(`Copying ${branch.headVersion?.declarations.length} declarations...`);
 
     // Copy the declarations
     if (branch.headVersion) {

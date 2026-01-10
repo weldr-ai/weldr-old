@@ -1,33 +1,19 @@
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
-import { and, eq, inArray, not } from "drizzle-orm";
+
+import { and, eq, not } from "drizzle-orm";
 
 import { db } from "@weldr/db";
-import {
-  declarations,
-  nodes,
-  projects,
-  versionDeclarations,
-  versions,
-} from "@weldr/db/schema";
+import { declarations, nodes, projects, versionDeclarations, versions } from "@weldr/db/schema";
 import { mergeJson } from "@weldr/db/utils";
 import { Logger } from "@weldr/shared/logger";
-import {
-  getActiveProjectIds,
-  getBranchDir,
-  isLocalMode,
-  WORKSPACE_DIR,
-} from "@weldr/shared/state";
+import { getBranchDir } from "@weldr/shared/state";
 import type { DeclarationCodeMetadata } from "@weldr/shared/types/declarations";
 
-import { findNodePosition, type NODE_DIMENSIONS } from "./declarations";
 import { embedDeclaration } from "./embed-declarations";
 import { enrichDeclaration } from "./enrich";
-import {
-  type ExtractedSpecs,
-  extractSpecsFromCode,
-  type SpecType,
-} from "./extract-specs";
+import { type ExtractedSpecs, extractSpecsFromCode, type SpecType } from "./extract-specs";
+import { findNodePosition, type NODE_DIMENSIONS } from "./node-placement";
 
 export interface EnrichingJobData {
   declarationId: string;
@@ -43,9 +29,7 @@ const jobQueue: EnrichingJobData[] = [];
 let isProcessing = false;
 const MAX_RETRIES = 3;
 
-export async function queueEnrichingJob(
-  jobData: EnrichingJobData,
-): Promise<void> {
+export async function queueEnrichingJob(jobData: EnrichingJobData): Promise<void> {
   const logger = Logger.get({
     declarationId: jobData.declarationId,
     declarationName: jobData.codeMetadata.name,
@@ -85,154 +69,125 @@ export async function queueEnrichingJob(
   }
 }
 
+/**
+ * Recover enriching jobs on startup.
+ * Queries the database for declarations that are in "enriching" state.
+ */
 export async function recoverEnrichingJobs(): Promise<void> {
   Logger.info("Recovering enriching jobs");
 
-  let projectsList: Array<typeof projects.$inferSelect> = [];
+  // Get project ID from environment
+  const projectId = process.env.PROJECT_ID;
 
-  if (isLocalMode()) {
-    // In local mode, recover projects based on IDs saved in metadata file
-    const activeProjectIds = getActiveProjectIds();
-
-    if (activeProjectIds.length === 0) {
-      Logger.info("No active projects found in metadata file");
-      return;
-    }
-
-    // Query projects by IDs from metadata file
-    const projectsFromMetadata = await db.query.projects.findMany({
-      where: inArray(projects.id, activeProjectIds),
-    });
-
-    projectsList = projectsFromMetadata;
-  } else {
-    // In cloud mode, each machine handles one project via PROJECT_ID
-    if (!process.env.PROJECT_ID) {
-      Logger.warn("PROJECT_ID not set in cloud mode");
-      return;
-    }
-
-    const project = await db.query.projects.findFirst({
-      where: eq(projects.id, process.env.PROJECT_ID),
-    });
-    if (project) {
-      projectsList = [project];
-    }
-  }
-
-  if (projectsList.length === 0) {
+  if (!projectId) {
+    Logger.info("No PROJECT_ID set, skipping enriching jobs recovery");
     return;
   }
 
-  for (const project of projectsList) {
-    const logger = Logger.get({
-      projectId: project.id,
+  const project = await db.query.projects.findFirst({
+    where: eq(projects.id, projectId),
+  });
+
+  if (!project) {
+    Logger.warn(`Project not found: ${projectId}`);
+    return;
+  }
+
+  const logger = Logger.get({ projectId: project.id });
+
+  try {
+    // Find declarations that are still in "enriching" state
+    const versionsList = await db.query.versions.findMany({
+      where: and(not(eq(versions.status, "planning")), eq(versions.projectId, project.id)),
+      with: {
+        branch: true,
+      },
     });
 
-    try {
-      // Find declarations that are still in "enriching" state
-      const versionsList = await db.query.versions.findMany({
-        where: and(
-          not(eq(versions.status, "planning")),
-          eq(versions.projectId, project.id),
-        ),
+    for (const version of versionsList) {
+      const declarationsList = await db.query.versionDeclarations.findMany({
+        where: eq(versionDeclarations.versionId, version.id),
         with: {
-          branch: true,
+          declaration: {
+            columns: {
+              id: true,
+              path: true,
+              metadata: true,
+              progress: true,
+            },
+          },
         },
       });
 
-      for (const version of versionsList) {
-        const declarationsList = await db.query.versionDeclarations.findMany({
-          where: eq(versionDeclarations.versionId, version.id),
-          with: {
-            declaration: {
-              columns: {
-                id: true,
-                path: true,
-                metadata: true,
-                progress: true,
-              },
-            },
-          },
+      const enrichingDeclarations = declarationsList
+        .map((declaration) => declaration.declaration)
+        .filter((declaration) => declaration.progress === "enriching");
+
+      if (enrichingDeclarations.length > 0) {
+        logger.info("Found declarations in enriching state, queueing for processing", {
+          extra: { count: enrichingDeclarations.length },
         });
 
-        const enrichingDeclarations = declarationsList
-          .map((declaration) => declaration.declaration)
-          .filter((declaration) => declaration.progress === "enriching");
+        // Add recovered declarations to queue
+        for (const declaration of enrichingDeclarations) {
+          const codeMetadata = declaration.metadata?.codeMetadata;
 
-        if (enrichingDeclarations.length > 0) {
-          logger.info(
-            "Found declarations in enriching state, queueing for processing",
-            {
-              extra: { count: enrichingDeclarations.length },
-            },
-          );
+          if (!declaration.path) {
+            continue;
+          }
 
-          // Add recovered declarations to queue
-          for (const declaration of enrichingDeclarations) {
-            const codeMetadata = declaration.metadata?.codeMetadata;
+          let sourceCodeContent: string;
+          try {
+            // Use unified branch directory path
+            const workspaceDir = getBranchDir(project.id, version.branch.id);
+            const fullPath = path.resolve(workspaceDir, declaration.path);
 
-            if (!declaration.path) {
-              continue;
-            }
-
-            let sourceCodeContent: string;
-            try {
-              // In local mode, use branch-specific directory
-              // In cloud mode, use WORKSPACE_DIR
-              const workspaceDir = isLocalMode()
-                ? getBranchDir(project.id, version.branch.id)
-                : WORKSPACE_DIR;
-
-              const fullPath = path.resolve(workspaceDir, declaration.path);
-
-              // Security check: ensure path is within workspace
-              if (!fullPath.startsWith(workspaceDir)) {
-                logger.error("Path traversal attempt detected", {
-                  extra: {
-                    declarationId: declaration.id,
-                    path: declaration.path,
-                  },
-                });
-                continue;
-              }
-
-              sourceCodeContent = await fs.readFile(fullPath, "utf-8");
-            } catch (error) {
-              logger.error("Failed to read source code", {
+            // Security check: ensure path is within workspace
+            if (!fullPath.startsWith(workspaceDir)) {
+              logger.error("Path traversal attempt detected", {
                 extra: {
                   declarationId: declaration.id,
-                  error: error instanceof Error ? error.message : String(error),
+                  path: declaration.path,
                 },
               });
               continue;
             }
 
-            if (codeMetadata && declaration.path) {
-              jobQueue.push({
+            sourceCodeContent = await fs.readFile(fullPath, "utf-8");
+          } catch (error) {
+            logger.error("Failed to read source code", {
+              extra: {
                 declarationId: declaration.id,
-                codeMetadata,
-                filePath: declaration.path,
-                sourceCode: sourceCodeContent,
-                projectId: project.id,
-              });
-            }
+                error: error instanceof Error ? error.message : String(error),
+              },
+            });
+            continue;
           }
 
-          // Start processing if we have jobs
-          if (jobQueue.length > 0) {
-            processDeclarationsQueue();
+          if (codeMetadata && declaration.path) {
+            jobQueue.push({
+              declarationId: declaration.id,
+              codeMetadata,
+              filePath: declaration.path,
+              sourceCode: sourceCodeContent,
+              projectId: project.id,
+            });
           }
         }
+
+        // Start processing if we have jobs
+        if (jobQueue.length > 0) {
+          processDeclarationsQueue();
+        }
       }
-    } catch (error) {
-      logger.error("Error recovering semantic data jobs", {
-        extra: {
-          error: error instanceof Error ? error.message : String(error),
-          projectId: project.id,
-        },
-      });
     }
+  } catch (error) {
+    logger.error("Error recovering semantic data jobs", {
+      extra: {
+        error: error instanceof Error ? error.message : String(error),
+        projectId: project.id,
+      },
+    });
   }
 
   Logger.info("Recovered enriching jobs");
@@ -389,10 +344,7 @@ async function enrichDeclarationJob(jobData: EnrichingJobData): Promise<void> {
       updateData.nodeId = nodeId;
     }
 
-    await db
-      .update(declarations)
-      .set(updateData)
-      .where(eq(declarations.id, jobData.declarationId));
+    await db.update(declarations).set(updateData).where(eq(declarations.id, jobData.declarationId));
 
     logger.info("Successfully enriched declaration", {
       extra: {
@@ -405,11 +357,7 @@ async function enrichDeclarationJob(jobData: EnrichingJobData): Promise<void> {
     });
   } catch (error) {
     const errorObj = error instanceof Error ? error : new Error(String(error));
-    handleJobRetry(
-      jobData,
-      "Failed to process semantic data generation",
-      errorObj,
-    );
+    handleJobRetry(jobData, "Failed to process semantic data generation", errorObj);
   }
 }
 
@@ -446,11 +394,7 @@ async function processDeclarationsQueue(): Promise<void> {
   Logger.info("Finished processing semantic data queue");
 }
 
-function handleJobRetry(
-  jobData: EnrichingJobData,
-  reason: string,
-  error?: Error,
-): boolean {
+function handleJobRetry(jobData: EnrichingJobData, reason: string, error?: Error): boolean {
   const currentRetryCount = jobData.retryCount ?? 0;
 
   if (currentRetryCount >= MAX_RETRIES) {

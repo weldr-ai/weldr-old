@@ -32,30 +32,22 @@ export function SubscriptionPlans({
             <span className="pb-1 font-medium text-sm">Free</span>
             <span className="block font-semibold text-2xl">$0 / mo</span>
           </CardTitle>
-          <CardDescription className="text-sm">
-            For getting started
-          </CardDescription>
+          <CardDescription className="text-sm">For getting started</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Link
             href="/auth/sign-up"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "sm" }),
-              "w-full",
-            )}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full")}
           >
             Get Started
           </Link>
           <ul className="list-outside space-y-3 text-sm">
-            {["Limited to 1 project", "2 generations per day"].map(
-              (item, index) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: reason
-                <li key={index} className="flex items-center gap-2">
-                  <CheckIcon className="size-3" />
-                  {item}
-                </li>
-              ),
-            )}
+            {["Limited to 1 project", "2 generations per day"].map((item, index) => (
+              <li key={index} className="flex items-center gap-2">
+                <CheckIcon className="size-3" />
+                {item}
+              </li>
+            ))}
           </ul>
         </CardContent>
       </Card>
@@ -69,18 +61,13 @@ export function SubscriptionPlans({
             </div>
             <span className="block font-semibold text-2xl">$25 / mo</span>
           </CardTitle>
-          <CardDescription className="text-sm">
-            For more generations and projects
-          </CardDescription>
+          <CardDescription className="text-sm">For more generations and projects</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {!session && !activeSubscription ? (
             <Link
               href="/auth/sign-up"
-              className={cn(
-                buttonVariants({ variant: "default", size: "sm" }),
-                "w-full",
-              )}
+              className={cn(buttonVariants({ variant: "default", size: "sm" }), "w-full")}
             >
               Get Started
             </Link>
@@ -102,15 +89,12 @@ export function SubscriptionPlans({
             <CancelSubscriptionButton className="w-full" />
           ) : null}
           <ul className="list-outside space-y-3 text-sm">
-            {["Unlimited projects", "Unlimited generations per day"].map(
-              (item, index) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: reason
-                <li key={index} className="flex items-center gap-2">
-                  <CheckIcon className="size-3" />
-                  {item}
-                </li>
-              ),
-            )}
+            {["Unlimited projects", "Unlimited generations per day"].map((item, index) => (
+              <li key={index} className="flex items-center gap-2">
+                <CheckIcon className="size-3" />
+                {item}
+              </li>
+            ))}
           </ul>
         </CardContent>
       </Card>

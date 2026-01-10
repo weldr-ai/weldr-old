@@ -25,7 +25,9 @@ This package is part of the Weldr monorepo and uses workspace protocol:
 ```typescript
 import { appRouter, createTRPCContext } from "@weldr/api";
 
-const context = createTRPCContext({ /* ... */ });
+const context = createTRPCContext({
+  /* ... */
+});
 const caller = appRouter.createCaller(context);
 
 const projects = await caller.projects.list();

@@ -38,9 +38,7 @@ export function parseOpenApiEndpoint(
 
   const pathItem = spec.paths[path] as OpenAPIV3.PathItemObject;
   const isHttpMethod = (key: string): key is OpenAPIV3.HttpMethods =>
-    ["get", "post", "put", "delete", "patch"].includes(
-      key as OpenAPIV3.HttpMethods,
-    );
+    ["get", "post", "put", "delete", "patch"].includes(key as OpenAPIV3.HttpMethods);
 
   const method = targetMethod || Object.keys(pathItem).find(isHttpMethod);
 
@@ -61,15 +59,12 @@ export function getResponseSchema(
 ): OpenAPIV3.SchemaObject | undefined {
   const response = operation.responses[statusCode] as OpenAPIV3.ResponseObject;
   if (response?.content?.["application/json"]) {
-    return response.content["application/json"]
-      .schema as OpenAPIV3.SchemaObject;
+    return response.content["application/json"].schema as OpenAPIV3.SchemaObject;
   }
   return undefined;
 }
 
-export function parseSchema(
-  schema: OpenAPIV3.SchemaObject | undefined,
-): ParsedSchema | undefined {
+export function parseSchema(schema: OpenAPIV3.SchemaObject | undefined): ParsedSchema | undefined {
   if (!schema) return undefined;
 
   const baseSchema: ParsedSchema = {
@@ -84,9 +79,7 @@ export function parseSchema(
   if (schema.type === "object" && schema.properties) {
     const properties: ParsedSchemaProperties = {};
     for (const [key, value] of Object.entries(schema.properties)) {
-      properties[key] = parseSchema(
-        value as OpenAPIV3.SchemaObject,
-      ) as ParsedSchema;
+      properties[key] = parseSchema(value as OpenAPIV3.SchemaObject) as ParsedSchema;
     }
     return {
       ...baseSchema,
@@ -112,9 +105,7 @@ export function getRequestBodySchema(operation: OpenAPIV3.OperationObject): {
 } {
   const requestBody = operation.requestBody as OpenAPIV3.RequestBodyObject;
   return {
-    schema:
-      (requestBody?.content?.["application/json"]
-        ?.schema as OpenAPIV3.SchemaObject) || null,
+    schema: (requestBody?.content?.["application/json"]?.schema as OpenAPIV3.SchemaObject) || null,
     required: requestBody?.required || false,
     description: requestBody?.description,
   };

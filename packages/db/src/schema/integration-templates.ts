@@ -1,13 +1,4 @@
-import { relations } from "drizzle-orm";
-import {
-  boolean,
-  index,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 import { nanoid } from "@weldr/shared/nanoid";
 import type {
@@ -18,7 +9,6 @@ import type {
 } from "@weldr/shared/types";
 
 import { integrationCategories } from "./integration-categories";
-import { integrations } from "./integrations";
 
 export const integrationTemplates = pgTable(
   "integration_templates",
@@ -30,9 +20,7 @@ export const integrationTemplates = pgTable(
     version: text("version").notNull(),
     variables: jsonb("variables").$type<IntegrationTemplateVariable>(),
     options: jsonb("options").$type<IntegrationTemplateOptions>(),
-    recommendedOptions: jsonb(
-      "recommended_options",
-    ).$type<IntegrationTemplateRecommendedOptions>(),
+    recommendedOptions: jsonb("recommended_options").$type<IntegrationTemplateRecommendedOptions>(),
     isRecommended: boolean("is_recommended").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
@@ -48,15 +36,4 @@ export const integrationTemplates = pgTable(
     index("integration_templates_category_id_idx").on(t.categoryId),
     uniqueIndex("integration_templates_key_version_idx").on(t.key, t.version),
   ],
-);
-
-export const integrationTemplatesRelations = relations(
-  integrationTemplates,
-  ({ one, many }) => ({
-    category: one(integrationCategories, {
-      fields: [integrationTemplates.categoryId],
-      references: [integrationCategories.id],
-    }),
-    integrations: many(integrations),
-  }),
 );

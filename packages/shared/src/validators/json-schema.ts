@@ -4,36 +4,13 @@ import { z } from "zod";
 export const dataTypeSchema = z
   .union([
     z.string().describe("TypeScript type literal"),
-    z.enum([
-      "string",
-      "number",
-      "integer",
-      "boolean",
-      "object",
-      "array",
-      "null",
-    ]),
-    z.array(
-      z.enum([
-        "string",
-        "number",
-        "integer",
-        "boolean",
-        "object",
-        "array",
-        "null",
-      ]),
-    ),
+    z.enum(["string", "number", "integer", "boolean", "object", "array", "null"]),
+    z.array(z.enum(["string", "number", "integer", "boolean", "object", "array", "null"])),
   ])
   .describe("The data type of a JSON Schema value");
 
 // Basic value types that can be used in enum and const
-export const basicValueSchema = z.union([
-  z.string(),
-  z.number(),
-  z.boolean(),
-  z.null(),
-]);
+export const basicValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 
 // Schema for simple validations (no nested schemas)
 export const simpleValidationSchema = z.object({
@@ -80,7 +57,7 @@ export const simpleValidationSchema = z.object({
 export const jsonSchema = simpleValidationSchema.extend({
   // For objects
   required: z.array(z.string()).optional(),
-  properties: z.record(z.unknown()).optional(),
+  properties: z.record(z.string(), z.unknown()).optional(),
   additionalProperties: z.union([z.boolean(), z.unknown()]).optional(),
 
   // For arrays
@@ -100,11 +77,11 @@ export const jsonSchema = simpleValidationSchema.extend({
 
   // Conditionals
   if: z.unknown().optional(),
-  // biome-ignore lint/suspicious/noThenProperty: Required for JSON Schema conditional
+  // oxlint-disable-next-line no-then-property
   then: z.unknown().optional(),
   else: z.unknown().optional(),
 
   // Schema definitions
-  $defs: z.record(z.unknown()).optional(),
-  definitions: z.record(z.unknown()).optional(),
+  $defs: z.record(z.string(), z.unknown()).optional(),
+  definitions: z.record(z.string(), z.unknown()).optional(),
 });

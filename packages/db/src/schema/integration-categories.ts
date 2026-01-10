@@ -1,21 +1,7 @@
-import { relations } from "drizzle-orm";
-import {
-  index,
-  integer,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 import { nanoid } from "@weldr/shared/nanoid";
-import type {
-  IntegrationCategoryKey,
-  IntegrationKey,
-} from "@weldr/shared/types";
-
-import { integrationTemplates } from "./integration-templates";
+import type { IntegrationCategoryKey, IntegrationKey } from "@weldr/shared/types";
 
 export const integrationCategories = pgTable(
   "integration_categories",
@@ -23,9 +9,7 @@ export const integrationCategories = pgTable(
     id: text("id").primaryKey().$defaultFn(nanoid),
     key: text("key").$type<IntegrationCategoryKey>().notNull(),
     description: text("description").notNull(),
-    recommendedIntegrations: jsonb("recommended_integrations")
-      .$type<IntegrationKey[]>()
-      .notNull(),
+    recommendedIntegrations: jsonb("recommended_integrations").$type<IntegrationKey[]>().notNull(),
     dependencies: jsonb("dependencies").$type<IntegrationCategoryKey[]>(),
     priority: integer("priority").notNull().default(100),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -38,11 +22,4 @@ export const integrationCategories = pgTable(
     index("integration_categories_created_at_idx").on(t.createdAt),
     uniqueIndex("integration_categories_key_idx").on(t.key),
   ],
-);
-
-export const integrationCategoriesRelations = relations(
-  integrationCategories,
-  ({ many }) => ({
-    integrationTemplates: many(integrationTemplates),
-  }),
 );

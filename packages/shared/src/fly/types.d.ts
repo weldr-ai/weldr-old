@@ -1174,10 +1174,7 @@ export interface components {
       name?: string;
     };
     /** @enum {string} */
-    "fly.ContainerDependencyCondition":
-      | "exited_successfully"
-      | "healthy"
-      | "started";
+    "fly.ContainerDependencyCondition": "exited_successfully" | "healthy" | "started";
     "fly.ContainerHealthcheck": {
       exec?: components["schemas"]["fly.ExecHealthcheck"];
       /** @description The number of times the check must fail before considering the container unhealthy. */
@@ -1224,13 +1221,7 @@ export interface components {
        * @description FieldRef selects a field of the Machine: supports id, version, app_name, private_ip, region, image.
        * @enum {string}
        */
-      field_ref?:
-        | "id"
-        | "version"
-        | "app_name"
-        | "private_ip"
-        | "region"
-        | "image";
+      field_ref?: "id" | "version" | "app_name" | "private_ip" | "region" | "image";
     };
     "fly.ExecHealthcheck": {
       /** @description The command to run to check the health of the container (e.g. ["cat", "/tmp/healthy"]) */

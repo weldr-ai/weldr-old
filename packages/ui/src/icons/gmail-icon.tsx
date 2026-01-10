@@ -2,11 +2,7 @@ import type { ComponentProps } from "react";
 
 export function GmailIcon(props: ComponentProps<"svg">) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 49.4 512 399.42"
-      {...props}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 49.4 512 399.42" {...props}>
       <title>Gmail</title>
       <g fill="none" fill-rule="evenodd">
         <g fill-rule="nonzero">
@@ -23,10 +19,7 @@ export function GmailIcon(props: ComponentProps<"svg">) {
             d="M395.636 99.727V251L512 163.727v-46.545c0-43.142-49.25-67.782-83.782-41.891z"
           />
         </g>
-        <path
-          fill="#ea4335"
-          d="M116.364 251V99.727L256 204.455 395.636 99.727V251L256 355.727z"
-        />
+        <path fill="#ea4335" d="M116.364 251V99.727L256 204.455 395.636 99.727V251L256 355.727z" />
         <path
           fill="#c5221f"
           fill-rule="nonzero"

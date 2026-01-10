@@ -2,7 +2,6 @@ import { TRPCError } from "@trpc/server";
 import type { Edge } from "@xyflow/react";
 import { notFound, redirect } from "next/navigation";
 
-import { trackProjectActivity } from "@weldr/shared/state";
 import type { NodeType } from "@weldr/shared/types";
 
 import { ProjectView } from "@/components/projects/project-view";
@@ -27,8 +26,6 @@ export default async function ProjectPage({
     });
     const integrationTemplates = await api.integrationTemplates.list();
 
-    await trackProjectActivity(projectId, branch.id);
-
     const versionToUse = branch.selectedVersion ?? branch.headVersion;
     const versionDeclarations = getVersionDeclarations(versionToUse);
 
@@ -52,10 +49,7 @@ export default async function ProjectPage({
     const initialEdges: Edge[] = Array.from(
       versionDeclarations
         .flatMap((decl) => decl.edges)
-        .filter(
-          (edge) =>
-            edge.dependencyId !== undefined && edge.dependentId !== undefined,
-        )
+        .filter((edge) => edge.dependencyId !== undefined && edge.dependentId !== undefined)
         .reduce((map, edge) => {
           const id = `${edge.dependencyId}-${edge.dependentId}`;
           if (!map.has(id)) {
@@ -83,11 +77,9 @@ export default async function ProjectPage({
     console.error(error);
     if (error instanceof TRPCError) {
       switch (error.code) {
-        // biome-ignore lint/suspicious/noFallthroughSwitchClause: notFound function already returns
         case "NOT_FOUND":
           notFound();
         case "UNAUTHORIZED":
-        // biome-ignore lint/suspicious/noFallthroughSwitchClause: redirect function already returns
         case "FORBIDDEN":
           redirect("/auth/sign-in");
         default:

@@ -89,9 +89,7 @@ export function extractType(type: ts.TypeNode): string {
         : typeRef.typeName.getText();
 
       if (typeRef.typeArguments) {
-        const params = typeRef.typeArguments
-          .map((arg) => extractType(arg))
-          .join(", ");
+        const params = typeRef.typeArguments.map((arg) => extractType(arg)).join(", ");
         base += `<${params}>`;
       }
       return base;
@@ -192,17 +190,11 @@ export function extractType(type: ts.TypeNode): string {
     case ts.SyntaxKind.MappedType: {
       const mappedType = type as ts.MappedTypeNode;
       const typeParam = mappedType.typeParameter;
-      const nameType = mappedType.nameType
-        ? ` as ${extractType(mappedType.nameType)}`
-        : "";
+      const nameType = mappedType.nameType ? ` as ${extractType(mappedType.nameType)}` : "";
       const questionToken = mappedType.questionToken ? "?" : "";
       const readonlyToken = mappedType.readonlyToken ? "readonly " : "";
-      const constraint = typeParam.constraint
-        ? ` in ${extractType(typeParam.constraint)}`
-        : "";
-      const mappedTypeResult = mappedType.type
-        ? extractType(mappedType.type)
-        : "any";
+      const constraint = typeParam.constraint ? ` in ${extractType(typeParam.constraint)}` : "";
+      const mappedTypeResult = mappedType.type ? extractType(mappedType.type) : "any";
       return `{ ${readonlyToken}[${typeParam.name.text}${constraint}]${nameType}${questionToken}: ${mappedTypeResult} }`;
     }
 
@@ -222,9 +214,7 @@ export function extractType(type: ts.TypeNode): string {
     case ts.SyntaxKind.ImportType: {
       const importType = type as ts.ImportTypeNode;
       const moduleSpecifier = importType.argument.getText();
-      const qualifier = importType.qualifier
-        ? `.${importType.qualifier.getText()}`
-        : "";
+      const qualifier = importType.qualifier ? `.${importType.qualifier.getText()}` : "";
       const typeArgs = importType.typeArguments
         ? `<${importType.typeArguments.map((arg) => extractType(arg)).join(", ")}>`
         : "";
@@ -249,13 +239,8 @@ export function extractType(type: ts.TypeNode): string {
 }
 
 // Get position information from TypeScript nodes
-export function getNodePosition(
-  node: ts.Node,
-  sourceFile: ts.SourceFile,
-): DeclarationPosition {
-  const start = sourceFile.getLineAndCharacterOfPosition(
-    node.getStart(sourceFile),
-  );
+export function getNodePosition(node: ts.Node, sourceFile: ts.SourceFile): DeclarationPosition {
+  const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
   const end = sourceFile.getLineAndCharacterOfPosition(node.getEnd());
 
   return {
@@ -332,10 +317,7 @@ export function inferReturnTypeFromFunctionBody(
     if (ts.isReturnStatement(node)) {
       if (node.expression) {
         // Try to infer the type of the return expression
-        const returnType = inferTypeFromReturnExpression(
-          node.expression,
-          parameters,
-        );
+        const returnType = inferTypeFromReturnExpression(node.expression, parameters);
         returnTypes.push(returnType);
       } else {
         // return; with no expression
@@ -353,10 +335,7 @@ export function inferReturnTypeFromFunctionBody(
   if (returnTypes.length === 0 && !hasVoidReturn) {
     if (ts.isArrowFunction(funcDecl) && !ts.isBlock(funcDecl.body)) {
       // Arrow function with expression body like: (x) => x
-      const returnType = inferTypeFromReturnExpression(
-        funcDecl.body,
-        parameters,
-      );
+      const returnType = inferTypeFromReturnExpression(funcDecl.body, parameters);
       returnTypes.push(returnType);
     } else {
       // No return statements and not an expression arrow function

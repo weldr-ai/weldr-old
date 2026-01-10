@@ -1,22 +1,12 @@
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
-import {
-  ExpandIcon,
-  ExternalLinkIcon,
-  GitMergeIcon,
-  Undo2Icon,
-  WorkflowIcon,
-} from "lucide-react";
+import { ExpandIcon, ExternalLinkIcon, GitMergeIcon, Undo2Icon, WorkflowIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useRef, useState } from "react";
 
 import type { RouterOutputs } from "@weldr/api";
 import { Button, buttonVariants } from "@weldr/ui/components/button";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@weldr/ui/components/hover-card";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@weldr/ui/components/hover-card";
 import {
   Tooltip,
   TooltipContent,
@@ -45,9 +35,7 @@ const TimelineContext = createContext<TimelineContextValue | null>(null);
 const useTimelineContext = () => {
   const context = useContext(TimelineContext);
   if (!context) {
-    throw new Error(
-      "useTimelineContext must be used within a TimelineProvider",
-    );
+    throw new Error("useTimelineContext must be used within a TimelineProvider");
   }
   return context;
 };
@@ -73,10 +61,7 @@ export function TimelineTrigger() {
             <span className="truncate">{branch.name}</span>
           </Button>
         </TooltipTrigger>
-        <TooltipContent
-          side="right"
-          className="max-w-xs border bg-muted text-xs"
-        >
+        <TooltipContent side="right" className="max-w-xs border bg-muted text-xs">
           {branch.name}
         </TooltipContent>
       </Tooltip>
@@ -102,9 +87,7 @@ export function Timeline({
   });
 
   return (
-    <TimelineContext.Provider
-      value={{ open: isOpen, onOpenChange: setIsOpen, branch }}
-    >
+    <TimelineContext.Provider value={{ open: isOpen, onOpenChange: setIsOpen, branch }}>
       {children}
     </TimelineContext.Provider>
   );
@@ -113,9 +96,7 @@ export function Timeline({
 export function TimelineContent({ className }: { className?: string }) {
   const { open, branch } = useTimelineContext();
   const router = useRouter();
-  const [highlightedVersionId, setHighlightedVersionId] = useState<
-    string | null
-  >(null);
+  const [highlightedVersionId, setHighlightedVersionId] = useState<string | null>(null);
   const versionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const scrollToVersion = (versionId: string) => {
@@ -153,12 +134,7 @@ export function TimelineContent({ className }: { className?: string }) {
   }
 
   return (
-    <div
-      className={cn(
-        "rounded-t-lg transition-all duration-300 ease-in-out",
-        className,
-      )}
-    >
+    <div className={cn("rounded-t-lg transition-all duration-300 ease-in-out", className)}>
       <BranchAncestryBreadcrumb
         ancestryChain={ancestryChain}
         currentBranch={{ name: branch.name, isMain: branch.isMain }}
@@ -183,19 +159,14 @@ export function TimelineContent({ className }: { className?: string }) {
                   </div>
 
                   <span className="text-left text-muted-foreground text-xs">
-                    #
-                    {versions[0]?.sequenceNumber
-                      ? versions[0].sequenceNumber + 1
-                      : 1}
+                    #{versions[0]?.sequenceNumber ? versions[0].sequenceNumber + 1 : 1}
                   </span>
 
                   <div className="flex items-center">
                     <CommitTypeBadge type="new" />
                   </div>
 
-                  <span className="text-left text-muted-foreground text-xs">
-                    New version
-                  </span>
+                  <span className="text-left text-muted-foreground text-xs">New version</span>
                 </div>
               </div>
             </div>
@@ -205,8 +176,7 @@ export function TimelineContent({ className }: { className?: string }) {
             const parsed = parseConventionalCommit(version.message || "");
             const isLast = index === versions.length - 1;
             const isCurrentVersion = version.id === currentVersionId;
-            const isTemporarilyHighlighted =
-              highlightedVersionId === version.id;
+            const isTemporarilyHighlighted = highlightedVersionId === version.id;
 
             return (
               <div key={version.id} className="relative">
@@ -217,8 +187,7 @@ export function TimelineContent({ className }: { className?: string }) {
                   className={cn(
                     "grid cursor-default grid-cols-[1fr_1.5rem] items-center gap-2 rounded-md transition-colors duration-300",
                     {
-                      "bg-orange-500/10":
-                        isTemporarilyHighlighted && !isCurrentVersion,
+                      "bg-orange-500/10": isTemporarilyHighlighted && !isCurrentVersion,
                     },
                   )}
                 >
@@ -239,14 +208,11 @@ export function TimelineContent({ className }: { className?: string }) {
                     >
                       <div className="relative flex h-full items-center justify-center">
                         <div
-                          className={cn(
-                            "relative z-10 size-2 shrink-0 rounded-full",
-                            {
-                              "bg-primary": version.kind === "checkpoint",
-                              "bg-purple-500": version.kind === "integration",
-                              "bg-orange-500": version.kind === "revert",
-                            },
-                          )}
+                          className={cn("relative z-10 size-2 shrink-0 rounded-full", {
+                            "bg-primary": version.kind === "checkpoint",
+                            "bg-purple-500": version.kind === "integration",
+                            "bg-orange-500": version.kind === "revert",
+                          })}
                         />
                         {!isLast && (
                           <div
@@ -262,8 +228,7 @@ export function TimelineContent({ className }: { className?: string }) {
 
                       <div className="flex items-center">
                         {parsed.type &&
-                        (version.status === "completed" ||
-                          version.status === "failed") ? (
+                        (version.status === "completed" || version.status === "failed") ? (
                           <CommitTypeBadge type={parsed.type} />
                         ) : (
                           <CommitTypeBadge type="pending" />
@@ -276,37 +241,26 @@ export function TimelineContent({ className }: { className?: string }) {
                             {parsed.message || version.message}
                           </span>
                         ) : (
-                          <span className="block truncate text-left text-xs">
-                            Untitled Version
+                          <span className="block truncate text-left text-xs">Untitled Version</span>
+                        )}
+                        {version.kind === "integration" && version.appliedFromBranch && (
+                          <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-purple-500">
+                            <GitMergeIcon className="size-2.5 shrink-0" />
+                            <span className="max-w-[72px] truncate">
+                              {version.appliedFromBranch.name}
+                            </span>
                           </span>
                         )}
-                        {version.kind === "integration" &&
-                          version.appliedFromBranch && (
-                            <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-purple-500">
-                              <GitMergeIcon className="size-2.5 shrink-0" />
-                              <span className="max-w-[72px] truncate">
-                                {version.appliedFromBranch.name}
-                              </span>
-                            </span>
-                          )}
-                        {version.kind === "revert" &&
-                          version.revertedVersion && (
-                            <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-orange-500">
-                              <Undo2Icon className="size-2.5" />#
-                              {version.revertedVersion.sequenceNumber}
-                            </span>
-                          )}
+                        {version.kind === "revert" && version.revertedVersion && (
+                          <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-orange-500">
+                            <Undo2Icon className="size-2.5" />#
+                            {version.revertedVersion.sequenceNumber}
+                          </span>
+                        )}
                       </div>
                     </HoverCardTrigger>
-                    <HoverCardContent
-                      side="right"
-                      align="start"
-                      className="w-[350px] p-2"
-                    >
-                      <TimelineItem
-                        version={version}
-                        onScrollToVersion={scrollToVersion}
-                      />
+                    <HoverCardContent side="right" align="start" className="w-[350px] p-2">
+                      <TimelineItem version={version} onScrollToVersion={scrollToVersion} />
                     </HoverCardContent>
                   </HoverCard>
                   {forkedBranches.length > 0 && (
@@ -338,17 +292,12 @@ function TimelineItem({
   const [createBranchDialogOpen, setCreateBranchDialogOpen] = useState(false);
   const [branchType, setBranchType] = useState<"variant" | "stream">("variant");
 
-  const isPublished =
-    version.status === "completed" && version.publishedAt !== null;
+  const isPublished = version.status === "completed" && version.publishedAt !== null;
   const isFailed = version.status === "failed";
 
   const isCompleted = isPublished || isFailed;
 
-  const previewUrl = getPreviewUrl(
-    version.id,
-    version.projectId,
-    version.branchId,
-  );
+  const previewUrl = getPreviewUrl(version.id, version.projectId, version.branchId);
 
   const handleCreateBranch = (type: "variant" | "stream") => {
     setBranchType(type);
@@ -381,8 +330,7 @@ function TimelineItem({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1">
           <span className="font-medium text-muted-foreground text-xs">{`#${version.sequenceNumber}`}</span>
-          {parsed.type &&
-          (version.status === "completed" || version.status === "failed") ? (
+          {parsed.type && (version.status === "completed" || version.status === "failed") ? (
             <CommitTypeBadge type={parsed.type} />
           ) : (
             <CommitTypeBadge type="pending" />
@@ -405,15 +353,11 @@ function TimelineItem({
           {(isPublished || version.status === "failed") && (
             <span
               className={cn("rounded-md px-1.5 py-0.5 text-[10px]", {
-                "bg-warning text-warning-foreground":
-                  version.status === "planning",
+                "bg-warning text-warning-foreground": version.status === "planning",
                 "bg-teal-500 text-teal-50": version.status === "coding",
-                "bg-primary text-primary-foreground":
-                  version.status === "finalizing",
-                "bg-success text-success-foreground":
-                  version.status === "completed",
-                "bg-destructive text-destructive-foreground":
-                  version.status === "failed",
+                "bg-primary text-primary-foreground": version.status === "finalizing",
+                "bg-success text-success-foreground": version.status === "completed",
+                "bg-destructive text-destructive-foreground": version.status === "failed",
               })}
             >
               {version.status.charAt(0).toUpperCase() + version.status.slice(1)}
@@ -421,10 +365,7 @@ function TimelineItem({
           )}
           {isCompleted && (
             <>
-              <RevertVersionDialog
-                version={version}
-                onScrollToVersion={onScrollToVersion}
-              />
+              <RevertVersionDialog version={version} onScrollToVersion={onScrollToVersion} />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -455,53 +396,43 @@ function TimelineItem({
               className="min-w-0 font-medium text-purple-500 underline-offset-1 hover:underline"
               href={`/projects/${version.projectId}/branches/${version.appliedFromBranch.id}`}
             >
-              <span className="block truncate">
-                {version.appliedFromBranch.name}
-              </span>
+              <span className="block truncate">{version.appliedFromBranch.name}</span>
             </Link>
           </div>
         </div>
       )}
 
-      {version.kind === "revert" &&
-        version.revertedVersion &&
-        version.revertedVersionId && (
-          <div className="flex min-w-0 items-center gap-1 rounded-md bg-orange-500/10 px-1.5 py-1">
-            <Undo2Icon className="size-3 shrink-0 text-orange-500" />
-            <div className="flex min-w-0 flex-1 items-baseline gap-1 overflow-hidden text-[10px] text-muted-foreground">
-              <span className="shrink-0">Reverted to</span>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  if (version.revertedVersionId) {
-                    onScrollToVersion(version.revertedVersionId);
-                  }
-                }}
-                className="h-auto min-w-0 flex-1 overflow-hidden p-0 text-left font-medium text-[10px] text-orange-500 underline-offset-1 hover:bg-transparent hover:text-orange-500 hover:underline"
-              >
-                <span className="block truncate">
-                  {`#${version.revertedVersion.sequenceNumber} ${version.revertedVersion.message}`}
-                </span>
-              </Button>
-            </div>
+      {version.kind === "revert" && version.revertedVersion && version.revertedVersionId && (
+        <div className="flex min-w-0 items-center gap-1 rounded-md bg-orange-500/10 px-1.5 py-1">
+          <Undo2Icon className="size-3 shrink-0 text-orange-500" />
+          <div className="flex min-w-0 flex-1 items-baseline gap-1 overflow-hidden text-[10px] text-muted-foreground">
+            <span className="shrink-0">Reverted to</span>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (version.revertedVersionId) {
+                  onScrollToVersion(version.revertedVersionId);
+                }
+              }}
+              className="h-auto min-w-0 flex-1 overflow-hidden p-0 text-left font-medium text-[10px] text-orange-500 underline-offset-1 hover:bg-transparent hover:text-orange-500 hover:underline"
+            >
+              <span className="block truncate">
+                {`#${version.revertedVersion.sequenceNumber} ${version.revertedVersion.message}`}
+              </span>
+            </Button>
           </div>
-        )}
+        </div>
+      )}
 
       {version.status !== "planning" ? (
         <div className="flex flex-col gap-1">
-          <span className="font-medium text-xs">
-            {parsed.message || version.message}
-          </span>
+          <span className="font-medium text-xs">{parsed.message || version.message}</span>
           {version.description && (
-            <p className="line-clamp-2 text-[11px] text-muted-foreground">
-              {version.description}
-            </p>
+            <p className="line-clamp-2 text-[11px] text-muted-foreground">{version.description}</p>
           )}
         </div>
       ) : (
-        <p className="text-[11px] text-muted-foreground">
-          No available information yet.
-        </p>
+        <p className="text-[11px] text-muted-foreground">No available information yet.</p>
       )}
 
       {version.status === "completed" && (

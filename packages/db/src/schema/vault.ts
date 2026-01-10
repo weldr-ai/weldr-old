@@ -1,12 +1,5 @@
 import { sql } from "drizzle-orm";
-import {
-  customType,
-  pgSchema,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { customType, pgSchema, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 export const vault = pgSchema("vault");
 

@@ -3,34 +3,31 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { and, db, eq } from "@weldr/db";
 import { branches, projects, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir, isLocalMode } from "@weldr/shared/state";
+import { getBranchDir } from "@weldr/shared/state";
 
 import { auth } from "@/lib/auth";
-import { syncBranchFromS3 } from "@/lib/branch-state";
 import { Git } from "@/lib/git";
+import { agentFSManager, createSnapshotService, syncAgentFSToDisk } from "@/lib/storage";
 import { createRouter } from "@/lib/utils";
 
 const route = createRoute({
   method: "post",
   path: "/revert",
-  summary: "Revert to a previous version in git",
-  description: "Revert to a previous version by creating a revert commit",
+  summary: "Revert to a previous version",
+  description:
+    "Revert to a previous version by restoring its snapshot and creating a revert commit",
   tags: ["Agent"],
   request: {
     body: {
       content: {
         "application/json": {
           schema: z.object({
-            projectId: z
-              .string()
-              .openapi({ description: "Project ID", example: "123abc" }),
+            projectId: z.string().openapi({ description: "Project ID", example: "123abc" }),
             versionId: z.string().openapi({
               description: "Version ID to revert to",
               example: "456def",
             }),
-            branchId: z
-              .string()
-              .openapi({ description: "Branch ID", example: "789ghi" }),
+            branchId: z.string().openapi({ description: "Branch ID", example: "789ghi" }),
           }),
         },
       },
@@ -44,6 +41,7 @@ const route = createRoute({
           schema: z.object({
             success: z.boolean(),
             commitHash: z.string(),
+            snapshotPath: z.string(),
           }),
         },
       },
@@ -73,31 +71,30 @@ router.openapi(route, async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const project = await db.query.projects.findFirst({
-    where: and(
-      eq(projects.id, projectId),
-      eq(projects.userId, session.user.id),
-    ),
-  });
+  // Validate project, branch, version
+  const [project, branch, version] = await Promise.all([
+    db.query.projects.findFirst({
+      where: and(eq(projects.id, projectId), eq(projects.userId, session.user.id)),
+    }),
+    db.query.branches.findFirst({
+      where: and(eq(branches.id, branchId), eq(branches.projectId, projectId)),
+    }),
+    db.query.versions.findFirst({
+      where: and(
+        eq(versions.id, versionId),
+        eq(versions.projectId, projectId),
+        eq(versions.userId, session.user.id),
+      ),
+    }),
+  ]);
 
   if (!project) {
     return c.json({ error: "Project not found" }, 404);
   }
 
-  const branch = await db.query.branches.findFirst({
-    where: and(eq(branches.id, branchId), eq(branches.projectId, projectId)),
-  });
-
   if (!branch) {
     return c.json({ error: "Branch not found" }, 404);
   }
-
-  const version = await db.query.versions.findFirst({
-    where: and(
-      eq(versions.id, versionId),
-      eq(versions.userId, session.user.id),
-    ),
-  });
 
   if (!version) {
     return c.json({ error: "Version not found" }, 404);
@@ -112,82 +109,83 @@ router.openapi(route, async (c) => {
   try {
     const branchDir = getBranchDir(projectId, branchId);
 
-    // Ensure git repository exists
-    if (!(await Git.hasGitRepository(branchDir))) {
-      return c.json({ error: "Git repository not initialized" }, 400);
+    // Check if version has a snapshot to restore
+    if (!version.snapshotPath) {
+      return c.json({ error: "Version does not have a snapshot" }, 400);
     }
+
+    // 1. Restore AgentFS snapshot
+    logger.info("Restoring AgentFS snapshot", {
+      extra: { snapshotPath: version.snapshotPath },
+    });
+
+    const snapshotService = createSnapshotService(projectId);
+    await snapshotService.restoreSnapshot(versionId, branchId);
+
+    // 2. Sync files from AgentFS to disk
+    logger.info("Syncing files from AgentFS to disk");
+
+    const agent = await agentFSManager.acquire(projectId, branchId, branchDir);
+    let synced: number;
+    let errors: string[];
+    try {
+      const result = await syncAgentFSToDisk(agent, branchDir);
+      synced = result.synced;
+      errors = result.errors;
+    } finally {
+      await agentFSManager.release(projectId, branchId);
+    }
+
+    logger.info("Files synced from snapshot", {
+      extra: { synced, errorCount: errors.length },
+    });
+
+    // 3. Create revert commit in git (preserves history)
+    const revertMessage = `revert: Revert to version #${version.sequenceNumber}${
+      version.message ? ` - ${version.message}` : ""
+    }`;
 
     let commitHash: string;
-
-    if (isLocalMode()) {
-      // Local mode: use git revert command
-      if (!version.commitHash) {
-        return c.json({ error: "Version does not have a commit hash" }, 400);
-      }
-
-      logger.info("Local mode: performing git revert", {
-        extra: { commitHash: version.commitHash },
-      });
-
-      commitHash = await Git.revert(
-        branch.name,
-        version.commitHash,
-        `revert: revert to #${version.sequenceNumber} ${version.message}`,
-        branchDir,
-      );
-    } else {
-      // Cloud mode: snapshot was already reverted in bucket
-      // We need to sync the workspace from S3 to match the reverted bucket state
-      // Then commit the reverted state as a new commit
-
-      logger.info(
-        "Cloud mode: syncing workspace from S3 after snapshot revert",
-        {
-          extra: { branchId, projectId },
-        },
-      );
-
-      const syncResult = await syncBranchFromS3(branchId, projectId);
-
-      if (!syncResult.success) {
-        logger.error("Failed to sync branch from S3 after snapshot revert", {
-          extra: { branchId, projectId },
-        });
-        return c.json(
-          { error: "Failed to sync workspace from S3 after snapshot revert" },
-          500,
-        );
-      }
-
-      if (syncResult.skipped) {
-        logger.warn("S3 sync was skipped", {
-          extra: { branchId, projectId, reason: syncResult.reason },
-        });
-      }
-
-      if (!session.user.name || !session.user.email) {
-        logger.error("Session user missing name or email", {
-          extra: { userId: session.user.id },
-        });
-        return c.json({ error: "User information incomplete for commit" }, 500);
-      }
-
-      logger.info("Cloud mode: committing reverted state", {
-        extra: { branchDir },
-      });
-
+    try {
       commitHash = await Git.commit(
-        `revert: revert to #${version.sequenceNumber} ${version.message}`,
-        { name: session.user.name, email: session.user.email },
+        revertMessage,
+        {
+          name: session.user.name || "Weldr",
+          email: session.user.email || "user@weldr.dev",
+        },
         branchDir,
       );
 
-      logger.info("Cloud mode: reverted state committed", {
-        extra: { commitHash },
+      logger.info("Revert commit created", { extra: { commitHash } });
+    } catch (error) {
+      // If git commit fails, it might be because git isn't initialized
+      logger.warn("Failed to create git commit", {
+        extra: {
+          error: error instanceof Error ? error.message : String(error),
+        },
       });
+
+      // Initialize git and try again
+      if (!(await Git.hasGitRepository(branchDir))) {
+        await Git.initRepository(projectId, branchId, branchDir);
+        commitHash = await Git.commit(
+          revertMessage,
+          {
+            name: session.user.name || "Weldr",
+            email: session.user.email || "user@weldr.dev",
+          },
+          branchDir,
+        );
+      } else {
+        throw error;
+      }
     }
 
-    return c.json({ success: true, commitHash });
+    return c.json({
+      success: true,
+      commitHash,
+      snapshotPath: version.snapshotPath,
+    });
   } catch (error) {
     logger.error("Revert failed", {
       extra: {
@@ -197,10 +195,7 @@ router.openapi(route, async (c) => {
         versionId: version.id,
       },
     });
-    return c.json(
-      { error: error instanceof Error ? error.message : "Revert failed" },
-      500,
-    );
+    return c.json({ error: error instanceof Error ? error.message : "Revert failed" }, 500);
   }
 });
 

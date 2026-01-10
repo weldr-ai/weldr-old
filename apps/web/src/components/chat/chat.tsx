@@ -47,8 +47,7 @@ export const Chat = memo<ChatProps>(
       session,
     });
 
-    const [messagesContainerRef, messagesEndRef] =
-      useScrollToBottom<HTMLDivElement>(messages);
+    const [messagesContainerRef, messagesEndRef] = useScrollToBottom<HTMLDivElement>(messages);
 
     const { status, setStatus } = useStatus({
       version: versionToUse,
@@ -56,27 +55,22 @@ export const Chat = memo<ChatProps>(
       project,
     });
 
-    const {
-      isChatVisible,
-      chatContainerRef,
-      handleInputFocus,
-      toggleChatVisibility,
-    } = useChatVisibility();
+    const { isChatVisible, chatContainerRef, handleInputFocus, toggleChatVisibility } =
+      useChatVisibility();
 
     const [isTimelineOpen, setIsTimelineOpen] = useState(true);
 
     // Track if we're currently submitting to prevent double submissions
     const isSubmittingRef = useRef(false);
 
-    const { eventSourceRef, connectToEventStream, closeEventStream } =
-      useEventStream({
-        projectId: project.id,
-        branchId: branch.id,
-        chatId: versionToUse.chat.id,
-        branch,
-        setStatus,
-        setMessages,
-      });
+    const { eventSourceRef, connectToEventStream, closeEventStream } = useEventStream({
+      projectId: project.id,
+      branchId: branch.id,
+      chatId: versionToUse.chat.id,
+      branch,
+      setStatus,
+      setMessages,
+    });
 
     const { triggerGeneration } = useWorkflowTrigger({
       projectId: project.id,
@@ -106,12 +100,7 @@ export const Chat = memo<ChatProps>(
           isSubmittingRef.current = false;
         }, 500);
       }
-    }, [
-      handleMessageSubmit,
-      triggerGeneration,
-      userMessageContent,
-      attachments,
-    ]);
+    }, [handleMessageSubmit, triggerGeneration, userMessageContent, attachments]);
 
     const editorReferences = useEditorReferences({
       version: versionToUse,
@@ -136,22 +125,14 @@ export const Chat = memo<ChatProps>(
           },
         )}
       >
-        <Timeline
-          open={isTimelineOpen}
-          onOpenChange={setIsTimelineOpen}
-          branch={branch}
-        >
+        <Timeline open={isTimelineOpen} onOpenChange={setIsTimelineOpen} branch={branch}>
           <TimelineContent className="border-b" />
           <div className="flex items-center justify-between gap-2 border-b px-2 py-1 pr-1 text-xs">
             <div className="flex w-full items-center gap-2 truncate font-medium">
               <span className="text-muted-foreground">{`#${versionToUse.sequenceNumber}`}</span>
               <span className="flex items-center gap-1 truncate">
-                {conventionalCommit.type && (
-                  <CommitTypeBadge type={conventionalCommit.type} />
-                )}
-                <span className="truncate">
-                  {conventionalCommit.message ?? "Untitled Version"}
-                </span>
+                {conventionalCommit.type && <CommitTypeBadge type={conventionalCommit.type} />}
+                <span className="truncate">{conventionalCommit.message ?? "Untitled Version"}</span>
               </span>
             </div>
             <div className="flex items-center gap-1">
@@ -221,26 +202,20 @@ export const Chat = memo<ChatProps>(
   },
   (prevProps, nextProps) => {
     // Check if environmentVariables changed
-    if (!equal(prevProps.environmentVariables, nextProps.environmentVariables))
-      return false;
+    if (!equal(prevProps.environmentVariables, nextProps.environmentVariables)) return false;
     // Check other props with shallow comparison
     if (prevProps.project.id !== nextProps.project.id) return false;
     if (prevProps.branch.id !== nextProps.branch.id) return false;
     // Check if branch name changed (streamed from generate-branch-name step)
     if (prevProps.branch.name !== nextProps.branch.name) return false;
     // Check if selectedVersion changed
-    const prevVersion =
-      prevProps.branch.selectedVersion ?? prevProps.branch.headVersion;
-    const nextVersion =
-      nextProps.branch.selectedVersion ?? nextProps.branch.headVersion;
+    const prevVersion = prevProps.branch.selectedVersion ?? prevProps.branch.headVersion;
+    const nextVersion = nextProps.branch.selectedVersion ?? nextProps.branch.headVersion;
     if (prevVersion.id !== nextVersion.id) return false;
     // Check if version message or description changed (streamed from generate-version-details step)
     if (prevVersion.message !== nextVersion.message) return false;
     if (prevVersion.description !== nextVersion.description) return false;
-    if (
-      prevProps.integrationTemplates.length !==
-      nextProps.integrationTemplates.length
-    )
+    if (prevProps.integrationTemplates.length !== nextProps.integrationTemplates.length)
       return false;
     return true;
   },

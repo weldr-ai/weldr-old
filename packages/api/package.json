@@ -17,10 +17,10 @@
     "@weldr/shared": "workspace:*",
     "redis": "^5.5.5",
     "superjson": "^2.2.2",
-    "zod": "^3.25.76"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@weldr/tsconfig": "workspace:*",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.3"
   }
 }

@@ -2,11 +2,7 @@ import { GitBranchIcon } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 
 import { Button } from "@weldr/ui/components/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@weldr/ui/components/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@weldr/ui/components/popover";
 import {
   Tooltip,
   TooltipContent,
@@ -20,10 +16,7 @@ interface ForkIndicatorProps {
   versionNumber: number;
 }
 
-export function ForkIndicator({
-  forkedBranches,
-  versionNumber,
-}: ForkIndicatorProps) {
+export function ForkIndicator({ forkedBranches, versionNumber }: ForkIndicatorProps) {
   const { projectId } = useParams<{ projectId: string }>();
   const router = useRouter();
 

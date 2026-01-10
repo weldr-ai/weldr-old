@@ -1,24 +1,11 @@
 import { embedMany } from "ai";
 import { z } from "zod";
 
-import {
-  and,
-  cosineDistance,
-  db,
-  desc,
-  eq,
-  getTableColumns,
-  gt,
-  isNotNull,
-  sql,
-} from "@weldr/db";
+import { and, cosineDistance, db, desc, eq, getTableColumns, gt, isNotNull, sql } from "@weldr/db";
 import { declarations, versionDeclarations, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
-import {
-  formatDeclarationData,
-  formatDeclarationSpecs,
-} from "@/ai/utils/formatters";
+import { formatDeclarationData, formatDeclarationSpecs } from "@/ai/utils/formatters";
 import { registry } from "@/ai/utils/registry";
 import { createTool } from "./utils";
 
@@ -29,9 +16,7 @@ export const searchCodebaseTool = createTool({
   whenToUse:
     "When you need to find declarations (functions, components, models, endpoints) that are semantically similar to a specific query or concept.",
   inputSchema: z.object({
-    query: z
-      .string()
-      .describe("The search query to find semantically similar declarations."),
+    query: z.string().describe("The search query to find semantically similar declarations."),
     limit: z
       .number()
       .int()
@@ -75,9 +60,7 @@ export const searchCodebaseTool = createTool({
     try {
       // Generate embedding for the query
       logger.info("Generating embedding for search query");
-      const embeddingModel = registry.textEmbeddingModel(
-        "openai:text-embedding-ada-002",
-      );
+      const embeddingModel = registry.textEmbeddingModel("openai:text-embedding-ada-002");
 
       const { embeddings } = await embedMany({
         model: embeddingModel,
@@ -117,10 +100,7 @@ export const searchCodebaseTool = createTool({
           versionDeclarations,
           sql`${versionDeclarations.declarationId} = ${declarations.id}`,
         )
-        .innerJoin(
-          versions,
-          sql`${versions.id} = ${versionDeclarations.versionId}`,
-        )
+        .innerJoin(versions, sql`${versions.id} = ${versionDeclarations.versionId}`)
         .where(
           and(
             eq(declarations.projectId, project.id),
@@ -164,10 +144,7 @@ export const searchCodebaseTool = createTool({
 
       return {
         success: false as const,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unknown error occurred during search",
+        error: error instanceof Error ? error.message : "Unknown error occurred during search",
       };
     }
   },

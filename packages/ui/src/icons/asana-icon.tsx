@@ -2,12 +2,7 @@ import type { ComponentProps } from "react";
 
 export function AsanaIcon(props: ComponentProps<"svg">) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 251 232"
-      {...props}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 251 232" {...props}>
       <title>Asana</title>
       <path
         fill="#F06A6A"

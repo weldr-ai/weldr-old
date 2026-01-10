@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
 
 import type { RouterOutputs } from "@weldr/api";
-import type {
-  ChatMessage,
-  IntegrationCategoryKey,
-  TStatus,
-} from "@weldr/shared/types";
+import type { ChatMessage, IntegrationCategoryKey, TStatus } from "@weldr/shared/types";
 
 import type { IntegrationToolResultPart } from "@/components/integrations/shared/types";
 
@@ -62,9 +58,7 @@ export function useStatus({ version, messages, project }: UseStatusOptions) {
       );
 
       const toolResult = lastMessage.content.find(
-        (content) =>
-          content.type === "tool-result" &&
-          content.toolName === "add_integrations",
+        (content) => content.type === "tool-result" && content.toolName === "add_integrations",
       ) as IntegrationToolResultPart;
 
       if (

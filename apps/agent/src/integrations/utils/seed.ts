@@ -8,10 +8,7 @@ import {
 } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 import { nanoid } from "@weldr/shared/nanoid";
-import type {
-  IntegrationCategoryKey,
-  IntegrationKey,
-} from "@weldr/shared/types";
+import type { IntegrationCategoryKey, IntegrationKey } from "@weldr/shared/types";
 import type { DeclarationMetadata } from "@weldr/shared/types/declarations";
 
 import { embedDeclaration } from "@/ai/utils/embed-declarations";
@@ -30,9 +27,7 @@ function extractSourceFromPath(
 ): string | null {
   // Parse the path: apps/agent/src/integrations/{category}/{key}/{option}/data/declarations.json
   const pathParts = successPath.split("/");
-  const integrationIndex = pathParts.findIndex(
-    (part) => part === integration.key,
-  );
+  const integrationIndex = pathParts.findIndex((part) => part === integration.key);
 
   if (integrationIndex === -1) {
     return null;
@@ -49,16 +44,12 @@ function extractSourceFromPath(
   return `${integration.key}/${nextPart}`;
 }
 
-async function insertCategories(
-  categoryKeys?: IntegrationCategoryKey[],
-): Promise<void> {
+async function insertCategories(categoryKeys?: IntegrationCategoryKey[]): Promise<void> {
   const categoriesToInsert = categoryKeys
     ? registeredCategories.filter((c) => categoryKeys.includes(c.key))
     : registeredCategories;
 
-  Logger.info(
-    `📁 Inserting ${categoriesToInsert.length} integration categories...`,
-  );
+  Logger.info(`📁 Inserting ${categoriesToInsert.length} integration categories...`);
 
   try {
     await db.transaction(async (tx) => {
@@ -92,16 +83,12 @@ async function insertCategories(
   }
 }
 
-async function updateCategories(
-  categoryKeys?: IntegrationCategoryKey[],
-): Promise<void> {
+async function updateCategories(categoryKeys?: IntegrationCategoryKey[]): Promise<void> {
   const categoriesToUpdate = categoryKeys
     ? registeredCategories.filter((c) => categoryKeys.includes(c.key))
     : registeredCategories;
 
-  Logger.info(
-    `📁 Updating ${categoriesToUpdate.length} integration categories...`,
-  );
+  Logger.info(`📁 Updating ${categoriesToUpdate.length} integration categories...`);
 
   try {
     await db.transaction(async (tx) => {
@@ -134,16 +121,12 @@ async function updateCategories(
   }
 }
 
-async function insertIntegrationTemplates(
-  categoryKeys?: IntegrationCategoryKey[],
-): Promise<void> {
+async function insertIntegrationTemplates(categoryKeys?: IntegrationCategoryKey[]): Promise<void> {
   const categoriesToProcess = categoryKeys
     ? registeredCategories.filter((c) => categoryKeys.includes(c.key))
     : registeredCategories;
 
-  Logger.info(
-    `🔧 Inserting integration templates for ${categoriesToProcess.length} categories...`,
-  );
+  Logger.info(`🔧 Inserting integration templates for ${categoriesToProcess.length} categories...`);
 
   try {
     await db.transaction(async (tx) => {
@@ -155,9 +138,7 @@ async function insertIntegrationTemplates(
           .limit(1);
 
         if (!existingCategory) {
-          Logger.warn(
-            `⚠️  Category ${category.key} not found. Skipping integrations.`,
-          );
+          Logger.warn(`⚠️  Category ${category.key} not found. Skipping integrations.`);
           continue;
         }
 
@@ -186,9 +167,7 @@ async function insertIntegrationTemplates(
             });
 
           if (result) {
-            Logger.info(
-              `  ✅ Inserted template: ${integration.key} v${integration.version}`,
-            );
+            Logger.info(`  ✅ Inserted template: ${integration.key} v${integration.version}`);
           }
         }
       }
@@ -252,13 +231,9 @@ async function insertDeclarationTemplates(
           // If integration has ORM options, check each subdirectory
           if (
             (integration as IntegrationDefinition<"postgresql">).options?.orm &&
-            Array.isArray(
-              (integration as IntegrationDefinition<"postgresql">).options.orm,
-            )
+            Array.isArray((integration as IntegrationDefinition<"postgresql">).options.orm)
           ) {
-            for (const orm of (
-              integration as IntegrationDefinition<"postgresql">
-            ).options.orm) {
+            for (const orm of (integration as IntegrationDefinition<"postgresql">).options.orm) {
               possiblePaths.push(
                 `apps/agent/src/integrations/${integration.category}/${integration.key}/${orm}/data/declarations.json`,
               );
@@ -311,20 +286,13 @@ async function insertDeclarationTemplates(
               }>
             >;
 
-            for (const [filePath, fileDeclarations] of Object.entries(
-              declarationsData,
-            )) {
+            for (const [filePath, fileDeclarations] of Object.entries(declarationsData)) {
               for (const declaration of fileDeclarations) {
                 // Check if declaration already exists to avoid generating embedding
                 const [existing] = await tx
                   .select({ id: declarationTemplates.id })
                   .from(declarationTemplates)
-                  .where(
-                    eq(
-                      declarationTemplates.uri,
-                      declaration.codeMetadata?.uri || "",
-                    ),
-                  )
+                  .where(eq(declarationTemplates.uri, declaration.codeMetadata?.uri || ""))
                   .limit(1);
 
                 if (existing) {
@@ -361,9 +329,7 @@ async function insertDeclarationTemplates(
                   });
 
                 if (result) {
-                  Logger.info(
-                    `    ✅ Inserted declaration: ${result.path} (${result.uri})`,
-                  );
+                  Logger.info(`    ✅ Inserted declaration: ${result.path} (${result.uri})`);
                 }
               }
             }
@@ -384,9 +350,7 @@ async function insertDeclarationTemplates(
   }
 }
 
-async function updateDeclarationTemplates(
-  integrationKeys?: IntegrationKey[],
-): Promise<void> {
+async function updateDeclarationTemplates(integrationKeys?: IntegrationKey[]): Promise<void> {
   Logger.info("📄 Updating declaration templates...");
 
   try {
@@ -419,12 +383,7 @@ async function updateDeclarationTemplates(
 
           await tx
             .delete(declarationTemplates)
-            .where(
-              eq(
-                declarationTemplates.integrationTemplateId,
-                existingTemplate.id,
-              ),
-            );
+            .where(eq(declarationTemplates.integrationTemplateId, existingTemplate.id));
 
           // Try to find declarations - first check if there are ORM options
           const possiblePaths: string[] = [];
@@ -432,13 +391,9 @@ async function updateDeclarationTemplates(
           // If integration has ORM options, check each subdirectory
           if (
             (integration as IntegrationDefinition<"postgresql">).options?.orm &&
-            Array.isArray(
-              (integration as IntegrationDefinition<"postgresql">).options.orm,
-            )
+            Array.isArray((integration as IntegrationDefinition<"postgresql">).options.orm)
           ) {
-            for (const orm of (
-              integration as IntegrationDefinition<"postgresql">
-            ).options.orm) {
+            for (const orm of (integration as IntegrationDefinition<"postgresql">).options.orm) {
               possiblePaths.push(
                 `apps/agent/src/integrations/${integration.category}/${integration.key}/${orm}/data/declarations.json`,
               );
@@ -491,9 +446,7 @@ async function updateDeclarationTemplates(
               }>
             >;
 
-            for (const [filePath, fileDeclarations] of Object.entries(
-              declarationsData,
-            )) {
+            for (const [filePath, fileDeclarations] of Object.entries(declarationsData)) {
               for (const declaration of fileDeclarations) {
                 const metadata: DeclarationMetadata = {
                   version: "v1",
@@ -522,9 +475,7 @@ async function updateDeclarationTemplates(
                   });
 
                 if (result) {
-                  Logger.info(
-                    `    ✅ Updated declaration: ${result.path} (${result.uri})`,
-                  );
+                  Logger.info(`    ✅ Updated declaration: ${result.path} (${result.uri})`);
                 }
               }
             }
@@ -545,16 +496,12 @@ async function updateDeclarationTemplates(
   }
 }
 
-async function updateIntegrationTemplates(
-  categoryKeys?: IntegrationCategoryKey[],
-): Promise<void> {
+async function updateIntegrationTemplates(categoryKeys?: IntegrationCategoryKey[]): Promise<void> {
   const categoriesToUpdate = categoryKeys
     ? registeredCategories.filter((c) => categoryKeys.includes(c.key))
     : registeredCategories;
 
-  Logger.info(
-    `🔧 Updating integration templates for ${categoriesToUpdate.length} categories...`,
-  );
+  Logger.info(`🔧 Updating integration templates for ${categoriesToUpdate.length} categories...`);
 
   try {
     await db.transaction(async (tx) => {
@@ -566,9 +513,7 @@ async function updateIntegrationTemplates(
           .limit(1);
 
         if (!existingCategory) {
-          Logger.warn(
-            `⚠️  Category ${category.key} not found. Skipping integrations.`,
-          );
+          Logger.warn(`⚠️  Category ${category.key} not found. Skipping integrations.`);
           continue;
         }
 
@@ -600,9 +545,7 @@ async function updateIntegrationTemplates(
             });
 
           if (result) {
-            Logger.info(
-              `  ✅ Updated template: ${integration.key} v${integration.version}`,
-            );
+            Logger.info(`  ✅ Updated template: ${integration.key} v${integration.version}`);
           }
         }
       }
@@ -632,28 +575,20 @@ function parseArgs(args: string[]): {
   } = { command };
 
   // Parse --categories or -c flag
-  const categoryIndex = args.findIndex(
-    (arg) => arg === "--categories" || arg === "-c",
-  );
+  const categoryIndex = args.findIndex((arg) => arg === "--categories" || arg === "-c");
   if (categoryIndex !== -1 && args[categoryIndex + 1]) {
     const categoryArg = args[categoryIndex + 1];
     if (categoryArg) {
-      result.categories = categoryArg
-        .split(",")
-        .map((c) => c.trim()) as IntegrationCategoryKey[];
+      result.categories = categoryArg.split(",").map((c) => c.trim()) as IntegrationCategoryKey[];
     }
   }
 
   // Parse --integrations or -i flag
-  const integrationIndex = args.findIndex(
-    (arg) => arg === "--integrations" || arg === "-i",
-  );
+  const integrationIndex = args.findIndex((arg) => arg === "--integrations" || arg === "-i");
   if (integrationIndex !== -1 && args[integrationIndex + 1]) {
     const integrationArg = args[integrationIndex + 1];
     if (integrationArg) {
-      result.integrations = integrationArg
-        .split(",")
-        .map((i) => i.trim()) as IntegrationKey[];
+      result.integrations = integrationArg.split(",").map((i) => i.trim()) as IntegrationKey[];
     }
   }
 
@@ -741,10 +676,7 @@ Examples:
         break;
       }
       case "insert-declaration-templates": {
-        await commands["insert-declaration-templates"](
-          categories,
-          integrations,
-        );
+        await commands["insert-declaration-templates"](categories, integrations);
         break;
       }
       case "update-declaration-templates": {

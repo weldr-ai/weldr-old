@@ -8,8 +8,7 @@ import { createTool } from "./utils";
 
 export const addIntegrationsTool = createTool({
   name: "add_integrations",
-  description:
-    "Shows available integration categories that can be added to a project.",
+  description: "Shows available integration categories that can be added to a project.",
   whenToUse:
     "Use this tool when you need to add more integration categories to a project. It will return available categories.",
   inputSchema: z.object({
@@ -67,9 +66,7 @@ export const addIntegrationsTool = createTool({
     });
 
     const existingCategoryKeys = new Set(
-      existingIntegrations.map(
-        (integration) => integration.integrationTemplate.category.key,
-      ),
+      existingIntegrations.map((integration) => integration.integrationTemplate.category.key),
     );
 
     const availableCategories = requestedCategories.filter(

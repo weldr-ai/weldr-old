@@ -1,10 +1,8 @@
-import { relations } from "drizzle-orm";
 import { index, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 
 import { nanoid } from "@weldr/shared/nanoid";
 import type { Task } from "@weldr/shared/types";
 
-import { declarations } from "./declarations";
 import { versions } from "./versions";
 
 export const tasks = pgTable("tasks", {
@@ -18,23 +16,6 @@ export const tasks = pgTable("tasks", {
     .references(() => versions.id, { onDelete: "cascade" })
     .notNull(),
 });
-
-export const taskRelations = relations(tasks, ({ one, many }) => ({
-  version: one(versions, {
-    fields: [tasks.versionId],
-    references: [versions.id],
-  }),
-  dependencies: many(taskDependencies, {
-    relationName: "taskDependencies",
-  }),
-  dependents: many(taskDependencies, {
-    relationName: "taskDependents",
-  }),
-  declaration: one(declarations, {
-    fields: [tasks.id],
-    references: [declarations.taskId],
-  }),
-}));
 
 export const taskDependencies = pgTable(
   "task_dependencies",
@@ -51,20 +32,4 @@ export const taskDependencies = pgTable(
     index("task_dependencies_dependent_id_idx").on(t.dependentId),
     index("task_dependencies_dependency_id_idx").on(t.dependencyId),
   ],
-);
-
-export const taskDependencyRelations = relations(
-  taskDependencies,
-  ({ one }) => ({
-    dependent: one(tasks, {
-      fields: [taskDependencies.dependentId],
-      references: [tasks.id],
-      relationName: "taskDependencies",
-    }),
-    dependency: one(tasks, {
-      fields: [taskDependencies.dependencyId],
-      references: [tasks.id],
-      relationName: "taskDependents",
-    }),
-  }),
 );

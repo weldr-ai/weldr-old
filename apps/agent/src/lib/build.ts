@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { put as tigrisPut } from "@tigrisdata/storage";
 
 import { Logger } from "@weldr/shared/logger";
@@ -43,9 +44,7 @@ export async function build({
     );
 
     if (!installResult.success) {
-      throw new Error(
-        `Failed to install dependencies: ${installResult.stderr}`,
-      );
+      throw new Error(`Failed to install dependencies: ${installResult.stderr}`);
     }
 
     // Run build
@@ -67,9 +66,7 @@ export async function build({
     );
 
     if (!prodInstallResult.success) {
-      throw new Error(
-        `Failed to install production dependencies: ${prodInstallResult.stderr}`,
-      );
+      throw new Error(`Failed to install production dependencies: ${prodInstallResult.stderr}`);
     }
 
     // Determine build output directory and files to include
@@ -92,9 +89,7 @@ export async function build({
       filesToZip = ["build/", "node_modules/", "package.json"];
       logger.info("Detected build directory");
     } else {
-      throw new Error(
-        "No build output directory found (.output/, dist/, or build/)",
-      );
+      throw new Error("No build output directory found (.output/, dist/, or build/)");
     }
 
     // Create zip artifact
@@ -103,11 +98,9 @@ export async function build({
 
     logger.info("Creating build artifact", { artifactName, buildDir });
 
-    const zipResult = await runCommand(
-      "zip",
-      ["-r", artifactPath, ...filesToZip, "-q"],
-      { cwd: dir },
-    );
+    const zipResult = await runCommand("zip", ["-r", artifactPath, ...filesToZip, "-q"], {
+      cwd: dir,
+    });
 
     if (!zipResult.success) {
       throw new Error(`Failed to create zip artifact: ${zipResult.stderr}`);

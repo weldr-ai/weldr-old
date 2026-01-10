@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "bracketSpacing": true,
+  "arrowParens": "always",
+  "endOfLine": "lf",
+  "quoteProps": "as-needed",
+  "experimentalTailwindcss": {
+    "functions": ["cn", "cva"],
+    "stylesheet": "./packages/ui/src/styles/globals.css"
+  },
+  "ignorePatterns": ["**/data/**"],
+  "experimentalSortPackageJson": true
+}

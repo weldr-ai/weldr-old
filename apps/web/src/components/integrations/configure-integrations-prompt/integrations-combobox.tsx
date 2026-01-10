@@ -13,11 +13,7 @@ import {
   CommandItem,
   CommandList,
 } from "@weldr/ui/components/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@weldr/ui/components/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@weldr/ui/components/popover";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { getIntegrationIcon } from "../shared/utils";
@@ -63,9 +59,7 @@ export function IntegrationsCombobox({
       </PopoverTrigger>
       <PopoverContent className="w-[448px] p-0">
         <Command>
-          <CommandInput
-            placeholder={`Search ${categoryName} integrations...`}
-          />
+          <CommandInput placeholder={`Search ${categoryName} integrations...`} />
           <CommandList>
             <CommandEmpty>No integrations found.</CommandEmpty>
             <CommandGroup>
@@ -82,9 +76,7 @@ export function IntegrationsCombobox({
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      selectedIntegration?.id === integration.id
-                        ? "opacity-100"
-                        : "opacity-0",
+                      selectedIntegration?.id === integration.id ? "opacity-100" : "opacity-0",
                     )}
                   />
                   <div className="flex items-center gap-2">
@@ -92,9 +84,7 @@ export function IntegrationsCombobox({
                     <span>{integration.name}</span>
                   </div>
                   {integration.isRecommended && (
-                    <span className="ml-auto text-muted-foreground text-xs">
-                      Recommended
-                    </span>
+                    <span className="ml-auto text-muted-foreground text-xs">Recommended</span>
                   )}
                 </CommandItem>
               ))}

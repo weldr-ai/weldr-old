@@ -103,9 +103,7 @@ export function SignInForm({
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground md:bg-card">
-              OR
-            </span>
+            <span className="bg-background px-2 text-muted-foreground md:bg-card">OR</span>
           </div>
         </div>
         <Form {...form}>
@@ -174,9 +172,7 @@ export function SignInForm({
                       <Checkbox
                         {...field}
                         checked={field.value === "true"}
-                        onCheckedChange={(value) =>
-                          field.onChange(value ? "true" : "false")
-                        }
+                        onCheckedChange={(value) => field.onChange(value ? "true" : "false")}
                       />
                     </FormControl>
                     <FormLabel>Remember me</FormLabel>
@@ -191,9 +187,7 @@ export function SignInForm({
               aria-disabled={!form.formState.isValid || isSubmitting}
               disabled={!form.formState.isValid || isSubmitting}
             >
-              {isSubmitting && (
-                <LoaderIcon className="mr-1 size-3 animate-spin" />
-              )}
+              {isSubmitting && <LoaderIcon className="mr-1 size-3 animate-spin" />}
               Sign in
             </Button>
           </form>
@@ -210,10 +204,7 @@ export function SignInForm({
                 Sign up
               </Button>
             ) : (
-              <Link
-                href="/auth/sign-up"
-                className="text-primary hover:underline"
-              >
+              <Link href="/auth/sign-up" className="text-primary hover:underline">
                 Sign up
               </Link>
             )}

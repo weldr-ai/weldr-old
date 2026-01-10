@@ -2,12 +2,7 @@ import type { ComponentProps } from "react";
 
 export function MdxIcon(props: ComponentProps<"svg">) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      {...props}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" {...props}>
       <title>MDX</title>
       <path
         stroke="#60A5FA"

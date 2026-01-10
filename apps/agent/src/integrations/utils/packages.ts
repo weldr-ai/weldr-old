@@ -22,8 +22,8 @@ export async function installPackages(
       version ? `${name}@${version}` : name,
     );
 
-    const developmentInstallCommand = developmentPackages.map(
-      ([name, version]) => (version ? `${name}@${version}` : name),
+    const developmentInstallCommand = developmentPackages.map(([name, version]) =>
+      version ? `${name}@${version}` : name,
     );
 
     const target = packages.target;
@@ -31,10 +31,7 @@ export async function installPackages(
     if (runtimeInstallCommand.length > 0) {
       const runtimeResult = await runCommand(
         "sh",
-        [
-          "-c",
-          `bun add ${runtimeInstallCommand.join(" ")} --cwd apps/${target}`,
-        ],
+        ["-c", `bun add ${runtimeInstallCommand.join(" ")} --cwd apps/${target}`],
         {
           cwd: branchDir,
         },
@@ -46,10 +43,7 @@ export async function installPackages(
     if (developmentInstallCommand.length > 0) {
       const developmentResult = await runCommand(
         "sh",
-        [
-          "-c",
-          `bun add -D ${developmentInstallCommand.join(" ")} --cwd apps/${target}`,
-        ],
+        ["-c", `bun add -D ${developmentInstallCommand.join(" ")} --cwd apps/${target}`],
         {
           cwd: branchDir,
         },
@@ -71,9 +65,7 @@ export async function updatePackageJsonScripts(
 
     for (const scriptSet of scriptSets) {
       const directory =
-        scriptSet.target === "root"
-          ? branchDir
-          : `${branchDir}/apps/${scriptSet.target}`;
+        scriptSet.target === "root" ? branchDir : `${branchDir}/apps/${scriptSet.target}`;
 
       let packageJsonContent: {
         scripts?: Record<string, string>;
@@ -103,11 +95,7 @@ export async function updatePackageJsonScripts(
 
       try {
         const packageJsonPath = `${directory}/package.json`;
-        await fs.writeFile(
-          packageJsonPath,
-          JSON.stringify(packageJsonContent, null, 2),
-          "utf-8",
-        );
+        await fs.writeFile(packageJsonPath, JSON.stringify(packageJsonContent, null, 2), "utf-8");
       } catch (error) {
         return {
           success: false,

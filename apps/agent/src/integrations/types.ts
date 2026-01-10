@@ -70,10 +70,8 @@ interface IntegrationDefinitionExtension<K extends IntegrationKey> {
   postInstall?: IntegrationCallback;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: required for distributive omit
-export type DistributiveOmit<T, K extends keyof T> = T extends any
-  ? Omit<T, K>
-  : never;
+// oxlint-disable-next-line no-explicit-any
+export type DistributiveOmit<T, K extends keyof T> = T extends any ? Omit<T, K> : never;
 
 export type IntegrationDefinition<K extends IntegrationKey> = DistributiveOmit<
   ExtractTemplateForKey<K>,
@@ -81,9 +79,11 @@ export type IntegrationDefinition<K extends IntegrationKey> = DistributiveOmit<
 > &
   IntegrationDefinitionExtension<K>;
 
-export type IntegrationCategoryDefinition<K extends IntegrationKey[]> =
-  DistributiveOmit<IntegrationCategory, "id"> & {
-    integrations: {
-      [key in K[number]]: IntegrationDefinition<key>;
-    };
+export type IntegrationCategoryDefinition<K extends IntegrationKey[]> = DistributiveOmit<
+  IntegrationCategory,
+  "id"
+> & {
+  integrations: {
+    [key in K[number]]: IntegrationDefinition<key>;
   };
+};

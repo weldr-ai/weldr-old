@@ -53,6 +53,13 @@ export async function runCommand(
     let stdout = "";
     let stderr = "";
     let timeoutId: NodeJS.Timeout | null = null;
+    let resolved = false;
+
+    const resolveOnce = (result: CommandResult) => {
+      if (resolved) return;
+      resolved = true;
+      resolve(result);
+    };
 
     if (options.stdin) {
       child.stdin.write(options.stdin);
@@ -106,7 +113,7 @@ export async function runCommand(
         success: exitCode === 0,
       };
 
-      resolve(result);
+      resolveOnce(result);
     });
 
     // Handle errors
@@ -127,7 +134,7 @@ export async function runCommand(
         success: false,
       };
 
-      resolve(result);
+      resolveOnce(result);
     });
   });
 }

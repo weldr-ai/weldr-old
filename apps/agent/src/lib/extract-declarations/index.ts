@@ -29,10 +29,7 @@ export async function extractDeclarations({
     const sourceLines = sourceCode.split("\n");
 
     // Track imported identifiers for dependency analysis
-    const importedIdentifiers = new Map<
-      string,
-      { source: string; isExternal: boolean }
-    >();
+    const importedIdentifiers = new Map<string, { source: string; isExternal: boolean }>();
 
     await processSourceFile({
       sourceFile,
@@ -47,9 +44,7 @@ export async function extractDeclarations({
 
     return declarations;
   } catch (error) {
-    throw new Error(
-      `Failed to parse TypeScript code: ${error instanceof Error ? error.message : "Unknown error"}`,
-    );
+    throw new Error("Failed to parse TypeScript code", { cause: error });
   }
 }
 

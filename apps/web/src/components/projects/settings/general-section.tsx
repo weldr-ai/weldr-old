@@ -31,11 +31,7 @@ import { DeleteAlertDialog } from "@/components/delete-alert-dialog";
 import { getProjectDownloadUrl } from "@/lib/actions/get-project-download-url";
 import { useTRPC } from "@/lib/trpc/react";
 
-export function GeneralSection({
-  project,
-}: {
-  project: RouterOutputs["projects"]["byId"];
-}) {
+export function GeneralSection({ project }: { project: RouterOutputs["projects"]["byId"] }) {
   const router = useRouter();
   const [isDownloading, setIsDownloading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -46,9 +42,7 @@ export function GeneralSection({
   const updateProject = useMutation(
     trpc.projects.update.mutationOptions({
       onSuccess: () => {
-        queryClient.invalidateQueries(
-          trpc.projects.byId.queryFilter({ id: project.id }),
-        );
+        queryClient.invalidateQueries(trpc.projects.byId.queryFilter({ id: project.id }));
       },
       onError: (error) => {
         toast({
@@ -107,17 +101,15 @@ export function GeneralSection({
       <CardHeader>
         <CardTitle>General</CardTitle>
         <CardDescription>
-          Update your project name and subdomain, download your project code, or
-          delete your project.
+          Update your project name and subdomain, download your project code, or delete your
+          project.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-2 rounded-lg border p-4">
           <div className="flex flex-col">
             <h3 className="font-medium">General</h3>
-            <p className="text-muted-foreground text-sm">
-              General project settings
-            </p>
+            <p className="text-muted-foreground text-sm">General project settings</p>
           </div>
           <Form {...form}>
             <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
@@ -157,14 +149,10 @@ export function GeneralSection({
                   type="submit"
                   size="sm"
                   disabled={
-                    updateProject.isPending ||
-                    !form.formState.isValid ||
-                    !form.formState.isDirty
+                    updateProject.isPending || !form.formState.isValid || !form.formState.isDirty
                   }
                 >
-                  {updateProject.isPending && (
-                    <LoaderIcon className="mr-2 size-3.5 animate-spin" />
-                  )}
+                  {updateProject.isPending && <LoaderIcon className="mr-2 size-3.5 animate-spin" />}
                   Update
                 </Button>
               </div>
@@ -174,9 +162,7 @@ export function GeneralSection({
         <div className="flex items-center justify-between gap-2 rounded-lg border p-4">
           <div className="flex flex-col">
             <h3 className="font-medium">Download Project</h3>
-            <p className="text-muted-foreground text-sm">
-              Download your project code.
-            </p>
+            <p className="text-muted-foreground text-sm">Download your project code.</p>
           </div>
           <Button
             size="sm"
@@ -206,11 +192,7 @@ export function GeneralSection({
               Permanently delete your project and all associated data.
             </p>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setDeleteDialogOpen(true)}
-          >
+          <Button size="sm" variant="outline" onClick={() => setDeleteDialogOpen(true)}>
             <TrashIcon className="mr-2 size-3.5 text-destructive" />
             Delete Project
           </Button>

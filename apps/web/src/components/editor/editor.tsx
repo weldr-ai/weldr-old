@@ -1,8 +1,9 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import type { ColorMode, Edge } from "@xyflow/react";
 import {
+  type ColorMode,
+  type Edge,
   Background,
   Panel,
   ReactFlow,
@@ -12,25 +13,24 @@ import {
   useViewport,
 } from "@xyflow/react";
 import { ArrowUpDownIcon, MinusIcon, PlusIcon } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useCallback, useMemo, useState } from "react";
 
+import type { RouterOutputs } from "@weldr/api";
 import { Button } from "@weldr/ui/components/button";
 import { toast } from "@weldr/ui/hooks/use-toast";
 
 import { useTRPC } from "@/lib/trpc/react";
 import type { CanvasNode } from "@/types";
-import { DbModelNode } from "./nodes/declaration/db-model";
-import { EndpointNode } from "./nodes/declaration/endpoint";
-import { PageNode } from "./nodes/declaration/page";
+import { Chat } from "../chat/chat";
 
 import "@xyflow/react/dist/base.css";
 
-import { useTheme } from "next-themes";
-
-import type { RouterOutputs } from "@weldr/api";
+import { DbModelNode } from "./nodes/declaration/db-model";
+import { EndpointNode } from "./nodes/declaration/endpoint";
 import "@weldr/ui/styles/canvas.css";
 
-import { Chat } from "../chat/chat";
+import { PageNode } from "./nodes/declaration/page";
 import { Placeholder } from "./placeholder";
 
 const nodeTypes = {
@@ -57,8 +57,7 @@ export function Editor({
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const viewPort = useViewport();
   const { resolvedTheme } = useTheme();
-  const [nodes, setNodes, onNodesChange] =
-    useNodesState<CanvasNode>(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(initialNodes);
   const [edges, _setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -154,8 +153,7 @@ export function Editor({
       }
       const groupWidth =
         grid.columns > 0
-          ? (grid.columns - 1) * nodeConfig.page.hSpacing +
-            nodeConfig.page.width
+          ? (grid.columns - 1) * nodeConfig.page.hSpacing + nodeConfig.page.width
           : 0;
       currentGroupX += groupWidth + groupGap;
     }
@@ -179,8 +177,7 @@ export function Editor({
       }
       const groupWidth =
         grid.columns > 0
-          ? (grid.columns - 1) * nodeConfig.endpoint.hSpacing +
-            nodeConfig.endpoint.width
+          ? (grid.columns - 1) * nodeConfig.endpoint.hSpacing + nodeConfig.endpoint.width
           : 0;
       currentGroupX += groupWidth + groupGap;
     }
@@ -248,8 +245,7 @@ export function Editor({
           expandedNodes.has(edge.source) || expandedNodes.has(edge.target)
             ? 0
             : // Show edges only when hovering over connected nodes
-              hoveredNode &&
-                (edge.source === hoveredNode || edge.target === hoveredNode)
+              hoveredNode && (edge.source === hoveredNode || edge.target === hoveredNode)
               ? 1
               : 0,
         transition: "opacity 0.3s ease-in-out",
@@ -257,12 +253,9 @@ export function Editor({
     }));
   }, [edges, hoveredNode, expandedNodes]);
 
-  const onNodeMouseEnter = useCallback(
-    (_event: React.MouseEvent, node: CanvasNode) => {
-      setHoveredNode(node.id);
-    },
-    [],
-  );
+  const onNodeMouseEnter = useCallback((_event: React.MouseEvent, node: CanvasNode) => {
+    setHoveredNode(node.id);
+  }, []);
 
   const onNodeMouseLeave = useCallback(() => {
     setHoveredNode(null);
@@ -293,11 +286,7 @@ export function Editor({
   }, [nodes, onNodeExpand, onNodeCollapse]);
 
   const onNodeDragStop = useCallback(
-    async (
-      _event: React.MouseEvent,
-      node: CanvasNode,
-      _nodes: CanvasNode[],
-    ) => {
+    async (_event: React.MouseEvent, node: CanvasNode, _nodes: CanvasNode[]) => {
       const updatedData = {
         where: {
           id: node.id,
@@ -338,10 +327,7 @@ export function Editor({
       {nodes.length === 0 && <Placeholder />}
       <Background color="transparent" bgColor="var(--color-background)" />
 
-      <Panel
-        position="bottom-left"
-        className="mb-4 ml-4 max-h-[calc(100vh-40px)] w-[500px]"
-      >
+      <Panel position="bottom-left" className="mb-4 ml-4 max-h-[calc(100vh-40px)] w-[500px]">
         <Chat
           project={project}
           branch={branch}
@@ -350,10 +336,7 @@ export function Editor({
         />
       </Panel>
 
-      <Panel
-        position="bottom-right"
-        className="flex items-center rounded-lg border bg-background"
-      >
+      <Panel position="bottom-right" className="flex items-center rounded-lg border bg-background">
         <Button
           className="size-9 rounded-r-none"
           variant="ghost"

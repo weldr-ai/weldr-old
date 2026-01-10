@@ -25,8 +25,11 @@ jobs:
         shell: bash
         run: cp .env.example .env
 
-      - name: Format and Lint
-        run: bun check
+      - name: Lint
+        run: bun run lint
+
+      - name: Format check
+        run: bun run format:check
 
   typecheck:
     runs-on: ubuntu-latest

@@ -130,4 +130,3 @@ The web app is part of the larger Weldr platform:
 - **Auth Package**: Shared authentication client and server
 - **UI Package**: Shared component library and design system
 - **Shared Package**: Common utilities and types
-

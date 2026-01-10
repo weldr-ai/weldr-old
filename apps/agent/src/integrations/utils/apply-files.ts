@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import Handlebars from "handlebars";
 
 import { Logger } from "@weldr/shared/logger";
@@ -34,9 +35,7 @@ export async function applyFiles({
 
   const logger = Logger.get({ projectId: integration.projectId });
 
-  logger.info(
-    `Generated ${files.length} files for integration ${integration.key}`,
-  );
+  logger.info(`Generated ${files.length} files for integration ${integration.key}`);
 
   for (const file of files) {
     logger.info(`Processing file: ${file.sourcePath} -> ${file.targetPath}`);
@@ -46,9 +45,7 @@ export async function applyFiles({
     try {
       await fs.mkdir(fullTargetDir, { recursive: true });
     } catch (error) {
-      throw new Error(
-        `Failed to create directories for ${file.targetPath}: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      throw new Error("Failed to create directories for ${file.targetPath}", { cause: error });
     }
 
     try {
@@ -67,9 +64,7 @@ export async function applyFiles({
               await fs.writeFile(fullTargetPath, file.content, "utf-8");
             }
           } catch (error) {
-            throw new Error(
-              `Failed to write content to ${file.targetPath}: ${error instanceof Error ? error.message : String(error)}`,
-            );
+            throw new Error("Failed to write content", { cause: error });
           }
 
           break;
@@ -85,10 +80,10 @@ export async function applyFiles({
           try {
             originalContent = await fs.readFile(fullTargetPath, "utf-8");
           } catch (error) {
-            logger.error(`Failed to read target file ${file.targetPath}`);
-            throw new Error(
-              `Failed to read target file ${file.targetPath}: ${error instanceof Error ? error.message : String(error)}`,
-            );
+            logger.error("Failed to read target file", {
+              extra: { targetPath: file.targetPath },
+            });
+            throw new Error("Failed to read target file", { cause: error });
           }
 
           const updatedContent = await applyEdit({
@@ -99,9 +94,7 @@ export async function applyFiles({
           try {
             await fs.writeFile(fullTargetPath, updatedContent, "utf-8");
           } catch (error) {
-            throw new Error(
-              `Failed to write updated content to ${file.targetPath}: ${error instanceof Error ? error.message : String(error)}`,
-            );
+            throw new Error("Failed to write updated content", { cause: error });
           }
 
           break;
@@ -115,23 +108,20 @@ export async function applyFiles({
 
           const template = Handlebars.compile(file.template);
 
-          const integrationVariables =
-            integration.environmentVariableMappings.reduce(
-              (acc, mapping) => {
-                acc[mapping.mapTo] = mapping.environmentVariable.key;
-                return acc;
-              },
-              {} as Record<string, string>,
-            );
+          const integrationVariables = integration.environmentVariableMappings.reduce(
+            (acc, mapping) => {
+              acc[mapping.mapTo] = mapping.environmentVariable.key;
+              return acc;
+            },
+            {} as Record<string, string>,
+          );
 
           const compiledContent = template(integrationVariables);
 
           try {
             await fs.writeFile(fullTargetPath, compiledContent, "utf-8");
           } catch (error) {
-            throw new Error(
-              `Failed to write processed handlebars content to ${file.targetPath}: ${error instanceof Error ? error.message : String(error)}`,
-            );
+            throw new Error("Failed to write processed handlebars content", { cause: error });
           }
 
           break;
@@ -162,11 +152,8 @@ async function generateFiles({
   const hasAnyIntegration = project.integrationCategories.size > 0;
 
   // Consider both what's installed AND the current integration's category
-  const hasFrontend =
-    project.integrationCategories.has("frontend") ||
-    category.key === "frontend";
-  const hasBackend =
-    project.integrationCategories.has("backend") || category.key === "backend";
+  const hasFrontend = project.integrationCategories.has("frontend") || category.key === "frontend";
+  const hasBackend = project.integrationCategories.has("backend") || category.key === "backend";
 
   const logger = Logger.get({ projectId: integration.projectId });
 
@@ -212,17 +199,9 @@ async function generateFiles({
 
   if (hasBackend || !hasAnyIntegration) {
     const serverPath = path.join(baseDataDir, "server");
-    logger.info(
-      `Processing server files from ${serverPath} for ${integration.key}`,
-    );
-    const serverFiles = await processDirectoryFiles(
-      serverPath,
-      "server",
-      branchDir,
-    );
-    logger.info(
-      `Found ${serverFiles.length} server files for ${integration.key}`,
-    );
+    logger.info(`Processing server files from ${serverPath} for ${integration.key}`);
+    const serverFiles = await processDirectoryFiles(serverPath, "server", branchDir);
+    logger.info(`Found ${serverFiles.length} server files for ${integration.key}`);
     files.push(...serverFiles);
   }
 
@@ -276,10 +255,7 @@ async function processDirectoryFiles(
   return files;
 }
 
-async function processFile(
-  filePath: string,
-  targetPath: string,
-): Promise<FileItem[]> {
+async function processFile(filePath: string, targetPath: string): Promise<FileItem[]> {
   const files: FileItem[] = [];
 
   let type: FileItem["type"];
@@ -297,10 +273,10 @@ async function processFile(
   try {
     fileContent = await fs.readFile(filePath, "utf-8");
   } catch (error) {
-    Logger.error(`Failed to read file ${filePath}`);
-    throw new Error(
-      `Failed to read file ${filePath}: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    Logger.error("Failed to read file", {
+      extra: { filePath },
+    });
+    throw new Error("Failed to read file", { cause: error });
   }
 
   const targetPathWithoutExtension = targetPath.replace(/\.(txt|hbs)$/, "");
@@ -337,13 +313,7 @@ async function processBaseFiles(workspaceDir: string): Promise<FileItem[]> {
 
   const files: FileItem[] = [];
 
-  const baseFiles = [
-    ".gitignore",
-    ".npmrc",
-    "biome.json",
-    "package.json",
-    "turbo.json",
-  ];
+  const baseFiles = [".gitignore", ".npmrc", "biome.json", "package.json", "turbo.json"];
 
   for (const fileName of baseFiles) {
     const sourcePath = path.join(baseDir, fileName);

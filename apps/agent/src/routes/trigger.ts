@@ -24,12 +24,8 @@ const route = createRoute({
       content: {
         "application/json": {
           schema: z.object({
-            projectId: z
-              .string()
-              .openapi({ description: "Project ID", example: "123abc" }),
-            branchId: z
-              .string()
-              .openapi({ description: "Version ID", example: "123abc" }),
+            projectId: z.string().openapi({ description: "Project ID", example: "123abc" }),
+            branchId: z.string().openapi({ description: "Version ID", example: "123abc" }),
             message: z
               .object({
                 content: z.custom<Exclude<UserContent, string>>().openapi({
@@ -89,10 +85,7 @@ router.openapi(route, async (c) => {
   }
 
   const project = await db.query.projects.findFirst({
-    where: and(
-      eq(projects.id, projectId),
-      eq(projects.userId, session.user.id),
-    ),
+    where: and(eq(projects.id, projectId), eq(projects.userId, session.user.id)),
     with: {
       integrations: {
         with: {
@@ -123,8 +116,7 @@ router.openapi(route, async (c) => {
     return c.json({ error: "Branch not found" }, 404);
   }
 
-  let activeVersion =
-    branch.headVersion?.status !== "completed" ? branch.headVersion : null;
+  let activeVersion = branch.headVersion?.status !== "completed" ? branch.headVersion : null;
 
   const branchDir = getBranchDir(projectId, branchId);
 
@@ -165,10 +157,7 @@ router.openapi(route, async (c) => {
   workflowContext.set("branch", { ...branch, headVersion: activeVersion });
   workflowContext.set("user", session.user);
 
-  if (
-    activeVersion.status !== "completed" &&
-    activeVersion.status !== "failed"
-  ) {
+  if (activeVersion.status !== "completed" && activeVersion.status !== "failed") {
     await workflow.execute({
       context: workflowContext,
     });

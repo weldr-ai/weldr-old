@@ -9,24 +9,14 @@ import type { endpointDeclarationSpecsSchema } from "../validators/declarations/
 import type { pageDeclarationSpecsSchema } from "../validators/declarations/page";
 import type { declarationSpecsV1Schema } from "../validators/declarations/v1";
 
-export type DeclarationProgress =
-  | "pending"
-  | "in_progress"
-  | "enriching"
-  | "completed";
+export type DeclarationProgress = "pending" | "in_progress" | "enriching" | "completed";
 export type DeclarationSpecs = z.infer<typeof declarationSpecsSchema>;
 export type DeclarationSpecsV1 = z.infer<typeof declarationSpecsV1Schema>;
-export type EndpointDeclarationSpecs = z.infer<
-  typeof endpointDeclarationSpecsSchema
->;
-export type DbModelDeclarationSpecs = z.infer<
-  typeof dbModelDeclarationSpecsSchema
->;
+export type EndpointDeclarationSpecs = z.infer<typeof endpointDeclarationSpecsSchema>;
+export type DbModelDeclarationSpecs = z.infer<typeof dbModelDeclarationSpecsSchema>;
 export type PageDeclarationSpecs = z.infer<typeof pageDeclarationSpecsSchema>;
 
-export type DeclarationSemanticData = z.infer<
-  typeof declarationSemanticDataSchema
->;
+export type DeclarationSemanticData = z.infer<typeof declarationSemanticDataSchema>;
 
 export interface DeclarationPosition {
   start: { line: number; column: number };
@@ -49,8 +39,10 @@ export interface InternalDependency {
 export type Dependency = ExternalDependency | InternalDependency;
 
 // Base interface for class members - extends declaration metadata with class-specific modifiers
-interface BaseClassMemberMetadata
-  extends Omit<BaseDeclarationCodeMetadata, "isExported" | "isDefault"> {
+interface BaseClassMemberMetadata extends Omit<
+  BaseDeclarationCodeMetadata,
+  "isExported" | "isDefault"
+> {
   // Access modifiers specific to class members
   isStatic: boolean;
   isPrivate: boolean;
@@ -101,8 +93,7 @@ interface BaseDeclarationCodeMetadata {
 }
 
 // Function declaration
-export interface FunctionDeclarationCodeMetadata
-  extends BaseDeclarationCodeMetadata {
+export interface FunctionDeclarationCodeMetadata extends BaseDeclarationCodeMetadata {
   type: "function";
   isAsync?: boolean;
   isGenerator?: boolean;
@@ -142,8 +133,7 @@ export interface SetterMemberMetadata extends BaseClassMemberMetadata {
 }
 
 // Class declaration
-export interface ClassDeclarationCodeMetadata
-  extends BaseDeclarationCodeMetadata {
+export interface ClassDeclarationCodeMetadata extends BaseDeclarationCodeMetadata {
   type: "class";
   extends?: string;
   implements?: string[];
@@ -155,40 +145,34 @@ export interface ClassDeclarationCodeMetadata
 }
 
 // Interface declaration
-export interface InterfaceDeclarationCodeMetadata
-  extends BaseDeclarationCodeMetadata {
+export interface InterfaceDeclarationCodeMetadata extends BaseDeclarationCodeMetadata {
   type: "interface";
   extends?: string[];
 }
 
 // Type declaration
-export interface TypeDeclarationCodeMetadata
-  extends BaseDeclarationCodeMetadata {
+export interface TypeDeclarationCodeMetadata extends BaseDeclarationCodeMetadata {
   type: "type";
 }
 
 // Variable declarations (const, let, var)
-export interface VariableDeclarationCodeMetadata
-  extends BaseDeclarationCodeMetadata {
+export interface VariableDeclarationCodeMetadata extends BaseDeclarationCodeMetadata {
   type: "const" | "let" | "var";
 }
 
 // Enum declaration
-export interface EnumDeclarationCodeMetadata
-  extends BaseDeclarationCodeMetadata {
+export interface EnumDeclarationCodeMetadata extends BaseDeclarationCodeMetadata {
   type: "enum";
   enumMembers: EnumMemberMetadata[];
 }
 
 // Namespace declaration
-export interface NamespaceDeclarationCodeMetadata
-  extends BaseDeclarationCodeMetadata {
+export interface NamespaceDeclarationCodeMetadata extends BaseDeclarationCodeMetadata {
   type: "namespace";
 }
 
 // Re-export declaration
-export interface ReExportDeclarationCodeMetadata
-  extends BaseDeclarationCodeMetadata {
+export interface ReExportDeclarationCodeMetadata extends BaseDeclarationCodeMetadata {
   type:
     | "function"
     | "class"

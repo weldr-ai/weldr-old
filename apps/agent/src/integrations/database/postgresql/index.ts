@@ -1,7 +1,4 @@
-import type {
-  IntegrationPackageSets,
-  IntegrationScriptSets,
-} from "@/integrations/types";
+import type { IntegrationPackageSets, IntegrationScriptSets } from "@/integrations/types";
 import { defineIntegration } from "@/integrations/utils/define-integration";
 
 export const postgresqlIntegration = defineIntegration<"postgresql">({

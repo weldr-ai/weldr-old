@@ -3,21 +3,11 @@ import type { AssistantContent } from "ai";
 import fastDeepEqual from "fast-deep-equal";
 import { CheckIcon, LoaderIcon, PenIcon } from "lucide-react";
 import { useParams } from "next/navigation";
-import {
-  type Dispatch,
-  memo,
-  type SetStateAction,
-  useCallback,
-  useState,
-} from "react";
+import { type Dispatch, memo, type SetStateAction, useCallback, useState } from "react";
 
 import type { RouterOutputs } from "@weldr/api";
 import { nanoid } from "@weldr/shared/nanoid";
-import type {
-  ChatMessage,
-  IntegrationCategoryKey,
-  TStatus,
-} from "@weldr/shared/types";
+import type { ChatMessage, IntegrationCategoryKey, TStatus } from "@weldr/shared/types";
 import { Button } from "@weldr/ui/components/button";
 import { toast } from "@weldr/ui/hooks/use-toast";
 
@@ -54,8 +44,7 @@ const PureConfigureIntegrationsPrompt = ({
     (part) =>
       part.type === "tool-call" &&
       part.toolName === "add_integrations" &&
-      (part.input as { status: "awaiting_config" }).status ===
-        "awaiting_config",
+      (part.input as { status: "awaiting_config" }).status === "awaiting_config",
   ) as IntegrationToolCall;
 
   const requiredCategories = integrationToolCall.input.categories;
@@ -65,24 +54,16 @@ const PureConfigureIntegrationsPrompt = ({
   >(
     integrationTemplates.reduce(
       (acc, template) => {
-        if (
-          template.isRecommended &&
-          requiredCategories.includes(template.category.key)
-        ) {
+        if (template.isRecommended && requiredCategories.includes(template.category.key)) {
           acc[template.category.key] = template;
         }
         return acc;
       },
-      {} as Record<
-        string,
-        RouterOutputs["integrationTemplates"]["list"][0] | null
-      >,
+      {} as Record<string, RouterOutputs["integrationTemplates"]["list"][0] | null>,
     ),
   );
 
-  const [categoryChange, setCategoryChange] = useState<
-    IntegrationCategoryKey[]
-  >([]);
+  const [categoryChange, setCategoryChange] = useState<IntegrationCategoryKey[]>([]);
 
   const [configuredIntegrations, setConfiguredIntegrations] = useState<
     Record<
@@ -98,8 +79,7 @@ const PureConfigureIntegrationsPrompt = ({
 
   const filteredIntegrationTemplates = integrationTemplates.filter(
     (template) =>
-      requiredCategories.length === 0 ||
-      requiredCategories.includes(template.category.key),
+      requiredCategories.length === 0 || requiredCategories.includes(template.category.key),
   );
 
   const groupedTemplates = filteredIntegrationTemplates.reduce(
@@ -148,8 +128,7 @@ const PureConfigureIntegrationsPrompt = ({
     }
 
     const variables = integration.variables || [];
-    const needsConfig =
-      variables.length > 0 && variables.some((v) => v.source === "user");
+    const needsConfig = variables.length > 0 && variables.some((v) => v.source === "user");
 
     if (!needsConfig) {
       setConfiguredIntegrations((prev) => ({
@@ -171,12 +150,9 @@ const PureConfigureIntegrationsPrompt = ({
   ) => {
     setConfiguredIntegrations((prev) => {
       const existingIntegration = prev[templateId] || {
-        // biome-ignore lint/style/noNonNullAssertion: reason
-        template: filteredIntegrationTemplates.find(
-          (t) => t.id === templateId,
-        )!,
-        name: filteredIntegrationTemplates.find((t) => t.id === templateId)
-          ?.name,
+        // oxlint-disable-next-line no-non-null-assertion
+        template: filteredIntegrationTemplates.find((t) => t.id === templateId)!,
+        name: filteredIntegrationTemplates.find((t) => t.id === templateId)?.name,
         environmentVariableMappings: {},
         isConfigured: false,
       };
@@ -218,9 +194,7 @@ const PureConfigureIntegrationsPrompt = ({
       const configuredIntegration = configuredIntegrations[integration.id];
       const mappings = configuredIntegration?.environmentVariableMappings || {};
 
-      return variables
-        .filter((v) => v.source === "user")
-        .every((v) => mappings[v.name]);
+      return variables.filter((v) => v.source === "user").every((v) => mappings[v.name]);
     },
     [selectedIntegrations, configuredIntegrations],
   );
@@ -306,9 +280,7 @@ const PureConfigureIntegrationsPrompt = ({
       });
 
     const messageContentWithoutToolCall = messageContent.filter(
-      (part) =>
-        part.type !== "tool-call" ||
-        part.toolCallId !== integrationToolCall.toolCallId,
+      (part) => part.type !== "tool-call" || part.toolCallId !== integrationToolCall.toolCallId,
     );
 
     updateMessageMutation.mutate({
@@ -430,9 +402,7 @@ const PureConfigureIntegrationsPrompt = ({
                 {categoryChange.includes(category.key) && (
                   <IntegrationsCombobox
                     integrations={templates}
-                    selectedIntegration={
-                      selectedIntegrations[categoryKey] || null
-                    }
+                    selectedIntegration={selectedIntegrations[categoryKey] || null}
                     onSelectIntegration={(integration) =>
                       handleSelectIntegration(categoryKey, integration)
                     }
@@ -465,23 +435,15 @@ const PureConfigureIntegrationsPrompt = ({
                             handleConfigurationCancel(integration.id);
                           }
                         }}
-                        onEnvironmentVariableMapping={(
-                          configKey: string,
-                          envVarId: string,
-                        ) => {
+                        onEnvironmentVariableMapping={(configKey: string, envVarId: string) => {
                           const integration = selectedIntegrations[categoryKey];
                           if (integration) {
-                            handleEnvironmentVariableMapping(
-                              integration.id,
-                              configKey,
-                              envVarId,
-                            );
+                            handleEnvironmentVariableMapping(integration.id, configKey, envVarId);
                           }
                         }}
                         environmentVariableMappings={
-                          configuredIntegrations[
-                            selectedIntegrations[categoryKey]?.id || ""
-                          ]?.environmentVariableMappings || {}
+                          configuredIntegrations[selectedIntegrations[categoryKey]?.id || ""]
+                            ?.environmentVariableMappings || {}
                         }
                       />
                     );
@@ -524,12 +486,9 @@ const PureConfigureIntegrationsPrompt = ({
             onClick={handleFinalConfirm}
             disabled={
               Object.values(selectedIntegrations).some(
-                (integration) =>
-                  integration && !isConfigured(integration.category.key),
+                (integration) => integration && !isConfigured(integration.category.key),
               ) ||
-              Object.values(selectedIntegrations).every(
-                (integration) => !integration,
-              ) ||
+              Object.values(selectedIntegrations).every((integration) => !integration) ||
               createBatchIntegrationsMutation.isPending ||
               categoryChange.length !== 0
             }
@@ -550,10 +509,7 @@ export const ConfigureIntegrationsPrompt = memo(
   (prevProps, nextProps) => {
     if (
       !fastDeepEqual(prevProps.message, nextProps.message) ||
-      !fastDeepEqual(
-        prevProps.environmentVariables,
-        nextProps.environmentVariables,
-      )
+      !fastDeepEqual(prevProps.environmentVariables, nextProps.environmentVariables)
     ) {
       return false;
     }

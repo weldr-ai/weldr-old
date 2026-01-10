@@ -323,7 +323,7 @@ CREATE TABLE "versions" (
 	"chat_id" text NOT NULL,
 	"branch_id" text NOT NULL,
 	"parent_version_id" text,
-	"bucket_snapshot_version" text,
+	"snapshot_path" text,
 	"kind" text DEFAULT 'checkpoint' NOT NULL,
 	"commit_hash" text,
 	"number" integer NOT NULL,

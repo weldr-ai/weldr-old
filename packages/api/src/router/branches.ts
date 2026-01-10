@@ -1,15 +1,10 @@
 import { TRPCError } from "@trpc/server";
-import z from "zod";
+import { z } from "zod";
 
 import { and, desc, eq, type SQL } from "@weldr/db";
 import { branches, versions } from "@weldr/db/schema";
 import { nanoid } from "@weldr/shared/nanoid";
-import { Tigris } from "@weldr/shared/tigris";
-import type {
-  AssistantMessage,
-  ChatMessage,
-  ToolMessage,
-} from "@weldr/shared/types";
+import type { AssistantMessage, ChatMessage, ToolMessage } from "@weldr/shared/types";
 
 import { protectedProcedure } from "../init";
 
@@ -49,33 +44,16 @@ export const branchRouter = {
         });
       }
 
-      // Check if running in local mode
-      const isLocalMode =
-        process.env.WELDR_MODE?.toLowerCase() === "local" ||
-        (process.env.WELDR_MODE === undefined &&
-          process.env.NODE_ENV === "development");
-
-      // In local mode, only require commit hash (not bucket snapshot)
-      // In cloud mode, require both bucket snapshot and commit hash
-      if (!isLocalMode && !forkedVersion.bucketSnapshotVersion) {
+      // Require snapshotPath for forking (same for both local and cloud modes)
+      if (!forkedVersion.snapshotPath) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Source version does not have a snapshot",
         });
       }
 
-      if (!forkedVersion.commitHash) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Source version does not have a commit hash",
-        });
-      }
-
       const existingBranch = await ctx.db.query.branches.findFirst({
-        where: and(
-          eq(branches.projectId, input.projectId),
-          eq(branches.name, input.name),
-        ),
+        where: and(eq(branches.projectId, input.projectId), eq(branches.name, input.name)),
       });
 
       if (existingBranch) {
@@ -99,37 +77,8 @@ export const branchRouter = {
 
       const branchId = nanoid();
 
-      // In local mode, skip Tigris bucket fork
-      // In cloud mode, create bucket fork
-      if (!isLocalMode) {
-        if (!forkedVersion.bucketSnapshotVersion) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Source version does not have a snapshot",
-          });
-        }
-
-        const sourceBucket = `project-${input.projectId}-branch-${forkedVersion.branchId}`;
-        const forkBucket = `project-${input.projectId}-branch-${branchId}`;
-
-        try {
-          await Tigris.bucket.fork(
-            sourceBucket,
-            forkBucket,
-            forkedVersion.bucketSnapshotVersion,
-          );
-        } catch (error) {
-          try {
-            await Tigris.bucket.delete(forkBucket);
-          } catch (cleanupError) {
-            console.error(
-              "Failed to cleanup bucket after branch creation error:",
-              cleanupError,
-            );
-          }
-          throw error;
-        }
-      }
+      // Branch creation no longer needs to fork Tigris buckets
+      // The agent will handle snapshot restoration when the branch is first accessed
 
       const [branch] = await ctx.db
         .insert(branches)
@@ -139,8 +88,7 @@ export const branchRouter = {
           description: input.description,
           projectId: input.projectId,
           type: input.type,
-          parentBranchId:
-            input.type === "stream" ? forkedVersion.branchId : null,
+          parentBranchId: input.type === "stream" ? forkedVersion.branchId : null,
           forkedFromVersionId: input.forkedFromVersionId,
           forksetId,
           userId: ctx.session.user.id,
@@ -240,47 +188,31 @@ export const branchRouter = {
           message: "Branch not found",
         });
       }
-      const getMessagesWithAttachments = async (
-        version: typeof branch.headVersion,
-      ) => {
+      const getMessagesWithAttachments = async (version: typeof branch.headVersion) => {
         const results = [];
 
         for (const message of version.chat.messages) {
           // Filter assistant messages for call_coder tool calls
-          let content = message.content as
-            | ToolMessage["content"]
-            | AssistantMessage["content"];
+          let content = message.content as ToolMessage["content"] | AssistantMessage["content"];
 
           // Skip tool messages with call_coder results
           if (message.role === "tool" && Array.isArray(message.content)) {
             content = content.filter(
-              (item) =>
-                !(
-                  item?.type === "tool-result" &&
-                  item?.toolName === "call_coder"
-                ),
+              (item) => !(item?.type === "tool-result" && item?.toolName === "call_coder"),
             );
           } else if (message.role === "assistant") {
             content = content.filter(
-              (item) =>
-                !(
-                  item?.type === "tool-call" && item?.toolName === "call_coder"
-                ),
+              (item) => !(item?.type === "tool-call" && item?.toolName === "call_coder"),
             );
           }
 
           if (content.length === 0) continue;
 
-          const attachmentsWithUrls = await Promise.all(
-            message.attachments.map(async (attachment) => ({
-              name: attachment.name,
-              url: await Tigris.object.getSignedUrl(
-                // biome-ignore lint/style/noNonNullAssertion: reason
-                process.env.GENERAL_BUCKET!,
-                attachment.key,
-              ),
-            })),
-          );
+          // Return attachment URL path - client can handle URL generation
+          const attachmentsWithUrls = message.attachments.map((attachment) => ({
+            name: attachment.name,
+            url: `/api/attachments/${attachment.key}`,
+          }));
 
           results.push({
             ...message,
@@ -301,10 +233,7 @@ export const branchRouter = {
 
       while (currentBranchId) {
         const parentBranch = await ctx.db.query.branches.findFirst({
-          where: and(
-            eq(branches.id, currentBranchId),
-            eq(branches.userId, ctx.session.user.id),
-          ),
+          where: and(eq(branches.id, currentBranchId), eq(branches.userId, ctx.session.user.id)),
           columns: {
             id: true,
             name: true,
@@ -353,10 +282,7 @@ export const branchRouter = {
       } | null = null;
       if (branch.parentBranchId) {
         const integration = await ctx.db.query.versions.findFirst({
-          where: and(
-            eq(versions.appliedFromBranchId, branch.id),
-            eq(versions.kind, "integration"),
-          ),
+          where: and(eq(versions.appliedFromBranchId, branch.id), eq(versions.kind, "integration")),
           columns: {
             number: true,
             branchId: true,
@@ -430,8 +356,7 @@ export const branchRouter = {
 
       for (const b of allBranchesInProject) {
         if (b.forkedFromVersionId && versionIds.has(b.forkedFromVersionId)) {
-          const existing =
-            versionToBranchesMap.get(b.forkedFromVersionId) || [];
+          const existing = versionToBranchesMap.get(b.forkedFromVersionId) || [];
           existing.push({
             id: b.id,
             name: b.name,
@@ -507,9 +432,7 @@ export const branchRouter = {
             ...version,
             chat: {
               ...version.chat,
-              messages: (await getMessagesWithAttachments(
-                version,
-              )) as ChatMessage[],
+              messages: (await getMessagesWithAttachments(version)) as ChatMessage[],
             },
           };
         }
@@ -521,9 +444,7 @@ export const branchRouter = {
           ...branch.headVersion,
           chat: {
             ...branch.headVersion.chat,
-            messages: (await getMessagesWithAttachments(
-              branch.headVersion,
-            )) as ChatMessage[],
+            messages: (await getMessagesWithAttachments(branch.headVersion)) as ChatMessage[],
           },
         },
         selectedVersion,

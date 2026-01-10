@@ -7,22 +7,20 @@ import { nodes } from "@weldr/db/schema";
 import { protectedProcedure } from "../init";
 
 export const nodesRouter = {
-  byId: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .query(async ({ ctx, input }) => {
-      const canvasNode = await ctx.db.query.nodes.findFirst({
-        where: eq(nodes.id, input.id),
+  byId: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+    const canvasNode = await ctx.db.query.nodes.findFirst({
+      where: eq(nodes.id, input.id),
+    });
+
+    if (!canvasNode) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Canvas node not found",
       });
+    }
 
-      if (!canvasNode) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Canvas node not found",
-        });
-      }
-
-      return canvasNode;
-    }),
+    return canvasNode;
+  }),
   update: protectedProcedure
     .input(
       z.object({

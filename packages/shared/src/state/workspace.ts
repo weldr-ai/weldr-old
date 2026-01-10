@@ -23,17 +23,18 @@ export function isCloudMode(): boolean {
   return !isLocalMode();
 }
 
-// Determine workspace base based on deployment mode
-// Local: use ~/.weldr directory for shared access between agent and web app
-// Cloud: use Docker volume mount at /workspace
-export const WORKSPACE_BASE = isLocalMode()
-  ? path.join(homedir(), ".weldr")
-  : "/workspace";
+/**
+ * Workspace base directory
+ * Local: ~/.weldr
+ * Cloud: /workspace
+ */
+export const WORKSPACE_BASE = isLocalMode() ? path.join(homedir(), ".weldr") : "/workspace";
 
 export const WORKSPACE_DIR = WORKSPACE_BASE;
 
 /**
- * Get the project directory path (local mode only)
+ * Get the project directory path
+ * Same structure in both local and cloud modes
  */
 export function getProjectDir(projectId: string): string {
   return path.join(WORKSPACE_BASE, projectId);
@@ -41,48 +42,33 @@ export function getProjectDir(projectId: string): string {
 
 /**
  * Get the branch directory path
- * Local mode: ~/.weldr/{projectId}/{branchId}
- * Cloud mode: /workspace/{branchId}
+ * Unified structure: {WORKSPACE_BASE}/{projectId}/{branchId}
  */
 export function getBranchDir(projectId: string, branchId: string): string {
-  if (isLocalMode()) {
-    return path.join(WORKSPACE_BASE, projectId, branchId);
-  }
-  // Cloud mode: flat structure with just branchId (one project per machine)
-  return path.join(WORKSPACE_BASE, branchId);
+  return path.join(WORKSPACE_BASE, projectId, branchId);
 }
 
 /**
  * Get the main git repository path from project ID and main branch ID
- * Local mode: ~/.weldr/{projectId}/{mainBranchId}
- * Cloud mode: /workspace/{mainBranchId}
+ * Unified structure: {WORKSPACE_BASE}/{projectId}/{mainBranchId}
  */
-export function getMainRepoPath(
-  projectId: string,
-  mainBranchId: string,
-): string {
-  if (isLocalMode()) {
-    return path.join(WORKSPACE_BASE, projectId, mainBranchId);
-  }
-  // Cloud mode: flat structure with just branchId (one project per machine)
-  return path.join(WORKSPACE_BASE, mainBranchId);
+export function getMainRepoPath(projectId: string, mainBranchId: string): string {
+  return path.join(WORKSPACE_BASE, projectId, mainBranchId);
 }
 
 /**
  * Initialize workspace directory
- * Creates the ~/.weldr directory in local mode if it doesn't exist
+ * Creates the workspace directory if it doesn't exist
  */
 export async function initializeWorkspace(): Promise<void> {
-  if (isLocalMode()) {
-    const fs = await import("node:fs/promises");
-    try {
-      await fs.mkdir(WORKSPACE_BASE, { recursive: true });
-      console.log(`📁 Workspace initialized at: ${WORKSPACE_BASE}`);
-    } catch (error) {
-      // Ignore if directory already exists
-      if ((error as { code?: string }).code !== "EEXIST") {
-        throw error;
-      }
+  const fs = await import("node:fs/promises");
+  try {
+    await fs.mkdir(WORKSPACE_BASE, { recursive: true });
+    console.log(`📁 Workspace initialized at: ${WORKSPACE_BASE}`);
+  } catch (error) {
+    // Ignore if directory already exists
+    if ((error as { code?: string }).code !== "EEXIST") {
+      throw error;
     }
   }
 }

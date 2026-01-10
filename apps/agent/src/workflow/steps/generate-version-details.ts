@@ -20,9 +20,7 @@ export const generateVersionDetailsStep = createStep({
 
     // Only run if version message or description is missing
     if (branch.headVersion.message && branch.headVersion.description) {
-      logger.info(
-        "Version already has message and description, skipping generation",
-      );
+      logger.info("Version already has message and description, skipping generation");
       return;
     }
 

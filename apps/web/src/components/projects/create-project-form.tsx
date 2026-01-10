@@ -106,12 +106,8 @@ export function CreateProjectForm({ session }: { session: Session | null }) {
     <>
       <div className="flex size-full flex-col items-center justify-center gap-10">
         <div className="flex flex-col items-center gap-2">
-          <div className="font-semibold text-3xl">
-            What can I build for you today?
-          </div>
-          <p className="text-muted-foreground">
-            Turn your ideas into reality with Weldr.
-          </p>
+          <div className="font-semibold text-3xl">What can I build for you today?</div>
+          <p className="text-muted-foreground">Turn your ideas into reality with Weldr.</p>
         </div>
         <div className="relative w-full max-w-3xl">
           <MultimodalInput
@@ -149,9 +145,7 @@ export function CreateProjectForm({ session }: { session: Session | null }) {
         >
           <div className="flex flex-col items-center justify-center gap-6">
             <DialogHeader className="flex flex-col items-center justify-center gap-1">
-              <DialogTitle className="font-medium text-lg">
-                Initializing your project
-              </DialogTitle>
+              <DialogTitle className="font-medium text-lg">Initializing your project</DialogTitle>
               <DialogDescription className="text-muted-foreground text-xs">
                 This will only take a moment
               </DialogDescription>

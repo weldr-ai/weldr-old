@@ -120,14 +120,10 @@ export function useEventStream({
               const lastMessage = prevMessages[prevMessages.length - 1];
 
               // Only append to the last message if it's an assistant message with the same ID
-              if (
-                lastMessage?.role === "assistant" &&
-                lastMessage.id === chunk.id
-              ) {
+              if (lastMessage?.role === "assistant" && lastMessage.id === chunk.id) {
                 const messagesWithoutLast = prevMessages.slice(0, -1);
                 const updatedContent = [...lastMessage.content];
-                const lastContentItem =
-                  updatedContent[updatedContent.length - 1];
+                const lastContentItem = updatedContent[updatedContent.length - 1];
 
                 if (lastContentItem && lastContentItem.type === "text") {
                   updatedContent[updatedContent.length - 1] = {
@@ -183,8 +179,7 @@ export function useEventStream({
                     content: [
                       ...(lastMessage.content.filter(
                         (content) =>
-                          content.type !== "tool-call" ||
-                          content.toolCallId !== chunk.toolCallId,
+                          content.type !== "tool-call" || content.toolCallId !== chunk.toolCallId,
                       ) as AssistantMessage["content"]),
                       {
                         type: "tool-call",
@@ -222,8 +217,7 @@ export function useEventStream({
               if (lastMessage?.role === "tool") {
                 const integrationToolResult = chunk.message.content.find(
                   (content) =>
-                    content.type === "tool-result" &&
-                    content.toolName === "add_integrations",
+                    content.type === "tool-result" && content.toolName === "add_integrations",
                 );
                 if (integrationToolResult) {
                   const chatWithLastMessage = prevMessages.slice(0, -1);
@@ -236,17 +230,14 @@ export function useEventStream({
           }
           case "update_project": {
             // Update the project data in the query cache
-            queryClient.setQueryData(
-              trpc.projects.byId.queryKey({ id: projectId }),
-              (old) => {
-                if (!old) return old;
-                return {
-                  ...old,
-                  title: chunk.data.title,
-                  description: chunk.data.description,
-                };
-              },
-            );
+            queryClient.setQueryData(trpc.projects.byId.queryKey({ id: projectId }), (old) => {
+              if (!old) return old;
+              return {
+                ...old,
+                title: chunk.data.title,
+                description: chunk.data.description,
+              };
+            });
 
             // Invalidate the query to ensure the data is fresh
             queryClient.invalidateQueries({
@@ -274,8 +265,7 @@ export function useEventStream({
                 }
                 // Ensure version message is updated if provided
                 if (chunk.data.headVersion?.message !== undefined) {
-                  updatedBranch.headVersion.message =
-                    chunk.data.headVersion.message;
+                  updatedBranch.headVersion.message = chunk.data.headVersion.message;
                 }
                 return updatedBranch;
               },
@@ -289,8 +279,7 @@ export function useEventStream({
             });
 
             // Use the status from the updated branch data if available
-            const updatedStatus =
-              chunk.data.headVersion?.status ?? branch.headVersion.status;
+            const updatedStatus = chunk.data.headVersion?.status ?? branch.headVersion.status;
 
             switch (updatedStatus) {
               case "planning":
@@ -324,9 +313,7 @@ export function useEventStream({
               });
             } else {
               if (!chunk.metadata) {
-                throw new Error(
-                  `[chat:${projectId}] No specs found for node ${chunk.nodeId}`,
-                );
+                throw new Error(`[chat:${projectId}] No specs found for node ${chunk.nodeId}`);
               }
 
               const newNode = {
@@ -342,10 +329,7 @@ export function useEventStream({
                 },
               } satisfies CanvasNode;
 
-              setNodes((prevNodes: CanvasNode[]) => [
-                ...prevNodes,
-                newNode as CanvasNode,
-              ]);
+              setNodes((prevNodes: CanvasNode[]) => [...prevNodes, newNode as CanvasNode]);
             }
             break;
           }

@@ -1,11 +1,9 @@
 import type { TextPart } from "ai";
-import type z from "zod";
+import type { z } from "zod";
 
 import type { referencePartSchema } from "./validators/chats";
 
-export function processText(
-  content: string,
-): (z.infer<typeof referencePartSchema> | TextPart)[] {
+export function processText(content: string): (z.infer<typeof referencePartSchema> | TextPart)[] {
   const parts: (z.infer<typeof referencePartSchema> | TextPart)[] = [];
   let lastIndex = 0;
 
@@ -13,7 +11,6 @@ export function processText(
   const referenceRegex = /<Reference\s+([^>]+?)\s*\/>/g;
   let match: RegExpExecArray | null;
 
-  // biome-ignore lint/suspicious/noAssignInExpressions: regex pattern matching
   while ((match = referenceRegex.exec(content)) !== null) {
     // Add any text before the reference as a text part
     if (match.index > lastIndex) {
@@ -27,7 +24,7 @@ export function processText(
     }
 
     // Parse the reference attributes
-    // biome-ignore lint/style/noNonNullAssertion: ignore
+    // oxlint-disable-next-line no-non-null-assertion
     const attributesString = match[1]!;
     const attributes: Record<string, string> = {};
 
@@ -35,9 +32,7 @@ export function processText(
     const attrRegex = /(\w+)=["']([^"']+)["']/g;
     let attrMatch: RegExpExecArray | null;
 
-    // biome-ignore lint/suspicious/noAssignInExpressions: regex pattern matching
     while ((attrMatch = attrRegex.exec(attributesString)) !== null) {
-      // @ts-expect-error attribute name is required
       attributes[attrMatch[1]] = attrMatch[2];
     }
 
@@ -55,11 +50,7 @@ export function processText(
           id: attributes.id,
           name: attributes.name || "",
         } satisfies z.infer<typeof referencePartSchema>);
-      } else if (
-        attributes.type === "endpoint" &&
-        attributes.method &&
-        attributes.path
-      ) {
+      } else if (attributes.type === "endpoint" && attributes.method && attributes.path) {
         parts.push({
           type: "endpoint",
           id: attributes.id,
@@ -106,19 +97,16 @@ export function processText(
   return parts;
 }
 
-export function parseReferences(
-  content: string,
-): z.infer<typeof referencePartSchema>[] {
+export function parseReferences(content: string): z.infer<typeof referencePartSchema>[] {
   const references: z.infer<typeof referencePartSchema>[] = [];
 
   // Regex to match <Reference ... /> tags
   const referenceRegex = /<Reference\s+([^>]+?)\s*\/>/g;
   let match: RegExpExecArray | null;
 
-  // biome-ignore lint/suspicious/noAssignInExpressions: regex pattern matching
   while ((match = referenceRegex.exec(content)) !== null) {
     // Parse the reference attributes
-    // biome-ignore lint/style/noNonNullAssertion: ignore
+    // oxlint-disable-next-line no-non-null-assertion
     const attributesString = match[1]!;
     const attributes: Record<string, string> = {};
 
@@ -126,9 +114,7 @@ export function parseReferences(
     const attrRegex = /(\w+)=["']([^"']+)["']/g;
     let attrMatch: RegExpExecArray | null;
 
-    // biome-ignore lint/suspicious/noAssignInExpressions: regex pattern matching
     while ((attrMatch = attrRegex.exec(attributesString)) !== null) {
-      // @ts-expect-error attribute name is required
       attributes[attrMatch[1]] = attrMatch[2];
     }
 
@@ -146,11 +132,7 @@ export function parseReferences(
           id: attributes.id,
           name: attributes.name || "",
         } satisfies z.infer<typeof referencePartSchema>);
-      } else if (
-        attributes.type === "endpoint" &&
-        attributes.method &&
-        attributes.path
-      ) {
+      } else if (attributes.type === "endpoint" && attributes.method && attributes.path) {
         references.push({
           type: "endpoint",
           id: attributes.id,
@@ -172,12 +154,11 @@ export function preprocessReferences(content: string): string {
 
       // Match attribute="value" or attribute='value' patterns
       const attrRegex = /(\w+)=["']([^"']+)["']/g;
-      // biome-ignore lint/suspicious/noImplicitAnyLet: ignore
+      // oxlint-disable-next-line no-implicit-any
       let attrMatch;
 
       attrMatch = attrRegex.exec(attributesString);
       while (attrMatch !== null) {
-        // @ts-expect-error attribute name is required
         attributes[attrMatch[1]] = attrMatch[2];
         attrMatch = attrRegex.exec(attributesString);
       }

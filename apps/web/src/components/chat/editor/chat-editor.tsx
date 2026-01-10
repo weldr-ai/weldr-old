@@ -1,7 +1,6 @@
 "use client";
 
-import type { InitialConfigType } from "@lexical/react/LexicalComposer";
-import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { LexicalComposer, type InitialConfigType } from "@lexical/react/LexicalComposer";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { EditorRefPlugin } from "@lexical/react/LexicalEditorRefPlugin";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
@@ -63,10 +62,7 @@ export function ChatEditor({ ...props }: ChatEditorProps) {
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <div id={`editor-${props.id}`} className="flex size-full">
-        <ReferencesPlugin
-          references={props.references ?? []}
-          position={props.typeaheadPosition}
-        />
+        <ReferencesPlugin references={props.references ?? []} position={props.typeaheadPosition} />
         <RichTextPlugin
           contentEditable={
             <div className="size-full">

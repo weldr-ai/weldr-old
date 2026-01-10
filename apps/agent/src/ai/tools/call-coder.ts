@@ -46,9 +46,7 @@ export const callCoderTool = createTool({
 
     if (!updatedVersion) {
       logger.error("Failed to update version");
-      throw new Error(
-        `[plannerAgent:call_coder:${project.id}] Failed to update version`,
-      );
+      throw new Error(`[plannerAgent:call_coder:${project.id}] Failed to update version`);
     }
 
     context.set("branch", {

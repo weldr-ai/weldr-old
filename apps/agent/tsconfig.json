@@ -1,11 +1,13 @@
 {
   "extends": "@weldr/tsconfig/node.json",
   "compilerOptions": {
-    "jsx": "react-jsx",
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/data/**"]
+  "exclude": ["node_modules", "dist", "src/integrations/**/data/**"]
 }

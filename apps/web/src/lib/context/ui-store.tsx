@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 
 export type CommandCenterView = "create" | "projects";
 
@@ -30,9 +24,7 @@ interface UIStoreContextType {
 
 const UIStoreContext = createContext<UIStoreContextType | undefined>(undefined);
 
-export function useUIStore(props?: {
-  commandCenterActiveView?: CommandCenterView;
-}) {
+export function useUIStore(props?: { commandCenterActiveView?: CommandCenterView }) {
   const { commandCenterActiveView } = props ?? {};
 
   const context = useContext(UIStoreContext);
@@ -53,13 +45,10 @@ export function useUIStore(props?: {
 
 export function UIStoreProvider({ children }: { children: ReactNode }) {
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
-  const [authDialogView, setAuthDialogView] = useState<"sign-in" | "sign-up">(
-    "sign-in",
-  );
+  const [authDialogView, setAuthDialogView] = useState<"sign-in" | "sign-up">("sign-in");
   const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
   const [commandCenterOpen, setCommandCenterOpen] = useState(false);
-  const [commandCenterView, setCommandCenterView] =
-    useState<CommandCenterView>("create");
+  const [commandCenterView, setCommandCenterView] = useState<CommandCenterView>("create");
 
   return (
     <UIStoreContext.Provider

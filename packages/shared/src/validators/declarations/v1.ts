@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 
 import { dbModelDeclarationSpecsSchema } from "./db-model";
 import { endpointDeclarationSpecsSchema } from "./endpoint";

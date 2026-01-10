@@ -17,14 +17,7 @@ const selectedTreeVariants = cva("text-accent-foreground before:opacity-100");
 interface TreeDataItem {
   id: string;
   name: string;
-  type:
-    | "string"
-    | "number"
-    | "integer"
-    | "array"
-    | "boolean"
-    | "object"
-    | "null";
+  type: "string" | "number" | "integer" | "array" | "boolean" | "object" | "null";
   description?: string;
   constraints?: string[];
   required?: boolean;
@@ -127,16 +120,12 @@ function createTreeItem(
   const constraints: string[] = [];
   if (schema.minimum !== undefined) constraints.push(`min: ${schema.minimum}`);
   if (schema.maximum !== undefined) constraints.push(`max: ${schema.maximum}`);
-  if (schema.minLength !== undefined)
-    constraints.push(`minLength: ${schema.minLength}`);
-  if (schema.maxLength !== undefined)
-    constraints.push(`maxLength: ${schema.maxLength}`);
+  if (schema.minLength !== undefined) constraints.push(`minLength: ${schema.minLength}`);
+  if (schema.maxLength !== undefined) constraints.push(`maxLength: ${schema.maxLength}`);
   if (schema.pattern) constraints.push(`pattern: ${schema.pattern}`);
   if (schema.format) constraints.push(`format: ${schema.format}`);
-  if (schema.minItems !== undefined)
-    constraints.push(`minItems: ${schema.minItems}`);
-  if (schema.maxItems !== undefined)
-    constraints.push(`maxItems: ${schema.maxItems}`);
+  if (schema.minItems !== undefined) constraints.push(`minItems: ${schema.minItems}`);
+  if (schema.maxItems !== undefined) constraints.push(`maxItems: ${schema.maxItems}`);
   if (schema.uniqueItems) constraints.push("uniqueItems");
   if (constraints.length > 0) {
     item.constraints = constraints;
@@ -158,26 +147,16 @@ function createTreeItem(
   }
 
   // Handle additional properties
-  if (
-    schema.additionalProperties &&
-    typeof schema.additionalProperties !== "boolean"
-  ) {
-    children.push(
-      createTreeItem(
-        schema.additionalProperties,
-        "additionalProperties",
-        false,
-      ),
-    );
+  if (schema.additionalProperties && typeof schema.additionalProperties !== "boolean") {
+    children.push(createTreeItem(schema.additionalProperties, "additionalProperties", false));
   }
 
   // Handle array items
   if (schema.items) {
     if (Array.isArray(schema.items)) {
       children.push(
-        ...schema.items.map(
-          (itemSchema: JSONSchema7Definition, index: number) =>
-            createTreeItem(itemSchema, `[${index}]`, false),
+        ...schema.items.map((itemSchema: JSONSchema7Definition, index: number) =>
+          createTreeItem(itemSchema, `[${index}]`, false),
         ),
       );
     } else if (isJSONSchema7(schema.items)) {
@@ -241,9 +220,9 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
     },
     ref,
   ) => {
-    const [selectedItemId, setSelectedItemId] = React.useState<
-      string | undefined
-    >(initialSelectedItemId);
+    const [selectedItemId, setSelectedItemId] = React.useState<string | undefined>(
+      initialSelectedItemId,
+    );
 
     const handleSelectChange = React.useCallback(
       (item: TreeDataItem | undefined) => {
@@ -262,10 +241,7 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
 
       const ids: string[] = [];
 
-      function walkTreeItems(
-        items: TreeDataItem[] | TreeDataItem,
-        targetId: string,
-      ) {
+      function walkTreeItems(items: TreeDataItem[] | TreeDataItem, targetId: string) {
         if (Array.isArray(items)) {
           for (const item of items) {
             ids.push(item.id);
@@ -395,21 +371,12 @@ const TreeNode = ({
   defaultNodeIcon?: React.ElementType;
   defaultLeafIcon?: React.ElementType;
 }) => {
-  const [value, setValue] = React.useState(
-    expandedItemIds.includes(item.id) ? [item.id] : [],
-  );
+  const [value, setValue] = React.useState(expandedItemIds.includes(item.id) ? [item.id] : []);
   return (
-    <AccordionPrimitive.Root
-      type="multiple"
-      value={value}
-      onValueChange={(s) => setValue(s)}
-    >
+    <AccordionPrimitive.Root type="multiple" value={value} onValueChange={(s) => setValue(s)}>
       <AccordionPrimitive.Item value={item.id}>
         <AccordionTrigger
-          className={cn(
-            treeVariants(),
-            selectedItemId === item.id && selectedTreeVariants(),
-          )}
+          className={cn(treeVariants(), selectedItemId === item.id && selectedTreeVariants())}
           onClick={() => {
             handleSelectChange(item);
             item.onClick?.();
@@ -422,9 +389,7 @@ const TreeNode = ({
             default={defaultNodeIcon}
           />
           <span className="truncate text-sm">{item.name}</span>
-          <TreeActions isSelected={selectedItemId === item.id}>
-            {item.actions}
-          </TreeActions>
+          <TreeActions isSelected={selectedItemId === item.id}>{item.actions}</TreeActions>
         </AccordionTrigger>
         <AccordionContent className="ml-7 border-l pl-2">
           <TreeItem
@@ -453,20 +418,10 @@ const TreeLeaf = React.forwardRef<
   }
 >(
   (
-    {
-      className,
-      item,
-      selectedItemId,
-      handleSelectChange,
-      defaultLeafIcon,
-      isFlat,
-      ...props
-    },
+    { className, item, selectedItemId, handleSelectChange, defaultLeafIcon, isFlat, ...props },
     ref,
   ) => {
     return (
-      // biome-ignore lint/a11y/noStaticElementInteractions: reason
-      // biome-ignore lint/a11y/useKeyWithClickEvents: reason
       <div
         ref={ref}
         className={cn(
@@ -483,11 +438,7 @@ const TreeLeaf = React.forwardRef<
         {...props}
       >
         <div className="flex items-center">
-          <TreeIcon
-            item={item}
-            isSelected={selectedItemId === item.id}
-            default={defaultLeafIcon}
-          />
+          <TreeIcon item={item} isSelected={selectedItemId === item.id} default={defaultLeafIcon} />
           <div className="flex flex-grow items-center gap-2">
             <span className="truncate text-sm">
               {item.name}
@@ -500,15 +451,11 @@ const TreeLeaf = React.forwardRef<
               </span>
             )}
           </div>
-          <TreeActions isSelected={selectedItemId === item.id}>
-            {item.actions}
-          </TreeActions>
+          <TreeActions isSelected={selectedItemId === item.id}>{item.actions}</TreeActions>
         </div>
         <div className="ml-6">
           {item.description && (
-            <div className="truncate text-muted-foreground text-xs">
-              {item.description}
-            </div>
+            <div className="truncate text-muted-foreground text-xs">{item.description}</div>
           )}
           {item.constraints && item.constraints.length > 0 && (
             <div className="truncate text-muted-foreground text-xs">
@@ -600,9 +547,7 @@ const TreeIcon = ({
     }
   }
 
-  return Icon ? (
-    <Icon className={cn("mr-2 size-4 shrink-0 text-primary", iconClassName)} />
-  ) : null;
+  return Icon ? <Icon className={cn("mr-2 size-4 shrink-0 text-primary", iconClassName)} /> : null;
 };
 
 const TreeActions = ({
@@ -613,12 +558,7 @@ const TreeActions = ({
   isSelected: boolean;
 }) => {
   return (
-    <div
-      className={cn(
-        isSelected ? "block" : "hidden",
-        "absolute right-3 group-hover:block",
-      )}
-    >
+    <div className={cn(isSelected ? "block" : "hidden", "absolute right-3 group-hover:block")}>
       {children}
     </div>
   );

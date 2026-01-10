@@ -29,10 +29,7 @@ import { toKebabCase, toSentence, toTitle } from "@weldr/shared/utils";
 ### Validators
 
 ```typescript
-import {
-  insertProjectSchema,
-  updateProjectSchema,
-} from "@weldr/shared/validators/projects";
+import { insertProjectSchema, updateProjectSchema } from "@weldr/shared/validators/projects";
 ```
 
 ### Types
@@ -59,10 +56,7 @@ logger.info("Payment processed");
 ### State Management
 
 ```typescript
-import {
-  getBranchDir,
-  getWorkspaceBase,
-} from "@weldr/shared/state";
+import { getBranchDir, getWorkspaceBase } from "@weldr/shared/state";
 ```
 
 ### Nanoid

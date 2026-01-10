@@ -15,11 +15,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import { Badge } from "@weldr/ui/components/badge";
 import { Card } from "@weldr/ui/components/card";
 import { ScrollArea } from "@weldr/ui/components/scroll-area";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@weldr/ui/components/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@weldr/ui/components/tooltip";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { useTRPC } from "@/lib/trpc/react";
@@ -27,12 +23,7 @@ import type { CanvasNodeProps } from "@/types";
 import { Status } from "../components/status";
 
 export const DbModelNode = memo(
-  ({
-    data: _data,
-    selected,
-    positionAbsoluteX,
-    positionAbsoluteY,
-  }: CanvasNodeProps) => {
+  ({ data: _data, selected, positionAbsoluteX, positionAbsoluteY }: CanvasNodeProps) => {
     const trpc = useTRPC();
 
     const { data: declaration } = useQuery(
@@ -56,43 +47,27 @@ export const DbModelNode = memo(
     // Handle click outside to collapse
     useEffect(() => {
       const handleClickOutside = (event: Event) => {
-        if (
-          isExpanded &&
-          cardRef.current &&
-          !cardRef.current.contains(event.target as Node)
-        ) {
+        if (isExpanded && cardRef.current && !cardRef.current.contains(event.target as Node)) {
           setIsExpanded(false);
           // Call onCollapse callback if it exists
           if (
             "onCollapse" in _data &&
-            typeof (_data as unknown as Record<string, unknown>).onCollapse ===
-              "function"
+            typeof (_data as unknown as Record<string, unknown>).onCollapse === "function"
           ) {
-            (
-              (_data as unknown as Record<string, unknown>)
-                .onCollapse as () => void
-            )();
+            ((_data as unknown as Record<string, unknown>).onCollapse as () => void)();
           }
         }
       };
 
       const handleDocumentClick = (event: MouseEvent) => {
-        if (
-          isExpanded &&
-          cardRef.current &&
-          !cardRef.current.contains(event.target as Node)
-        ) {
+        if (isExpanded && cardRef.current && !cardRef.current.contains(event.target as Node)) {
           setIsExpanded(false);
           // Call onCollapse callback if it exists
           if (
             "onCollapse" in _data &&
-            typeof (_data as unknown as Record<string, unknown>).onCollapse ===
-              "function"
+            typeof (_data as unknown as Record<string, unknown>).onCollapse === "function"
           ) {
-            (
-              (_data as unknown as Record<string, unknown>)
-                .onCollapse as () => void
-            )();
+            ((_data as unknown as Record<string, unknown>).onCollapse as () => void)();
           }
         }
       };
@@ -122,10 +97,7 @@ export const DbModelNode = memo(
 
     const maxColumnsInCollapsed = 5;
     const visibleColumns = specs.columns.slice(0, maxColumnsInCollapsed);
-    const hiddenColumnsCount = Math.max(
-      0,
-      specs.columns.length - maxColumnsInCollapsed,
-    );
+    const hiddenColumnsCount = Math.max(0, specs.columns.length - maxColumnsInCollapsed);
 
     const handleCardClick = () => {
       if (!isExpanded && declaration.progress === "completed") {
@@ -133,12 +105,9 @@ export const DbModelNode = memo(
         // Call onExpand callback if it exists
         if (
           "onExpand" in _data &&
-          typeof (_data as unknown as Record<string, unknown>).onExpand ===
-            "function"
+          typeof (_data as unknown as Record<string, unknown>).onExpand === "function"
         ) {
-          (
-            (_data as unknown as Record<string, unknown>).onExpand as () => void
-          )();
+          ((_data as unknown as Record<string, unknown>).onExpand as () => void)();
         }
         fitBounds(
           {
@@ -163,8 +132,7 @@ export const DbModelNode = memo(
             {
               "border-primary": selected,
               "w-[400px]": !isExpanded,
-              "-translate-x-[100px] -translate-y-[150px] h-[400px] w-[500px]":
-                isExpanded,
+              "-translate-x-[100px] -translate-y-[150px] h-[400px] w-[500px]": isExpanded,
             },
           )}
           onClick={handleCardClick}
@@ -198,14 +166,10 @@ export const DbModelNode = memo(
                       ) : (
                         <div className="size-2.5 flex-shrink-0" />
                       )}
-                      <span className="truncate font-mono text-xs">
-                        {column.name}
-                      </span>
+                      <span className="truncate font-mono text-xs">{column.name}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground text-xs">
-                        {column.type}
-                      </span>
+                      <span className="text-muted-foreground text-xs">{column.type}</span>
                       {!column.required ? (
                         <DiamondIcon className="size-2 text-muted-foreground" />
                       ) : (
@@ -230,23 +194,15 @@ export const DbModelNode = memo(
                 <div className="flex w-full items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Table2Icon className="size-4 text-primary" />
-                    <span className="font-semibold text-primary text-sm">
-                      {specs.name}
-                    </span>
+                    <span className="font-semibold text-primary text-sm">{specs.name}</span>
                   </div>
                   <div className="flex gap-1">
-                    <Badge variant="secondary">
-                      {specs.columns.length} cols
-                    </Badge>
+                    <Badge variant="secondary">{specs.columns.length} cols</Badge>
                     {specs.relationships && specs.relationships.length > 0 && (
-                      <Badge variant="outline">
-                        {specs.relationships.length} rels
-                      </Badge>
+                      <Badge variant="outline">{specs.relationships.length} rels</Badge>
                     )}
                     {specs.indexes && specs.indexes.length > 0 && (
-                      <Badge variant="outline">
-                        {specs.indexes.length} idx
-                      </Badge>
+                      <Badge variant="outline">{specs.indexes.length} idx</Badge>
                     )}
                   </div>
                 </div>
@@ -290,13 +246,9 @@ export const DbModelNode = memo(
                               ) : (
                                 <div className="w-3 flex-shrink-0" />
                               )}
-                              <span className="font-medium font-mono">
-                                {column.name}
-                              </span>
+                              <span className="font-medium font-mono">{column.name}</span>
                             </div>
-                            <span className="text-muted-foreground">
-                              {column.type}
-                            </span>
+                            <span className="text-muted-foreground">{column.type}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             {!column.required ? (
@@ -318,9 +270,7 @@ export const DbModelNode = memo(
                                 </TooltipContent>
                               </Tooltip>
                             )}
-                            {column.autoIncrement && (
-                              <Badge variant="outline">auto</Badge>
-                            )}
+                            {column.autoIncrement && <Badge variant="outline">auto</Badge>}
                           </div>
                         </div>
                       ))}
@@ -342,18 +292,12 @@ export const DbModelNode = memo(
                           >
                             <div className="flex min-w-0 flex-1 items-center gap-2">
                               <Link2Icon className="size-3 text-success" />
-                              <span className="font-mono">
-                                {relationship.referencedModel}
-                              </span>
+                              <span className="font-mono">{relationship.referencedModel}</span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <Badge variant="outline">
-                                {relationship.type}
-                              </Badge>
+                              <Badge variant="outline">{relationship.type}</Badge>
                               {relationship.onDelete && (
-                                <Badge variant="secondary">
-                                  {relationship.onDelete}
-                                </Badge>
+                                <Badge variant="secondary">{relationship.onDelete}</Badge>
                               )}
                             </div>
                           </div>
@@ -377,16 +321,12 @@ export const DbModelNode = memo(
                           >
                             <div className="flex min-w-0 flex-1 items-center gap-2">
                               <HashIcon className="size-3 text-purple-500" />
-                              <span className="font-medium font-mono">
-                                {index.name}
-                              </span>
+                              <span className="font-medium font-mono">{index.name}</span>
                               <span className="text-muted-foreground">
                                 ({index.columns.join(", ")})
                               </span>
                             </div>
-                            {index.unique && (
-                              <Badge variant="secondary">unique</Badge>
-                            )}
+                            {index.unique && <Badge variant="secondary">unique</Badge>}
                           </div>
                         ))}
                       </div>

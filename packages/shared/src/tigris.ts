@@ -12,12 +12,7 @@ import {
   type CreateBucketOptions,
   type CreateBucketResponse,
   createBucket as tigrisCreateBucket,
-  createBucketSnapshot as tigrisCreateBucketSnapshot,
-  get as tigrisGet,
   getPresignedUrl as tigrisGetPresignedUrl,
-  list as tigrisList,
-  put as tigrisPut,
-  remove as tigrisRemove,
   removeBucket as tigrisRemoveBucket,
 } from "@tigrisdata/storage";
 
@@ -200,9 +195,7 @@ async function deleteAccessKey(bucketName: string): Promise<Error | undefined> {
       bucketName,
       error,
     });
-    return new Error(
-      `Failed to delete access key: ${(error as Error).message}`,
-    );
+    return new Error(`Failed to delete access key: ${(error as Error).message}`);
   }
 }
 
@@ -222,9 +215,7 @@ async function createProjectPolicy(projectId: string): Promise<string> {
     });
 
     if (!policyResponse.Policy?.Arn) {
-      throw new Error(
-        "Failed to create policy: Missing policy ARN in response",
-      );
+      throw new Error("Failed to create policy: Missing policy ARN in response");
     }
 
     return policyResponse.Policy.Arn;
@@ -237,10 +228,7 @@ async function createProjectPolicy(projectId: string): Promise<string> {
   }
 }
 
-async function attachPolicyToUser(
-  accessKeyId: string,
-  policyArn: string,
-): Promise<void> {
+async function attachPolicyToUser(accessKeyId: string, policyArn: string): Promise<void> {
   try {
     await iamClient.send(
       new AttachUserPolicyCommand({
@@ -262,9 +250,7 @@ async function attachPolicyToUser(
   }
 }
 
-async function findProjectPolicyByName(
-  projectId: string,
-): Promise<string | undefined> {
+async function findProjectPolicyByName(projectId: string): Promise<string | undefined> {
   try {
     const policyName = `project-${projectId}-policy`;
     const listPoliciesResponse = await iamClient.send(
@@ -274,9 +260,7 @@ async function findProjectPolicyByName(
       }),
     );
 
-    const policy = listPoliciesResponse.Policies?.find(
-      (p) => p.PolicyName === policyName,
-    );
+    const policy = listPoliciesResponse.Policies?.find((p) => p.PolicyName === policyName);
     return policy?.Arn;
   } catch (error) {
     Logger.error("Failed to find project policy by name", {
@@ -287,9 +271,7 @@ async function findProjectPolicyByName(
   }
 }
 
-async function deleteProjectPolicy(
-  projectId: string,
-): Promise<Error | undefined> {
+async function deleteProjectPolicy(projectId: string): Promise<Error | undefined> {
   try {
     const policyName = `project-${projectId}-policy`;
     const policyArn = await findProjectPolicyByName(projectId);
@@ -348,14 +330,9 @@ async function createCredentials(projectId: string): Promise<Credentials> {
   }
 }
 
-async function deleteCredentials(
-  projectId: string,
-): Promise<Error | undefined> {
+async function deleteCredentials(projectId: string): Promise<Error | undefined> {
   const userName = `project-${projectId}`;
-  const errors = await Promise.all([
-    deleteAccessKey(userName),
-    deleteProjectPolicy(projectId),
-  ]);
+  const errors = await Promise.all([deleteAccessKey(userName), deleteProjectPolicy(projectId)]);
 
   const error = errors.find((e) => e !== undefined);
   if (error) {
@@ -370,23 +347,6 @@ async function deleteCredentials(
     projectId,
   });
   return undefined;
-}
-
-async function forkBucket(
-  sourceBucket: string,
-  forkBucket: string,
-  snapshotVersion?: string,
-): Promise<void> {
-  const result = await tigrisCreateBucket(forkBucket, {
-    sourceBucketName: sourceBucket,
-    enableSnapshot: true,
-    ...(snapshotVersion && { snapshotVersion }),
-    config: tigrisConfig,
-  });
-
-  if (result.error) {
-    throw new Error(`Failed to fork bucket: ${result.error}`);
-  }
 }
 
 async function getObjectSignedUrl(
@@ -415,237 +375,10 @@ async function getObjectSignedUrl(
   return response.data?.url ?? "";
 }
 
-async function createSnapshot(
-  bucketName: string,
-  snapshotName: string,
-): Promise<string> {
-  try {
-    const response = await tigrisCreateBucketSnapshot(bucketName, {
-      name: snapshotName,
-      config: tigrisConfig,
-    });
-
-    if (response.error) {
-      Logger.error("Create snapshot error", {
-        bucketName,
-        snapshotName,
-        error: response.error,
-      });
-      throw response.error;
-    }
-
-    Logger.info("Snapshot created", {
-      bucketName,
-      snapshotName,
-      version: response.data.snapshotVersion,
-    });
-
-    return response.data.snapshotVersion;
-  } catch (error) {
-    Logger.error("Create snapshot error", {
-      bucketName,
-      snapshotName,
-      error,
-    });
-    throw error;
-  }
-}
-
-async function revertToSnapshot(
-  bucketName: string,
-  snapshotVersion: string,
-): Promise<string> {
-  const tempBucketName = `${bucketName}-temp-${Date.now()}`;
-
-  try {
-    Logger.info("Creating temporary bucket from snapshot", {
-      bucketName,
-      tempBucketName,
-      snapshotVersion,
-    });
-
-    const forkResult = await tigrisCreateBucket(tempBucketName, {
-      sourceBucketName: bucketName,
-      sourceBucketSnapshot: snapshotVersion,
-      enableSnapshot: false,
-      config: tigrisConfig,
-    });
-
-    if (forkResult.error) {
-      throw forkResult.error;
-    }
-
-    Logger.info("Listing current objects in bucket", { bucketName });
-
-    let hasMore = true;
-    let paginationToken: string | undefined;
-
-    while (hasMore) {
-      const listResult = await tigrisList({
-        config: {
-          ...tigrisConfig,
-          bucket: bucketName,
-        },
-        ...(paginationToken && { paginationToken }),
-      });
-
-      if (listResult.error) {
-        throw listResult.error;
-      }
-
-      if (listResult.data?.items && listResult.data.items.length > 0) {
-        Logger.info("Deleting current objects", {
-          bucketName,
-          count: listResult.data.items.length,
-        });
-
-        await Promise.all(
-          listResult.data.items.map(async (item) => {
-            const removeResult = await tigrisRemove(item.name, {
-              config: {
-                ...tigrisConfig,
-                bucket: bucketName,
-              },
-            });
-
-            if (removeResult?.error) {
-              Logger.error("Failed to delete object", {
-                bucketName,
-                path: item.name,
-                error: removeResult.error,
-              });
-            }
-          }),
-        );
-      }
-
-      hasMore = listResult.data?.hasMore ?? false;
-      paginationToken = listResult.data?.paginationToken;
-    }
-
-    Logger.info("Listing objects from snapshot", { tempBucketName });
-
-    hasMore = true;
-    paginationToken = undefined;
-
-    while (hasMore) {
-      const listResult = await tigrisList({
-        config: {
-          ...tigrisConfig,
-          bucket: tempBucketName,
-        },
-        ...(paginationToken && { paginationToken }),
-      });
-
-      if (listResult.error) {
-        throw listResult.error;
-      }
-
-      if (listResult.data?.items && listResult.data.items.length > 0) {
-        Logger.info("Copying objects from snapshot", {
-          tempBucketName,
-          bucketName,
-          count: listResult.data.items.length,
-        });
-
-        await Promise.all(
-          listResult.data.items.map(async (item) => {
-            const getResult = await tigrisGet(item.name, "stream", {
-              config: {
-                ...tigrisConfig,
-                bucket: tempBucketName,
-              },
-            });
-
-            if (getResult.error) {
-              Logger.error("Failed to get object from temp bucket", {
-                tempBucketName,
-                path: item.name,
-                error: getResult.error,
-              });
-              return;
-            }
-
-            const putResult = await tigrisPut(item.name, getResult.data, {
-              config: {
-                ...tigrisConfig,
-                bucket: bucketName,
-              },
-              allowOverwrite: true,
-            });
-
-            if (putResult.error) {
-              Logger.error("Failed to put object to original bucket", {
-                bucketName,
-                path: item.name,
-                error: putResult.error,
-              });
-            }
-          }),
-        );
-      }
-
-      hasMore = listResult.data?.hasMore ?? false;
-      paginationToken = listResult.data?.paginationToken;
-    }
-
-    Logger.info("Deleting temporary bucket", { tempBucketName });
-
-    const deleteResult = await tigrisRemoveBucket(tempBucketName, {
-      force: true,
-      config: tigrisConfig,
-    });
-
-    if (deleteResult.error) {
-      Logger.warn("Failed to delete temporary bucket", {
-        tempBucketName,
-        error: deleteResult.error,
-      });
-    }
-
-    Logger.info("Successfully reverted bucket to snapshot", {
-      bucketName,
-      snapshotVersion,
-    });
-
-    const newSnapshotVersion = await createSnapshot(
-      bucketName,
-      `${snapshotVersion}-reverted`,
-    );
-
-    return newSnapshotVersion;
-  } catch (error) {
-    Logger.error("Revert to snapshot error", {
-      bucketName,
-      snapshotVersion,
-      error,
-    });
-
-    try {
-      await tigrisRemoveBucket(tempBucketName, {
-        force: true,
-        config: tigrisConfig,
-      });
-    } catch (cleanupError) {
-      Logger.warn("Failed to cleanup temporary bucket after error", {
-        tempBucketName,
-        cleanupError,
-      });
-    }
-
-    throw error;
-  }
-}
-
 export const Tigris = {
   bucket: {
     create: createBucket,
     delete: deleteBucket,
-    fork: forkBucket,
-    snapshot: {
-      create: createSnapshot,
-      revert: revertToSnapshot,
-    },
   },
   credentials: {
     create: createCredentials,

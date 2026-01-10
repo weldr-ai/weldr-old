@@ -1,18 +1,10 @@
 import { z } from "zod";
 
 import { and, db, eq } from "@weldr/db";
-import {
-  declarations,
-  dependencies,
-  versionDeclarations,
-  versions,
-} from "@weldr/db/schema";
+import { declarations, dependencies, versionDeclarations, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
-import {
-  formatDeclarationData,
-  formatDeclarationSpecs,
-} from "@/ai/utils/formatters";
+import { formatDeclarationData, formatDeclarationSpecs } from "@/ai/utils/formatters";
 import { createTool } from "./utils";
 
 export const queryRelatedDeclarationsTool = createTool({
@@ -22,9 +14,7 @@ export const queryRelatedDeclarationsTool = createTool({
   whenToUse:
     "When you need to understand the relationships between declarations - what a specific declaration depends on (dependencies) or what other declarations use it (dependents).",
   inputSchema: z.object({
-    declarationId: z
-      .string()
-      .describe("The ID of the declaration to query relationships for."),
+    declarationId: z.string().describe("The ID of the declaration to query relationships for."),
     queryType: z
       .enum(["dependencies", "dependents", "both"])
       .describe(
@@ -62,18 +52,14 @@ export const queryRelatedDeclarationsTool = createTool({
       const targetDeclaration = await db
         .select()
         .from(declarations)
-        .where(
-          eq(declarations.id, declarationId) &&
-            eq(declarations.projectId, project.id),
-        )
+        .where(eq(declarations.id, declarationId) && eq(declarations.projectId, project.id))
         .limit(1);
 
       if (targetDeclaration.length === 0) {
         logger.error("Declaration not found or doesn't belong to project");
         return {
           success: false as const,
-          error:
-            "Declaration not found or doesn't belong to the current project",
+          error: "Declaration not found or doesn't belong to the current project",
         };
       }
 
@@ -91,14 +77,8 @@ export const queryRelatedDeclarationsTool = createTool({
             declaration: declarations,
           })
           .from(dependencies)
-          .innerJoin(
-            declarations,
-            eq(dependencies.dependencyId, declarations.id),
-          )
-          .innerJoin(
-            versionDeclarations,
-            eq(versionDeclarations.declarationId, declarations.id),
-          )
+          .innerJoin(declarations, eq(dependencies.dependencyId, declarations.id))
+          .innerJoin(versionDeclarations, eq(versionDeclarations.declarationId, declarations.id))
           .innerJoin(versions, eq(versions.id, versionDeclarations.versionId))
           .where(
             and(
@@ -144,14 +124,8 @@ export const queryRelatedDeclarationsTool = createTool({
             declaration: declarations,
           })
           .from(dependencies)
-          .innerJoin(
-            declarations,
-            eq(dependencies.dependentId, declarations.id),
-          )
-          .innerJoin(
-            versionDeclarations,
-            eq(versionDeclarations.declarationId, declarations.id),
-          )
+          .innerJoin(declarations, eq(dependencies.dependentId, declarations.id))
+          .innerJoin(versionDeclarations, eq(versionDeclarations.declarationId, declarations.id))
           .innerJoin(versions, eq(versions.id, versionDeclarations.versionId))
           .where(
             and(
@@ -201,10 +175,7 @@ export const queryRelatedDeclarationsTool = createTool({
 
       return {
         success: false as const,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unknown error occurred during query",
+        error: error instanceof Error ? error.message : "Unknown error occurred during query",
       };
     }
   },

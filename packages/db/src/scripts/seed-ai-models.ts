@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
-import { db } from "..";
 
+import { db } from "..";
 import { aiModels } from "../schema";
 
 /**
@@ -86,16 +86,12 @@ export async function seedAiModels(): Promise<void> {
         // Check if this was an insert or update by checking if createdAt === updatedAt
         const insertedModel = await db.query.aiModels.findFirst({
           where: (models, { eq, and }) =>
-            and(
-              eq(models.provider, model.provider),
-              eq(models.modelKey, model.modelKey),
-            ),
+            and(eq(models.provider, model.provider), eq(models.modelKey, model.modelKey)),
         });
 
         if (insertedModel) {
           const isNewRecord =
-            insertedModel.createdAt.getTime() ===
-            insertedModel.updatedAt.getTime();
+            insertedModel.createdAt.getTime() === insertedModel.updatedAt.getTime();
           if (isNewRecord) {
             inserted++;
             console.log(`  ✅ Inserted: ${model.provider}/${model.modelKey}`);
@@ -107,9 +103,7 @@ export async function seedAiModels(): Promise<void> {
       }
     }
 
-    console.log(
-      `🤖 AI models seeding completed: ${inserted} inserted, ${updated} updated`,
-    );
+    console.log(`🤖 AI models seeding completed: ${inserted} inserted, ${updated} updated`);
   } catch (error) {
     console.error("❌ Error seeding AI models:", error);
     throw error;

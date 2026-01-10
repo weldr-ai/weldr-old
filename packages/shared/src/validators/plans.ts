@@ -32,10 +32,7 @@ export const taskSchema = z.object({
     - "Create a user profile page that allows users to view and edit their personal information, including name, email, bio, and profile picture. The page should integrate with the user authentication system."
     - "The login session expires too quickly (currently 15 minutes), causing users to be logged out while actively using the application. Update the session timeout to 2 hours."
   `),
-  acceptanceCriteria: z
-    .string()
-    .array()
-    .describe(`
+  acceptanceCriteria: z.string().array().describe(`
     Specific conditions that must be met for this task to be considered complete.
     Each criterion should be testable and verifiable.
     Each array item is a separate acceptance criterion.
@@ -49,11 +46,7 @@ export const taskSchema = z.object({
       "Profile changes are saved to the database"
     ]
   `),
-  dependencies: z
-    .number()
-    .array()
-    .optional()
-    .describe(`
+  dependencies: z.number().array().optional().describe(`
     Array of other task IDs that this task depends on.
     These are the direct dependencies that must be completed before this task can be started.
 
@@ -62,11 +55,7 @@ export const taskSchema = z.object({
     [1] (depends on task 1 to complete first)
     [1, 3] (depends on both tasks 1 and 3 to complete first)
   `),
-  implementationNotes: z
-    .string()
-    .array()
-    .optional()
-    .describe(`
+  implementationNotes: z.string().array().optional().describe(`
     Technical implementation guidance specific to this task.
     Should include patterns, conventions, libraries, or architectural decisions to follow.
     Each array item is a separate implementation note.
@@ -78,10 +67,7 @@ export const taskSchema = z.object({
       "Use shadcn/ui components for consistent styling"
     ]
   `),
-  subTasks: z
-    .string()
-    .array()
-    .describe(`
+  subTasks: z.string().array().describe(`
     Implementation guidance broken into specific, actionable pieces for THIS task only.
     Each subtask should be a clear, concrete action that moves toward completing the overall task.
     Each array item is a separate subtask.
@@ -98,10 +84,7 @@ export const taskSchema = z.object({
 });
 
 export const planSchema = z.object({
-  acceptanceCriteria: z
-    .string()
-    .array()
-    .describe(`
+  acceptanceCriteria: z.string().array().describe(`
       Plan-level acceptance criteria that validate the entire plan is complete.
       Each array item is a separate acceptance criterion for the overall plan.
 

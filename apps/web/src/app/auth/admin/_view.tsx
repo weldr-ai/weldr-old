@@ -29,12 +29,7 @@ import {
 import { Badge } from "@weldr/ui/components/badge";
 import { Button, buttonVariants } from "@weldr/ui/components/button";
 import { Calendar } from "@weldr/ui/components/calendar";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@weldr/ui/components/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@weldr/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -45,11 +40,7 @@ import {
 } from "@weldr/ui/components/dialog";
 import { Input } from "@weldr/ui/components/input";
 import { Label } from "@weldr/ui/components/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@weldr/ui/components/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@weldr/ui/components/popover";
 import {
   Select,
   SelectContent,
@@ -227,8 +218,8 @@ export function AdminView() {
               <DialogHeader>
                 <DialogTitle>Create New User</DialogTitle>
                 <DialogDescription>
-                  Create a new user to the platform. This will allow them to
-                  login and access their account.
+                  Create a new user to the platform. This will allow them to login and access their
+                  account.
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateUser} className="space-y-4">
@@ -238,9 +229,7 @@ export function AdminView() {
                     id="email"
                     type="email"
                     value={newUser.email}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, email: e.target.value })
-                    }
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                     required
                   />
                 </div>
@@ -250,9 +239,7 @@ export function AdminView() {
                     id="password"
                     type="password"
                     value={newUser.password}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, password: e.target.value })
-                    }
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                     required
                   />
                 </div>
@@ -261,9 +248,7 @@ export function AdminView() {
                   <Input
                     id="name"
                     value={newUser.name}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, name: e.target.value })
-                    }
+                    onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                     required
                   />
                 </div>
@@ -284,11 +269,7 @@ export function AdminView() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isLoading === "create"}
-                >
+                <Button type="submit" className="w-full" disabled={isLoading === "create"}>
                   {isLoading === "create" ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -306,8 +287,8 @@ export function AdminView() {
               <DialogHeader>
                 <DialogTitle>Ban User</DialogTitle>
                 <DialogDescription>
-                  Ban a user from the platform. This will prevent them from
-                  logging in and accessing their account.
+                  Ban a user from the platform. This will prevent them from logging in and accessing
+                  their account.
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleBanUser} className="space-y-4">
@@ -316,9 +297,7 @@ export function AdminView() {
                   <Input
                     id="reason"
                     value={banForm.reason}
-                    onChange={(e) =>
-                      setBanForm({ ...banForm, reason: e.target.value })
-                    }
+                    onChange={(e) => setBanForm({ ...banForm, reason: e.target.value })}
                     required
                   />
                 </div>
@@ -346,9 +325,7 @@ export function AdminView() {
                       <Calendar
                         mode="single"
                         selected={banForm.expirationDate}
-                        onSelect={(date) =>
-                          setBanForm({ ...banForm, expirationDate: date })
-                        }
+                        onSelect={(date) => setBanForm({ ...banForm, expirationDate: date })}
                         initialFocus
                       />
                     </PopoverContent>
@@ -419,8 +396,8 @@ export function AdminView() {
                                 Are you sure you want to delete this user?
                               </AlertDialogTitle>
                               <AlertDialogDescription>
-                                This action will delete the user and all their
-                                sessions. THIS ACTION IS IRREVERSIBLE.
+                                This action will delete the user and all their sessions. THIS ACTION
+                                IS IRREVERSIBLE.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -456,12 +433,10 @@ export function AdminView() {
                           <AlertDialogContent>
                             <AlertDialogHeader>
                               <AlertDialogTitle>
-                                Are you sure you want to revoke all sessions for
-                                this user?
+                                Are you sure you want to revoke all sessions for this user?
                               </AlertDialogTitle>
                               <AlertDialogDescription>
-                                This action will revoke all sessions for the
-                                user.
+                                This action will revoke all sessions for the user.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -501,8 +476,8 @@ export function AdminView() {
                                 Are you sure you want to impersonate this user?
                               </AlertDialogTitle>
                               <AlertDialogDescription>
-                                This action will impersonate the user and give
-                                you access to their account.
+                                This action will impersonate the user and give you access to their
+                                account.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -541,10 +516,7 @@ export function AdminView() {
                                 },
                                 {
                                   onError(context) {
-                                    toast.error(
-                                      context.error.message ||
-                                        "Failed to unban user",
-                                    );
+                                    toast.error(context.error.message || "Failed to unban user");
                                     setIsLoading(undefined);
                                   },
                                   onSuccess() {

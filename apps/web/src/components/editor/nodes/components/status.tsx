@@ -1,11 +1,7 @@
 import { BrainIcon, CircleIcon, HammerIcon } from "lucide-react";
 
 import type { DeclarationProgress } from "@weldr/shared/types/declarations";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@weldr/ui/components/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@weldr/ui/components/tooltip";
 
 export const Status = ({ progress }: { progress: DeclarationProgress }) => {
   return (
