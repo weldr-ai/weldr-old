@@ -1,8 +1,3 @@
-import {
-  createSnapshotService,
-  openAgentFS,
-  syncDiskToAgentFS,
-} from "@weldr/agent-storage";
 import { db, eq } from "@weldr/db";
 import { versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
@@ -11,6 +6,11 @@ import { getBranchDir, isCloudMode } from "@weldr/shared/state";
 import { syncBranchToStorage } from "@/lib/branch-state";
 import { build } from "@/lib/build";
 import { Git } from "@/lib/git";
+import {
+  createSnapshotService,
+  openAgentFS,
+  syncDiskToAgentFS,
+} from "@/lib/storage";
 import { stream } from "@/lib/stream-utils";
 import { createStep } from "../engine";
 

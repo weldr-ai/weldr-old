@@ -7,18 +7,7 @@ import { Logger } from "@weldr/shared/logger";
 import { getBranchDir } from "@weldr/shared/state";
 import type { addMessageItemSchema } from "@weldr/shared/validators/chats";
 
-import {
-  deleteFileTool,
-  doneTool,
-  editFileTool,
-  findTool,
-  fzfTool,
-  grepTool,
-  listDirTool,
-  readFileTool,
-  searchCodebaseTool,
-  writeFileTool,
-} from "@/ai/tools";
+import { bashTool, doneTool, searchCodebaseTool } from "@/ai/tools";
 import { getMessages } from "@/ai/utils/get-messages";
 import { insertMessages } from "@/ai/utils/insert-messages";
 import { registry } from "@/ai/utils/registry";
@@ -264,16 +253,9 @@ async function executeTaskCoder({
   logger.info("Starting task coder");
 
   const tools: ToolSet = {
-    list_dir: listDirTool(context),
-    read_file: readFileTool(context),
-    write_file: writeFileTool(context),
-    delete_file: deleteFileTool(context),
-    edit_file: editFileTool(context),
+    bash: bashTool(context),
     search_codebase: searchCodebaseTool(context),
     query_related_declarations: queryRelatedDeclarationsTool(context),
-    fzf: fzfTool(context),
-    grep: grepTool(context),
-    find: findTool(context),
     done: doneTool(context),
   };
 

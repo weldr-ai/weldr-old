@@ -13,10 +13,8 @@ export type AgentFSInstance = Awaited<ReturnType<typeof AgentFS.open>>;
 export async function openAgentFS(branchDir: string): Promise<AgentFSInstance> {
   const agentfsPath = path.join(branchDir, "agent.db");
 
-  // Ensure branch directory exists
   await fs.mkdir(branchDir, { recursive: true });
 
-  // Open AgentFS
   const agent = await AgentFS.open({ path: agentfsPath });
 
   return agent;
@@ -42,7 +40,6 @@ export async function syncAgentFSToDisk(
     try {
       entries = await agent.fs.readdir(agentPath);
     } catch {
-      // Directory doesn't exist in AgentFS
       return;
     }
 
@@ -50,7 +47,6 @@ export async function syncAgentFSToDisk(
       const entryAgentPath = path.posix.join(agentPath, entry);
       const entryDiskPath = path.join(diskPath, entry);
 
-      // Skip excluded paths
       if (exclude.has(entry)) continue;
 
       try {
@@ -124,10 +120,8 @@ export async function syncDiskToAgentFS(
     }
 
     for (const entry of entries) {
-      // Convert entry name to string (handles Buffer case)
       const entryName = String(entry.name);
 
-      // Skip excluded paths
       if (exclude.has(entryName)) continue;
 
       const entryDiskPath = path.join(diskPath, entryName);

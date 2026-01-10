@@ -41,7 +41,6 @@ export class SnapshotService {
       extra: { branchId, versionId, snapshotPath },
     });
 
-    // Copy the AgentFS database file
     await this.backend.copy(branchDbPath, snapshotPath);
 
     this.logger.info("Snapshot created", {
@@ -65,13 +64,11 @@ export class SnapshotService {
       extra: { sourceVersionId, targetBranchId },
     });
 
-    // Check snapshot exists
     const exists = await this.backend.exists(snapshotPath);
     if (!exists) {
       throw new Error(`Snapshot not found for version: ${sourceVersionId}`);
     }
 
-    // Copy snapshot to new branch's database location
     await this.backend.copy(snapshotPath, targetBranchDbPath);
 
     this.logger.info("Fork completed", {
@@ -92,13 +89,11 @@ export class SnapshotService {
       extra: { versionId, branchId },
     });
 
-    // Check snapshot exists
     const exists = await this.backend.exists(snapshotPath);
     if (!exists) {
       throw new Error(`Snapshot not found for version: ${versionId}`);
     }
 
-    // Overwrite branch's database with snapshot
     await this.backend.copy(snapshotPath, branchDbPath);
 
     this.logger.info("Snapshot restored", {

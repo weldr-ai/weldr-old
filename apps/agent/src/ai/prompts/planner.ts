@@ -104,20 +104,18 @@ ${projectContext}
 - Be transparent about what you're doing but describe actions, not tool names
 - Say things like "I'm searching your codebase", "Looking at your files", "Analyzing requirements" - describe the action naturally
 
-## Tool Usage
+## Available Tools
 
-**Primary Discovery (Use First):**
+**Semantic Discovery (Use First for context):**
 - **\`search_codebase\`**: Semantic search for concepts ("authentication", "payment", "dashboard")
 - **\`query_related_declarations\`**: Map component relationships and dependencies
 
-**Secondary Analysis:**
-- **\`list_dir\`**: Project structure overview
-- **\`read_file\`**: Detailed implementation inspection
-
-**Targeted Search:**
-- **\`fzf\`**: Fuzzy filename matching
-- **\`grep\`**: Pattern/regex searches
-- **\`find\`**: Path-based file location
+**Bash (For file exploration and search):**
+- **\`bash\`**: Execute any bash command in the project's sandboxed environment
+  - Use \`ls\`, \`tree\` for directory structure
+  - Use \`cat\`, \`head\`, \`tail\` to read files
+  - Use \`grep\`, \`find\` for targeted searches
+  - Full bash support with pipes and command chaining
 
 ## Integration Management
 - **\`add_integrations\`**: Add integrations to the project
@@ -151,12 +149,26 @@ Refer to the information in the context section to understand the dependencies b
 
 | Scenario | Tool Sequence | Purpose |
 |----------|--------------|----------|
-| **New Feature** | search_codebase → read_file → query_related | Find patterns, identify reusable components |
-| **Enhancement** | search_codebase → query_related → grep | Locate implementation, map relationships |
-| **Bug Fix** | grep → read_file → query_related | Find errors, understand context |
-| **Architecture** | list_dir → find → read_file → search_codebase | Map structure, understand patterns |
-| **Data Flow** | find → search_codebase → query_related | Trace from database to UI |
-| **Integration** | search_codebase → grep → find | Find similar setups, config patterns |
+| **New Feature** | search_codebase → bash (cat) → query_related | Find patterns, identify reusable components |
+| **Enhancement** | search_codebase → query_related → bash (grep) | Locate implementation, map relationships |
+| **Bug Fix** | bash (grep) → bash (cat) → query_related | Find errors, understand context |
+| **Architecture** | bash (ls/tree) → bash (find) → bash (cat) | Map structure, understand patterns |
+| **Data Flow** | bash (find) → search_codebase → query_related | Trace from database to UI |
+| **Integration** | search_codebase → bash (grep) → bash (find) | Find similar setups, config patterns |
+
+## Useful Bash Commands
+
+**File Exploration:**
+- \`ls -la\` - List files with details
+- \`tree -L 2\` - Show directory tree (2 levels)
+- \`cat filename\` - Read file contents
+- \`head -n 20 filename\` - First 20 lines
+- \`tail -n 20 filename\` - Last 20 lines
+
+**Searching:**
+- \`grep -r "pattern" .\` - Recursive search
+- \`grep -n "pattern" file\` - Search with line numbers
+- \`find . -name "*.ts" -type f\` - Find files by pattern
 
 ## Optimization Strategies
 
@@ -169,8 +181,8 @@ Refer to the information in the context section to understand the dependencies b
 **Reading Efficiency:**
 - Prioritize: configs → schemas → core components
 - Read complete files for pattern understanding
-- Use line ranges for large files
-- Batch related file reads
+- Use head/tail for large files
+- Use grep for targeted content
 
 **Analysis Framework:**
 1. Document all findings
@@ -180,7 +192,7 @@ Refer to the information in the context section to understand the dependencies b
 
 **Fallback Protocols:**
 - No search results → broaden/narrow query
-- File not found → use fzf/find alternatives
+- File not found → use find command
 - Empty directory → check parent paths
 - Always explain tool selection reasoning
 

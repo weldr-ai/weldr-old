@@ -1,10 +1,11 @@
-export * from "./agentfs-wrapper";
-export * from "./snapshot-service";
-export * from "./storage-backends";
+export * from "./agentfs";
+export * from "./bash-tool";
+export * from "./s3-backend";
+export * from "./snapshot";
 export * from "./types";
 
-import { SnapshotService } from "./snapshot-service";
-import { S3StorageBackend } from "./storage-backends";
+import { S3StorageBackend } from "./s3-backend";
+import { SnapshotService } from "./snapshot";
 import type { StorageBackend } from "./types";
 
 /**

@@ -1,13 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import {
-  agentFSExists,
-  createSnapshotService,
-  createStorageBackend,
-  openAgentFS,
-  syncAgentFSToDisk,
-} from "@weldr/agent-storage";
 import { db, eq } from "@weldr/db";
 import { branches, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
@@ -17,6 +10,13 @@ import {
   getBranchDir,
 } from "@weldr/shared/state";
 
+import {
+  agentFSExists,
+  createSnapshotService,
+  createStorageBackend,
+  openAgentFS,
+  syncAgentFSToDisk,
+} from "@/lib/storage";
 import { Git } from "./git";
 
 export async function loadState(): Promise<BranchState> {

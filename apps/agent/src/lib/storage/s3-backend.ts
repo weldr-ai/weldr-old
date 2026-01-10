@@ -36,7 +36,6 @@ export class S3StorageBackend implements StorageBackend {
   }
 
   async copy(source: string, dest: string): Promise<void> {
-    // S3 CopyObject requires source to exist, so we read and write
     const data = await this.read(source);
     await this.write(dest, data);
   }

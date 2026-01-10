@@ -1,7 +1,6 @@
 /**
- * Types for the agent storage system
+ * Represents a point-in-time snapshot of a branch's state
  */
-
 export interface VersionSnapshot {
   versionId: string;
   branchId: string;
@@ -14,38 +13,21 @@ export interface VersionSnapshot {
   createdAt: Date;
 }
 
+/**
+ * Abstract storage operations interface
+ */
 export interface StorageBackend {
-  /**
-   * Copy a file from source to destination
-   */
   copy(source: string, dest: string): Promise<void>;
-
-  /**
-   * Read a file and return its contents
-   */
   read(path: string): Promise<Buffer>;
-
-  /**
-   * Write data to a file
-   */
   write(path: string, data: Buffer): Promise<void>;
-
-  /**
-   * Delete a file
-   */
   delete(path: string): Promise<void>;
-
-  /**
-   * Check if a file exists
-   */
   exists(path: string): Promise<boolean>;
-
-  /**
-   * List files with a given prefix
-   */
   list(prefix: string): Promise<string[]>;
 }
 
+/**
+ * Result of sync operations
+ */
 export interface SyncResult {
   synced: number;
   errors: string[];
