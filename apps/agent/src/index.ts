@@ -10,8 +10,7 @@ import { closeRedisConnections } from "./lib/stream-utils";
 import { configureOpenAPI, createRouter } from "./lib/utils";
 import { loggerMiddleware } from "./middlewares/logger";
 import { routes } from "./routes";
-import { recoverWorkflow } from "./workflow";
-import { WorkflowContext } from "./workflow/context";
+import { recoverSessions } from "./session";
 
 const app = createRouter();
 
@@ -30,12 +29,6 @@ app
   );
 
 configureOpenAPI(app);
-
-app.use(async (c, next) => {
-  const workflowContext = new WorkflowContext();
-  c.set("workflowContext", workflowContext);
-  await next();
-});
 
 for (const route of routes) {
   app.route("/", route);
@@ -89,7 +82,7 @@ serve(
   async (info) => {
     Logger.info(`Server is running on http://localhost:${info.port}`);
     await initializeWorkspace();
-    await recoverWorkflow();
+    await recoverSessions();
     await recoverEnrichingJobs();
   },
 );

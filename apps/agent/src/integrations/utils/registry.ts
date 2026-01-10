@@ -6,7 +6,7 @@ import { databaseIntegrationCategory } from "@/integrations/database";
 import { frontendIntegrationCategory } from "@/integrations/frontend";
 import type { IntegrationCategoryDefinition, IntegrationDefinition } from "@/integrations/types";
 import { applyFiles } from "@/integrations/utils/apply-files";
-import type { WorkflowContext } from "@/workflow/context";
+import type { SessionContext } from "@/session";
 
 class IntegrationRegistry {
   private integrationCategories = new Map<
@@ -56,7 +56,7 @@ class IntegrationRegistry {
     context,
   }: {
     integration: Integration;
-    context: WorkflowContext;
+    context: SessionContext;
   }): Promise<void> {
     const integrationDefinition = this.getIntegration(integration.key);
 

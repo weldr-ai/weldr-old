@@ -20,7 +20,7 @@ import { Logger } from "@weldr/shared/logger";
 import { getBranchDir } from "@weldr/shared/state";
 import type { Integration } from "@weldr/shared/types";
 
-import type { WorkflowContext } from "@/workflow/context";
+import type { SessionContext } from "@/session";
 
 /**
  * Parse a .env file content into a Map
@@ -166,11 +166,11 @@ export async function writeEnvironmentVariables({
   context,
   integration,
 }: {
-  context: WorkflowContext;
+  context: SessionContext;
   integration: Integration;
 }): Promise<void> {
-  const project = context.get("project");
-  const branch = context.get("branch");
+  const project = context.project;
+  const branch = context.branch;
   const logger = Logger.get({ projectId: project.id });
 
   // Check if integration has environment variables

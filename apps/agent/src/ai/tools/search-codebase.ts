@@ -11,10 +11,9 @@ import { createTool } from "./utils";
 
 export const searchCodebaseTool = createTool({
   name: "search_codebase",
-  description:
-    "Searches for the most relevant declarations in the codebase based on semantic similarity to a query text. Returns formatted results with detailed information including path, position, purpose, parameters, and example usage.",
-  whenToUse:
-    "When you need to find declarations (functions, components, models, endpoints) that are semantically similar to a specific query or concept.",
+  description: `Searches for the most relevant declarations in the codebase based on semantic similarity to a query text. Returns formatted results with detailed information including path, position, purpose, parameters, and example usage.
+
+When you need to find declarations (functions, components, models, endpoints) that are semantically similar to a specific query or concept.`,
   inputSchema: z.object({
     query: z.string().describe("The search query to find semantically similar declarations."),
     limit: z
@@ -44,9 +43,9 @@ export const searchCodebaseTool = createTool({
   ]),
   execute: async ({ input, context }) => {
     const { query, limit, minSimilarity } = input;
-    const project = context.get("project");
-    const user = context.get("user");
-    const branch = context.get("branch");
+    const project = context.project;
+    const user = context.user;
+    const branch = context.branch;
 
     const logger = Logger.get({
       projectId: project.id,

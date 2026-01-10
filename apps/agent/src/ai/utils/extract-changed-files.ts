@@ -7,7 +7,7 @@ import { mergeJson } from "@weldr/db/utils";
 import { Logger } from "@weldr/shared/logger";
 import { getBranchDir } from "@weldr/shared/state";
 
-import type { WorkflowContext } from "@/workflow/context";
+import type { SessionContext } from "@/session";
 import { extractAndSaveDeclarations } from "./declarations";
 
 /**
@@ -78,18 +78,18 @@ async function scanDirectory(
  * Extract declarations from all code files in the project.
  * This should be called after bash operations that modify files.
  *
- * @param context - Workflow context containing project and branch info
+ * @param context - Session context containing project and branch info
  * @param changedFiles - Optional list of specific files that changed. If not provided, scans all code files.
  */
 export async function extractDeclarationsFromProject({
   context,
   changedFiles,
 }: {
-  context: WorkflowContext;
+  context: SessionContext;
   changedFiles?: ChangedFile[];
 }): Promise<{ processed: number; errors: string[] }> {
-  const project = context.get("project");
-  const branch = context.get("branch");
+  const project = context.project;
+  const branch = context.branch;
   const branchDir = getBranchDir(project.id, branch.id);
 
   const logger = Logger.get({
@@ -151,7 +151,7 @@ export async function extractDeclarationsFromProject({
  * Track a file change for later declaration extraction.
  * Updates the version's changedFiles list.
  *
- * @param context - Workflow context
+ * @param context - Session context
  * @param filePath - Relative path to the changed file
  * @param type - Type of change: added, modified, or deleted
  */
@@ -160,11 +160,11 @@ export async function trackFileChange({
   filePath,
   type,
 }: {
-  context: WorkflowContext;
+  context: SessionContext;
   filePath: string;
   type: "added" | "modified" | "deleted";
 }): Promise<void> {
-  const branch = context.get("branch");
+  const branch = context.branch;
 
   await db
     .update(versions)
@@ -177,23 +177,23 @@ export async function trackFileChange({
 /**
  * Handle file deletion - removes declarations associated with the deleted file.
  *
- * @param context - Workflow context
+ * @param context - Session context
  * @param filePath - Relative path to the deleted file
  */
 export async function handleFileDeleted({
   context,
   filePath,
 }: {
-  context: WorkflowContext;
+  context: SessionContext;
   filePath: string;
 }): Promise<void> {
   const { and, inArray } = await import("@weldr/db");
   const { declarations, versionDeclarations } = await import("@weldr/db/schema");
 
-  const branch = context.get("branch");
+  const branch = context.branch;
 
   const logger = Logger.get({
-    projectId: context.get("project").id,
+    projectId: context.project.id,
     versionId: branch.headVersion.id,
   });
 

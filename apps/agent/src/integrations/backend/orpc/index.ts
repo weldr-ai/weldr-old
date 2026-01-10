@@ -14,7 +14,7 @@ export const orpcIntegration = defineIntegration<"orpc">({
   recommendedOptions: null,
   isRecommended: true,
   packages: async (context) => {
-    const project = context.get("project");
+    const project = context.project;
     const hasFrontend = project.integrationCategories.has("frontend");
 
     const packages: IntegrationPackageSets = [

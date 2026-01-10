@@ -9,7 +9,7 @@ import { Logger } from "@weldr/shared/logger";
 import { nanoid } from "@weldr/shared/nanoid";
 import type { Integration, IntegrationKey } from "@weldr/shared/types";
 
-import type { WorkflowContext } from "@/workflow/context";
+import type { SessionContext } from "@/session";
 
 /**
  * Seed declaration templates to a user's project based on their selected integration options
@@ -20,11 +20,11 @@ export async function seedDeclarationTemplates({
   context,
 }: {
   integration: Integration;
-  context: WorkflowContext;
+  context: SessionContext;
 }) {
-  const project = context.get("project");
-  const branch = context.get("branch");
-  const user = context.get("user");
+  const project = context.project;
+  const branch = context.branch;
+  const user = context.user;
 
   if (!project || !branch.headVersion || !user) {
     throw new Error("Project, version, or user not found in context");

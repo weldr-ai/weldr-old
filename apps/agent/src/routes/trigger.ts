@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { UserContent } from "ai";
+import { createActor } from "xstate";
 
 import { and, db, eq } from "@weldr/db";
 import { branches, projects } from "@weldr/db/schema";
@@ -11,7 +12,8 @@ import { getInstalledCategories } from "@/integrations/utils/get-installed-categ
 import { auth } from "@/lib/auth";
 import { Git } from "@/lib/git";
 import { createRouter } from "@/lib/utils";
-import { workflow } from "@/workflow";
+import { sessionMachine } from "@/machines/session";
+import { createSessionInput } from "@/session";
 
 const route = createRoute({
   method: "post",
@@ -132,7 +134,7 @@ router.openapi(route, async (c) => {
     });
   }
 
-  if (message) {
+  if (message && activeVersion) {
     await insertMessages({
       input: {
         chatId: activeVersion.chatId,
@@ -148,19 +150,16 @@ router.openapi(route, async (c) => {
     });
   }
 
-  // Store the context we need for the workflow
-  const workflowContext = c.get("workflowContext");
-  workflowContext.set("project", {
-    ...project,
-    integrationCategories: new Set(installedCategories),
-  });
-  workflowContext.set("branch", { ...branch, headVersion: activeVersion });
-  workflowContext.set("user", session.user);
-
-  if (activeVersion.status !== "completed" && activeVersion.status !== "failed") {
-    await workflow.execute({
-      context: workflowContext,
+  if (activeVersion && activeVersion.status !== "completed" && activeVersion.status !== "failed") {
+    const sessionInput = createSessionInput({
+      project: { ...project, integrationCategories: new Set(installedCategories) },
+      branch: { ...branch, headVersion: activeVersion },
+      user: session.user,
     });
+
+    const sessionActor = createActor(sessionMachine, { input: sessionInput });
+    sessionActor.start();
+    sessionActor.send({ type: "START" });
   }
 
   return c.json({ success: true });

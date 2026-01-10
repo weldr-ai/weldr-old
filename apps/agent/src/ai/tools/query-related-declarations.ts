@@ -9,10 +9,9 @@ import { createTool } from "./utils";
 
 export const queryRelatedDeclarationsTool = createTool({
   name: "query_related_declarations",
-  description:
-    "Queries the dependencies and/or dependents of a specific declaration using its ID. Returns formatted results showing what the declaration depends on and/or what depends on it.",
-  whenToUse:
-    "When you need to understand the relationships between declarations - what a specific declaration depends on (dependencies) or what other declarations use it (dependents).",
+  description: `Queries the dependencies and/or dependents of a specific declaration using its ID. Returns formatted results showing what the declaration depends on and/or what depends on it.
+
+When you need to understand the relationships between declarations - what a specific declaration depends on (dependencies) or what other declarations use it (dependents).`,
   inputSchema: z.object({
     declarationId: z.string().describe("The ID of the declaration to query relationships for."),
     queryType: z
@@ -34,9 +33,9 @@ export const queryRelatedDeclarationsTool = createTool({
   ]),
   execute: async ({ input, context }) => {
     const { declarationId, queryType } = input;
-    const project = context.get("project");
-    const user = context.get("user");
-    const branch = context.get("branch");
+    const project = context.project;
+    const user = context.user;
+    const branch = context.branch;
 
     const logger = Logger.get({
       projectId: project.id,

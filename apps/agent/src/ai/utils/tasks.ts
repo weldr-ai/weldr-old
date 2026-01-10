@@ -2,7 +2,7 @@ import { db, eq } from "@weldr/db";
 import { taskDependencies, tasks } from "@weldr/db/schema";
 import type { Task } from "@weldr/shared/types";
 
-import type { WorkflowContext } from "@/workflow/context";
+import type { SessionContext } from "@/session";
 
 export type TaskWithRelations = typeof tasks.$inferSelect & {
   dependencies: {
@@ -14,10 +14,10 @@ export async function createTasks({
   context,
   taskList,
 }: {
-  context: WorkflowContext;
+  context: SessionContext;
   taskList: Task[];
 }) {
-  const branch = context.get("branch");
+  const branch = context.branch;
 
   return await db.transaction(async (tx) => {
     const tasksMap = new Map<

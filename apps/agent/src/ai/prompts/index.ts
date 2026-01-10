@@ -1,7 +1,3 @@
-import { generalCoder } from "./general-coder";
-import { planner } from "./planner";
-
-export const prompts = {
-  generalCoder,
-  planner,
-};
+export { agentPrompt } from "./agent";
+export { codingGuidelines } from "./coding-guidelines";
+export { enricher } from "./enricher";

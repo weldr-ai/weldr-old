@@ -1,12 +1,12 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { PinoLogger } from "hono-pino";
 
-import type { WorkflowContext } from "@/workflow/context";
+import type { SessionContext } from "@/session";
 
 export type HonoContext = {
   Variables: {
     logger: PinoLogger;
-    workflowContext: WorkflowContext;
+    sessionContext: SessionContext;
   };
 };
 

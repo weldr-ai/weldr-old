@@ -4,11 +4,11 @@ import { Logger } from "@weldr/shared/logger";
 import type { Integration, IntegrationInstallationStatus } from "@weldr/shared/types";
 
 import { integrationRegistry } from "@/integrations/utils/registry";
-import type { WorkflowContext } from "@/workflow/context";
+import type { SessionContext } from "@/session";
 
-export async function processIntegrationQueue(context: WorkflowContext): Promise<void> {
-  const project = context.get("project");
-  const branch = context.get("branch");
+export async function processIntegrationQueue(context: SessionContext): Promise<void> {
+  const project = context.project;
+  const branch = context.branch;
   const versionId = branch.headVersionId;
   const logger = Logger.get({ projectId: project.id });
 
@@ -103,9 +103,9 @@ export async function processIntegrationQueue(context: WorkflowContext): Promise
   logger.info("Queue processing completed");
 }
 
-export async function unblockIntegrations(context: WorkflowContext): Promise<void> {
-  const project = context.get("project");
-  const branch = context.get("branch");
+export async function unblockIntegrations(context: SessionContext): Promise<void> {
+  const project = context.project;
+  const branch = context.branch;
   const versionId = branch.headVersionId;
   const logger = Logger.get({ projectId: project.id });
 
@@ -159,8 +159,8 @@ export async function unblockIntegrations(context: WorkflowContext): Promise<voi
   }
 }
 
-export async function getQueuedIntegrations(context: WorkflowContext): Promise<Integration[]> {
-  const branch = context.get("branch");
+export async function getQueuedIntegrations(context: SessionContext): Promise<Integration[]> {
+  const branch = context.branch;
   const versionId = branch.headVersionId;
 
   if (!versionId) {

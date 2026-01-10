@@ -37,7 +37,7 @@ export const betterAuthIntegration = defineIntegration<"better-auth">({
   ],
   isRecommended: true,
   packages: async (context) => {
-    const project = context.get("project");
+    const project = context.project;
     const hasFrontend = project.integrationCategories.has("frontend");
 
     const packages: IntegrationPackageSets = [
@@ -64,9 +64,9 @@ export const betterAuthIntegration = defineIntegration<"better-auth">({
   },
 
   postInstall: async ({ context, integration }) => {
-    const project = context.get("project");
-    const branch = context.get("branch");
-    const user = context.get("user");
+    const project = context.project;
+    const branch = context.branch;
+    const user = context.user;
     const branchDir = getBranchDir(project.id, branch.id);
 
     try {

@@ -14,7 +14,7 @@ export const tanstackStartIntegration = defineIntegration<"tanstack-start">({
   variables: null,
   isRecommended: true,
   packages: async (context) => {
-    const project = context.get("project");
+    const project = context.project;
     const hasBackend = project.integrationCategories.has("backend");
     const hasAuthentication = project.integrationCategories.has("authentication");
 

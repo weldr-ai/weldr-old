@@ -31,6 +31,7 @@
     "pluralize": "^8.0.0",
     "redis": "^5.5.5",
     "simple-git": "^3.28.0",
+    "xstate": "^5",
     "zod": "^4.3.5"
   },
   "devDependencies": {

@@ -11,7 +11,7 @@ import type { Integration } from "@weldr/shared/types";
 import { applyEdit } from "@/ai/utils/apply-edit";
 import type { FileItem } from "@/integrations/types";
 import { integrationRegistry } from "@/integrations/utils/registry";
-import type { WorkflowContext } from "@/workflow/context";
+import type { SessionContext } from "@/session";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,10 +21,10 @@ export async function applyFiles({
   context,
 }: {
   integration: Integration;
-  context: WorkflowContext;
+  context: SessionContext;
 }): Promise<void> {
-  const project = context.get("project");
-  const branch = context.get("branch");
+  const project = context.project;
+  const branch = context.branch;
   const branchDir = getBranchDir(project.id, branch.id);
 
   const files = await generateFiles({
@@ -142,10 +142,10 @@ async function generateFiles({
   branchDir,
 }: {
   integration: Integration;
-  context: WorkflowContext;
+  context: SessionContext;
   branchDir: string;
 }): Promise<FileItem[]> {
-  const project = context.get("project");
+  const project = context.project;
 
   const category = integrationRegistry.getIntegrationCategory(integration.key);
 

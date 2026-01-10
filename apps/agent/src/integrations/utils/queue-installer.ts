@@ -12,7 +12,7 @@ import type {
 
 import { integrationRegistry } from "@/integrations/utils/registry";
 import { stream } from "@/lib/stream-utils";
-import type { WorkflowContext } from "@/workflow/context";
+import type { SessionContext } from "@/session";
 import {
   getQueuedIntegrations,
   unblockIntegrations,
@@ -24,11 +24,11 @@ async function streamToolMessageUpdate({
   integrationKey,
   status,
 }: {
-  context: WorkflowContext;
+  context: SessionContext;
   integrationKey: IntegrationKey;
   status: IntegrationInstallationStatus;
 }) {
-  const branch = context.get("branch");
+  const branch = context.branch;
 
   const message = await db.query.chatMessages.findFirst({
     where: and(eq(chatMessages.chatId, branch.headVersion.chatId), eq(chatMessages.role, "tool")),
@@ -101,7 +101,7 @@ async function streamToolMessageUpdate({
   });
 }
 
-export async function installQueuedIntegrations(context: WorkflowContext): Promise<
+export async function installQueuedIntegrations(context: SessionContext): Promise<
   | {
       status: "completed";
       installedIntegrations: {
@@ -115,8 +115,8 @@ export async function installQueuedIntegrations(context: WorkflowContext): Promi
       error: string;
     }
 > {
-  const project = context.get("project");
-  const branch = context.get("branch");
+  const project = context.project;
+  const branch = context.branch;
   const versionId = branch.headVersionId;
   const logger = Logger.get({ projectId: project.id });
 

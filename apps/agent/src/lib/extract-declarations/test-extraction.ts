@@ -4,7 +4,7 @@ import { Logger } from "@weldr/shared/logger";
 
 import { extractAndSaveDeclarations } from "@/ai/utils/declarations";
 import { getInstalledCategories } from "@/integrations/utils/get-installed-categories";
-import type { WorkflowContext } from "@/workflow/context";
+import type { SessionContext } from "@/session";
 import { fixtures } from "./test-fixtures";
 
 const logger = Logger.get({ module: "test-extraction" });
@@ -52,27 +52,18 @@ async function loadRealContext(testContext: TestContext) {
   return { project: projectWithCategories, branch, user };
 }
 
-function createWorkflowContext(
+function createSessionContextForTest(
   project: typeof projects.$inferSelect & {
     integrationCategories: Set<string>;
   },
   branch: typeof branches.$inferSelect & { headVersion: unknown },
   user: typeof users.$inferSelect,
-): WorkflowContext {
-  const contextData: Record<string, unknown> = {
+): SessionContext {
+  return {
     project,
     branch,
     user,
-  };
-
-  return {
-    get: (key: string) => {
-      return contextData[key];
-    },
-    set: (key: string, value: unknown) => {
-      contextData[key] = value;
-    },
-  } as WorkflowContext;
+  } as SessionContext;
 }
 
 /**
@@ -108,13 +99,12 @@ async function cleanupTestData(
 }
 
 async function testExtractionAndDependencies(
-  context: WorkflowContext,
+  context: SessionContext,
   filePath: string,
   sourceCode: string,
   expectedDeclarations?: string[],
 ) {
-  const project = context.get("project");
-  const branch = context.get("branch");
+  const { project, branch } = context;
 
   const declarationsBeforeTest = await db.query.declarations.findMany({
     where: eq(declarations.projectId, project.id),
@@ -221,7 +211,7 @@ async function main() {
       projectId,
     });
 
-    const context = createWorkflowContext(project, branch, user);
+    const context = createSessionContextForTest(project, branch, user);
 
     const fixturesToTest = fixtureFilter
       ? fixtures.filter((f) => f.name === fixtureFilter)
@@ -293,4 +283,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     });
 }
 
-export { testExtractionAndDependencies, loadRealContext, createWorkflowContext };
+export { testExtractionAndDependencies, loadRealContext, createSessionContextForTest };

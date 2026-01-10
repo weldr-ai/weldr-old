@@ -2,7 +2,7 @@ import { Logger } from "@weldr/shared/logger";
 import { getBranchDir, isLocalMode } from "@weldr/shared/state";
 import type { Integration, IntegrationKey } from "@weldr/shared/types";
 
-import type { WorkflowContext } from "@/workflow/context";
+import type { SessionContext } from "@/session";
 import type { ExtractOptionsForKey, IntegrationDefinition } from "../types";
 import { combineResults } from "./combine-results";
 import { seedDeclarationTemplates } from "./declaration-templates-utils";
@@ -18,12 +18,12 @@ export function defineIntegration<K extends IntegrationKey>(
       context,
       integration,
     }: {
-      context: WorkflowContext;
+      context: SessionContext;
       integration: Integration;
     }) => {
       try {
-        const project = context.get("project");
-        const branch = context.get("branch");
+        const project = context.project;
+        const branch = context.branch;
         const branchDir = getBranchDir(project.id, branch.id);
 
         const options = integration?.options as ExtractOptionsForKey<K> | undefined;
@@ -49,10 +49,10 @@ export function defineIntegration<K extends IntegrationKey>(
           props.postInstall?.({ context, integration }),
         ]);
 
-        context.set("project", {
+        context.project = {
           ...project,
           integrationCategories: new Set([...project.integrationCategories, props.category]),
-        });
+        };
 
         return combineResults(results.filter((r) => r !== undefined));
       } catch (error: unknown) {

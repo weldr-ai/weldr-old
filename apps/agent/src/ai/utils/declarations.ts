@@ -8,7 +8,7 @@ import { nanoid } from "@weldr/shared/nanoid";
 import type { DeclarationCodeMetadata } from "@weldr/shared/types/declarations";
 
 import { extractDeclarations } from "@/lib/extract-declarations";
-import type { WorkflowContext } from "@/workflow/context";
+import type { SessionContext } from "@/session";
 import { queueEnrichingJob } from "./enriching-jobs";
 
 /**
@@ -250,7 +250,7 @@ async function updateDeclaration(
     declarationId,
   });
 
-  logger.info(`✅ Updating existing declaration ${declarationId} (matched by URI)`);
+  logger.info(`Updating existing declaration ${declarationId} (matched by URI)`);
 
   await tx
     .update(declarations)
@@ -370,7 +370,7 @@ async function createDeclaration(
  * - Transaction rollback on failure
  * - Continues processing despite individual enrichment failures
  *
- * @param context - Workflow context containing project, branch, version info
+ * @param context - Session context containing project, branch, version info
  * @param filePath - Relative path to the source file being processed
  * @param sourceCode - Complete source code content of the file
  * @param workspaceDir - Absolute path to the workspace root directory
@@ -381,13 +381,12 @@ export async function extractAndSaveDeclarations({
   sourceCode,
   workspaceDir,
 }: {
-  context: WorkflowContext;
+  context: SessionContext;
   filePath: string;
   sourceCode: string;
   workspaceDir: string;
 }): Promise<void> {
-  const project = context.get("project");
-  const branch = context.get("branch");
+  const { project, branch } = context;
 
   const logger = Logger.get({
     projectId: project.id,

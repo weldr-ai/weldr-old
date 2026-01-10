@@ -1,4 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { createActor } from "xstate";
 
 import { and, db, eq } from "@weldr/db";
 import { branches, projects } from "@weldr/db/schema";
@@ -9,7 +10,8 @@ import { installQueuedIntegrations } from "@/integrations/utils/queue-installer"
 import { processIntegrationQueue } from "@/integrations/utils/queue-manager";
 import { auth } from "@/lib/auth";
 import { createRouter } from "@/lib/utils";
-import { workflow } from "@/workflow";
+import { sessionMachine } from "@/machines";
+import type { SessionContext } from "@/session";
 
 const route = createRoute({
   method: "post",
@@ -121,20 +123,21 @@ router.openapi(route, async (c) => {
 
     const installedCategories = await getInstalledCategories(branch.headVersion.id);
 
-    const workflowContext = c.get("workflowContext");
-    workflowContext.set("project", {
-      ...project,
-      integrationCategories: new Set(installedCategories),
-    });
-    workflowContext.set("branch", {
-      ...branch,
-      headVersion: branch.headVersion,
-    });
-    workflowContext.set("user", session.user);
+    const sessionContext: SessionContext = {
+      project: {
+        ...project,
+        integrationCategories: new Set(installedCategories),
+      },
+      branch: {
+        ...branch,
+        headVersion: branch.headVersion,
+      },
+      user: session.user,
+    };
 
-    await processIntegrationQueue(workflowContext);
+    await processIntegrationQueue(sessionContext);
 
-    const result = await installQueuedIntegrations(workflowContext);
+    const result = await installQueuedIntegrations(sessionContext);
 
     if (result.status === "error") {
       logger.error("Integration installation failed", {
@@ -150,9 +153,21 @@ router.openapi(route, async (c) => {
     }
 
     if (triggerWorkflow) {
-      await workflow.execute({
-        context: workflowContext,
+      const sessionActor = createActor(sessionMachine, {
+        input: {
+          project: {
+            ...project,
+            integrationCategories: new Set(installedCategories),
+          },
+          branch: {
+            ...branch,
+            headVersion: branch.headVersion,
+          },
+          user: session.user,
+        },
       });
+      sessionActor.start();
+      sessionActor.send({ type: "START" });
     }
 
     logger.info("Integration installation completed successfully", {

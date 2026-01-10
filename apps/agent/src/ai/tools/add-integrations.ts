@@ -8,9 +8,9 @@ import { createTool } from "./utils";
 
 export const addIntegrationsTool = createTool({
   name: "add_integrations",
-  description: "Shows available integration categories that can be added to a project.",
-  whenToUse:
-    "Use this tool when you need to add more integration categories to a project. It will return available categories.",
+  description: `Shows available integration categories that can be added to a project.
+
+Use this tool when you need to add more integration categories to a project. It will return available categories.`,
   inputSchema: z.object({
     categories: z
       .array(integrationCategoryKeySchema)
@@ -29,8 +29,8 @@ export const addIntegrationsTool = createTool({
     }),
   ]),
   execute: async ({ input, context }) => {
-    const project = context.get("project");
-    const branch = context.get("branch");
+    const project = context.project;
+    const branch = context.branch;
 
     const logger = Logger.get({
       projectId: project.id,

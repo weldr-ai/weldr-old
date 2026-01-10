@@ -1,17 +1,16 @@
 import type { Tool } from "ai";
 import type { z } from "zod";
 
-import type { WorkflowContext } from "@/workflow/context";
+import type { SessionContext } from "@/session";
 
 type ToolConfig<TName extends string, TInput extends z.ZodSchema, TOutput extends z.ZodSchema> = {
   name: TName;
   description: string;
-  whenToUse: string;
   inputSchema: TInput;
   outputSchema: TOutput;
   execute?: (params: {
     input: z.infer<TInput>;
-    context: WorkflowContext;
+    context: SessionContext;
   }) => Promise<z.infer<TOutput>> | undefined;
 };
 
@@ -23,7 +22,7 @@ export function createTool<
   TInput extends z.ZodSchema,
   TOutput extends z.ZodSchema,
 >(config: ToolConfig<TName, TInput, TOutput>) {
-  const aiSDKTool = (context: WorkflowContext): Tool => ({
+  const aiSDKTool = (context: SessionContext): Tool => ({
     name: config.name,
     description: config.description,
     inputSchema: config.inputSchema,

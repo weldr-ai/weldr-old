@@ -6,7 +6,7 @@ import { Logger } from "@weldr/shared/logger";
 import { getBranchDir } from "@weldr/shared/state";
 
 import { type AgentFSBashTools, agentFSManager, createAgentFSBashTool } from "@/lib/storage";
-import type { WorkflowContext } from "@/workflow/context";
+import type { SessionContext } from "@/session";
 import { trackFileChange } from "../utils/extract-changed-files";
 import { createTool } from "./utils";
 
@@ -174,8 +174,9 @@ export async function clearBashToolCache(projectId: string, branchId: string): P
  */
 export const bashTool = createTool({
   name: "bash",
-  description: `Execute bash commands in the project's sandboxed environment. Use this for file exploration, text search, data processing, and any shell operations. Commands run in a TypeScript-based bash with full support for pipes, redirections, variables, and common utilities (grep, find, awk, sed, jq, etc.).`,
-  whenToUse: `Use this tool when you need to:
+  description: `Execute bash commands in the project's sandboxed environment. Use this for file exploration, text search, data processing, and any shell operations. Commands run in a TypeScript-based bash with full support for pipes, redirections, variables, and common utilities (grep, find, awk, sed, jq, etc.).
+
+Use this tool when you need to:
 - Search for patterns in files (grep, find)
 - Explore directory structure (ls, tree, find)
 - Process text or data (awk, sed, jq, cut, sort)
@@ -198,8 +199,8 @@ Prefer this over specialized tools when you need flexibility or when combining m
   }),
   execute: async ({ input, context }) => {
     const { command } = input;
-    const project = context.get("project");
-    const branch = context.get("branch");
+    const project = context.project;
+    const branch = context.branch;
 
     const logger = Logger.get({
       projectId: project.id,
@@ -265,8 +266,8 @@ Prefer this over specialized tools when you need flexibility or when combining m
  * Get the bash tools instance for direct access.
  * This can be used for operations that need direct access to the sandbox.
  */
-export async function getBashTools(context: WorkflowContext): Promise<AgentFSBashTools> {
-  const project = context.get("project");
-  const branch = context.get("branch");
+export async function getBashTools(context: SessionContext): Promise<AgentFSBashTools> {
+  const project = context.project;
+  const branch = context.branch;
   return getOrCreateBashTool(project.id, branch.id);
 }
