@@ -3,6 +3,14 @@
 ## Overview
 The @weldr/db package manages all database operations using Drizzle ORM with PostgreSQL. It provides type-safe schema definitions, migrations, and database utilities for the entire monorepo.
 
+## Current Structure
+- `src/schema`: tables for projects, branches, versions, chats/messages, declarations, declaration-templates, dependencies, nodes, tasks, integrations (and categories/templates), environment-variables, themes, vault, auth tables, ai-models
+- `src/migrations`: SQL migration history and meta tracking
+- `src/index.ts`: drizzle client setup and exports
+- `src/types.ts`: shared types from schemas
+- `src/scripts` and `seed.ts`: helpers for seeding and maintenance
+- `src/utils.ts`: common helpers for DB interactions
+
 ## Type Safety Requirements
 
 ### Schema Definition

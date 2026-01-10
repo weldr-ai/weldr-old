@@ -1,6 +1,7 @@
 import { Logger } from "@weldr/shared/logger";
 
 import { ensureBranchDir } from "@/lib/branch-state";
+import { agentFSManager } from "@/lib/storage";
 import { stream } from "@/lib/stream-utils";
 import type { WorkflowContext } from "./context";
 
@@ -176,6 +177,9 @@ export function createWorkflow(
         });
         throw error;
       } finally {
+        // Force close AgentFS connection to ensure cleanup
+        await agentFSManager.forceClose(project.id, branch.id);
+
         if (api.status === "executing") {
           await stream(branch.headVersion.chatId, {
             type: "end",

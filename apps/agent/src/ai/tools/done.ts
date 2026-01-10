@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { db, inArray } from "@weldr/db";
-import { tasks } from "@weldr/db/schema";
+import { db, eq, inArray } from "@weldr/db";
+import { tasks, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
 import { extractDeclarationsFromProject } from "../utils/extract-changed-files";
@@ -75,21 +75,43 @@ export const doneTool = createTool({
       extra: { completedTaskIds: taskIdsToComplete },
     });
 
-    // Extract declarations from changed files after task completion
-    logger.info("Extracting declarations from changed files...");
-    const { processed, errors } = await extractDeclarationsFromProject({
-      context,
+    // Fetch the latest changedFiles from the version
+    const currentVersion = await db.query.versions.findFirst({
+      where: eq(versions.id, branch.headVersion.id),
+      columns: { changedFiles: true },
     });
 
-    if (errors.length > 0) {
-      logger.warn("Some files failed declaration extraction", {
-        extra: { errorCount: errors.length, errors: errors.slice(0, 5) },
-      });
-    }
+    const changedFiles = currentVersion?.changedFiles ?? [];
 
-    logger.info(
-      `Declaration extraction completed: ${processed} files processed`,
-    );
+    // Extract declarations only from changed files (incremental extraction)
+    if (changedFiles.length > 0) {
+      logger.info("Extracting declarations from changed files...", {
+        extra: { fileCount: changedFiles.length },
+      });
+
+      const { processed, errors } = await extractDeclarationsFromProject({
+        context,
+        changedFiles,
+      });
+
+      if (errors.length > 0) {
+        logger.warn("Some files failed declaration extraction", {
+          extra: { errorCount: errors.length, errors: errors.slice(0, 5) },
+        });
+      }
+
+      logger.info(
+        `Declaration extraction completed: ${processed} files processed`,
+      );
+
+      // Clear changedFiles after successful extraction
+      await db
+        .update(versions)
+        .set({ changedFiles: [] })
+        .where(eq(versions.id, branch.headVersion.id));
+    } else {
+      logger.info("No changed files to process for declaration extraction");
+    }
 
     return {
       success: true as const,

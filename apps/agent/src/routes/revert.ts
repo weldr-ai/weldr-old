@@ -8,8 +8,8 @@ import { getBranchDir } from "@weldr/shared/state";
 import { auth } from "@/lib/auth";
 import { Git } from "@/lib/git";
 import {
+  agentFSManager,
   createSnapshotService,
-  openAgentFS,
   syncAgentFSToDisk,
 } from "@/lib/storage";
 import { createRouter } from "@/lib/utils";
@@ -136,7 +136,7 @@ router.openapi(route, async (c) => {
     // 2. Sync files from AgentFS to disk
     logger.info("Syncing files from AgentFS to disk");
 
-    const agent = await openAgentFS(branchDir);
+    const agent = await agentFSManager.acquire(projectId, branchId, branchDir);
     let synced: number;
     let errors: string[];
     try {
@@ -144,7 +144,7 @@ router.openapi(route, async (c) => {
       synced = result.synced;
       errors = result.errors;
     } finally {
-      await agent.close();
+      await agentFSManager.release(projectId, branchId);
     }
 
     logger.info("Files synced from snapshot", {

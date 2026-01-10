@@ -48,7 +48,7 @@ export interface AgentFSBashToolOptions {
 
   /**
    * The working directory for bash commands
-   * @default "/project"
+   * @default "/workspace"
    */
   cwd?: string;
 
@@ -120,18 +120,19 @@ export interface AgentFSBashTools {
  * - All file operations are persisted to AgentFS (SQLite-backed)
  * - Commands execute in a TypeScript-based bash implementation (no real shell)
  * - The agent can use familiar bash commands (grep, cat, find, etc.)
+ * - The AgentFS root is mounted at the configured working directory
  */
 export async function createAgentFSBashTool(
   options: AgentFSBashToolOptions,
 ): Promise<AgentFSBashTools> {
   const {
     agent,
-    cwd = "/project",
+    cwd = "/workspace",
     onBeforeBashCall,
     onAfterBashCall,
   } = options;
 
-  const fs = await agentfs(agent);
+  const fs = await agentfs(agent, cwd);
 
   const bashInstance = new Bash({
     fs,

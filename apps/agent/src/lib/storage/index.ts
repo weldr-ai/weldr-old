@@ -1,33 +1,33 @@
 export * from "./agentfs";
+export * from "./agentfs-manager";
 export * from "./bash-tool";
-export * from "./s3-backend";
+export * from "./errors";
 export * from "./snapshot";
+export * from "./tigris-backend";
 export * from "./types";
 
-import { S3StorageBackend } from "./s3-backend";
 import { SnapshotService } from "./snapshot";
+import { TigrisStorageBackend } from "./tigris-backend";
 import type { StorageBackend } from "./types";
 
 /**
- * S3 configuration from environment variables
- * Works with MinIO (local) or Tigris (cloud)
+ * Tigris configuration from environment variables
  */
-function getS3Config() {
+function getTigrisConfig() {
   return {
     accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
     endpoint: process.env.S3_ENDPOINT || "https://fly.storage.tigris.dev",
-    region: process.env.S3_REGION || "auto",
   };
 }
 
 /**
  * Factory to create the storage backend for a project
- * Always uses S3-compatible storage (MinIO locally, Tigris in cloud)
+ * Uses Tigris object storage
  */
 export function createStorageBackend(projectId: string): StorageBackend {
   const bucket = `project-${projectId}`;
-  return new S3StorageBackend(bucket, getS3Config());
+  return new TigrisStorageBackend(bucket, getTigrisConfig());
 }
 
 /**

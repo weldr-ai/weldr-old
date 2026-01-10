@@ -1,4 +1,3 @@
-import type { Dirent } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { AgentFS } from "agentfs-sdk";
@@ -21,8 +20,8 @@ export async function openAgentFS(branchDir: string): Promise<AgentFSInstance> {
 }
 
 /**
- * Sync files from AgentFS filesystem to actual disk
- * Used after restoring a snapshot to update the working directory
+ * Sync files from AgentFS filesystem to actual disk.
+ * Used before Git commits and builds that require physical files.
  */
 export async function syncAgentFSToDisk(
   agent: AgentFSInstance,
@@ -70,80 +69,6 @@ export async function syncAgentFSToDisk(
   }
 
   await syncDir("/", branchDir);
-
-  return { synced, errors };
-}
-
-/**
- * Sync files from disk to AgentFS filesystem
- * Used to capture changes made to the working directory
- */
-export async function syncDiskToAgentFS(
-  agent: AgentFSInstance,
-  branchDir: string,
-  options?: { exclude?: string[] },
-): Promise<SyncResult> {
-  const exclude = new Set(
-    options?.exclude || [
-      "agent.db",
-      ".git",
-      "node_modules",
-      ".next",
-      "dist",
-      "build",
-      ".turbo",
-      ".cache",
-      "tmp",
-      "coverage",
-      ".nyc_output",
-      "out",
-      ".output",
-      ".nitro",
-      ".vercel",
-      ".react-router",
-      ".vscode",
-      ".idea",
-      ".DS_Store",
-    ],
-  );
-  let synced = 0;
-  const errors: string[] = [];
-
-  async function syncDir(diskPath: string, agentPath: string) {
-    let entries: Dirent[];
-    try {
-      entries = (await fs.readdir(diskPath, {
-        withFileTypes: true,
-      })) as Dirent[];
-    } catch {
-      return;
-    }
-
-    for (const entry of entries) {
-      const entryName = String(entry.name);
-
-      if (exclude.has(entryName)) continue;
-
-      const entryDiskPath = path.join(diskPath, entryName);
-      const entryAgentPath = path.posix.join(agentPath, entryName);
-
-      if (entry.isDirectory()) {
-        await syncDir(entryDiskPath, entryAgentPath);
-      } else if (entry.isFile()) {
-        try {
-          const content = await fs.readFile(entryDiskPath);
-          await agent.fs.writeFile(entryAgentPath, content);
-          synced++;
-        } catch (err) {
-          errors.push(
-            `Failed to sync ${entryDiskPath}: ${err instanceof Error ? err.message : String(err)}`,
-          );
-        }
-      }
-    }
-  }
-
-  await syncDir(branchDir, "/");
 
   return { synced, errors };
 }

@@ -21,6 +21,13 @@
 - Version history with navigation
 - Subscription-based pricing model
 
+## Current Structure
+- `src/app`: app router routes (landing, pricing, projects, auth flows, API handlers), shared layout/loading/not-found
+- `src/components`: auth, billing, chat, editor, integrations, projects, openapi viewer, command center, timeline, dialogs
+- `src/hooks`: event stream, workflow trigger, messages, chat visibility, editor references, scroll management, status
+- `src/lib`: tRPC client/server utils, context providers, gradient and preview helpers, dev-server manager, shutdown helpers
+- `src/types`: shared client-side types for UI
+
 ## Type Safety Requirements
 
 ### Component Props

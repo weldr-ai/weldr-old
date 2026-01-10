@@ -173,9 +173,16 @@ export async function trackFileChange({
   filePath: string;
   type: "added" | "modified" | "deleted";
 }): Promise<void> {
-  await db.update(versions).set({
-    changedFiles: mergeJson(versions.changedFiles, [{ path: filePath, type }]),
-  });
+  const branch = context.get("branch");
+
+  await db
+    .update(versions)
+    .set({
+      changedFiles: mergeJson(versions.changedFiles, [
+        { path: filePath, type },
+      ]),
+    })
+    .where(eq(versions.id, branch.headVersion.id));
 }
 
 /**

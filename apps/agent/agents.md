@@ -3,6 +3,14 @@
 ## Overview
 The Agent application is the core AI-powered backend service built with Hono and OpenAPI. It handles code generation, project planning, and integration management using LLMs with custom tools.
 
+## Current Structure
+- `src/ai`: agents (planner, coder), prompts, schemas, tools, shared utils
+- `src/routes`: health, trigger, stream, revert, install-integrations (Hono OpenAPI routes)
+- `src/workflow`: engine, context, steps (generate-project-info, generate-branch-name, generate-version-details, planning, coding, finalizing)
+- `src/integrations`: authentication (better-auth), backend (orpc), frontend (tanstack-start), database (postgresql), utils (registry, queue-manager/installer, declaration templates, env writer)
+- `src/lib`: git/worktrees, branch-state, build, commands runner, constants, extract-declarations, storage, stream-utils, misc utils
+- `src/middlewares`: logger middleware for request logging
+
 ## Type Safety Requirements
 
 ### Hono OpenAPI Routes

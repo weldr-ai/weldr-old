@@ -7,9 +7,9 @@ import { syncBranchToStorage } from "@/lib/branch-state";
 import { build } from "@/lib/build";
 import { Git } from "@/lib/git";
 import {
+  agentFSManager,
   createSnapshotService,
-  openAgentFS,
-  syncDiskToAgentFS,
+  syncAgentFSToDisk,
 } from "@/lib/storage";
 import { stream } from "@/lib/stream-utils";
 import { createStep } from "../engine";
@@ -31,20 +31,25 @@ export const finalizingStep = createStep({
     try {
       const branchDir = getBranchDir(project.id, branch.id);
 
-      // 1. Sync disk changes to AgentFS filesystem
-      logger.info("Syncing disk changes to AgentFS");
-      const agent = await openAgentFS(branchDir);
+      // 1. Sync AgentFS filesystem to disk for Git commit
+      // (Agent writes to AgentFS via bash tool, need to materialize files on disk)
+      logger.info("Syncing AgentFS to disk");
+      const agent = await agentFSManager.acquire(
+        project.id,
+        branch.id,
+        branchDir,
+      );
       let synced: number;
       let errors: string[];
       try {
-        const result = await syncDiskToAgentFS(agent, branchDir);
+        const result = await syncAgentFSToDisk(agent, branchDir);
         synced = result.synced;
         errors = result.errors;
       } finally {
-        await agent.close();
+        await agentFSManager.release(project.id, branch.id);
       }
 
-      logger.info("Disk synced to AgentFS", {
+      logger.info("AgentFS synced to disk", {
         extra: { synced, errorCount: errors.length },
       });
 

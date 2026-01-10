@@ -3,6 +3,26 @@
 ## Project Overview
 Weldr is a TypeScript-based monorepo using bun workspaces, Turbo, and modern web technologies. The project consists of AI-powered web applications with a focus on code generation, project management, and integrations.
 
+## Monorepo Structure
+
+### Apps
+| App | Path | Description | Has agents.md |
+|-----|------|-------------|---------------|
+| `agent` | `/apps/agent` | AI-powered backend service with Hono and OpenAPI | Yes |
+| `web` | `/apps/web` | Next.js frontend application | Yes |
+
+### Packages
+| Package | Path | Description | Has agents.md |
+|---------|------|-------------|---------------|
+| `@weldr/api` | `/packages/api` | tRPC API layer with type-safe routers | Yes |
+| `@weldr/auth` | `/packages/auth` | Authentication with Better Auth | Yes |
+| `@weldr/db` | `/packages/db` | Database schemas and Drizzle ORM | Yes |
+| `@weldr/emails` | `/packages/emails` | React email templates | Yes |
+| `@weldr/shared` | `/packages/shared` | Shared utilities, types, and validators | Yes |
+| `@weldr/ui` | `/packages/ui` | UI components with shadcn/ui | Yes |
+
+Each app and package has its own `agents.md` file with package-specific development guidelines. Refer to those files for detailed patterns and best practices specific to each package.
+
 ## Core Principles
 
 ### 1. Type Safety is Non-Negotiable

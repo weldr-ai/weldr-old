@@ -12,9 +12,9 @@ import {
 
 import {
   agentFSExists,
+  agentFSManager,
   createSnapshotService,
   createStorageBackend,
-  openAgentFS,
   syncAgentFSToDisk,
 } from "@/lib/storage";
 import { Git } from "./git";
@@ -115,8 +115,8 @@ export async function ensureBranchDir(
     if (!syncResult.success) {
       logger.warn("Failed to sync from storage, initializing empty AgentFS");
     }
-    const agent = await openAgentFS(branchDir);
-    await agent.close();
+    await agentFSManager.acquire(projectId, branchId, branchDir);
+    await agentFSManager.release(projectId, branchId);
   }
 
   // Initialize Git repository if needed
@@ -174,7 +174,11 @@ async function createBranchFromFork(
       }
 
       // Sync files from AgentFS to disk
-      const agent = await openAgentFS(branchDir);
+      const agent = await agentFSManager.acquire(
+        projectId,
+        branchId,
+        branchDir,
+      );
       try {
         const { synced, errors } = await syncAgentFSToDisk(agent, branchDir);
 
@@ -182,7 +186,7 @@ async function createBranchFromFork(
           extra: { synced, errorCount: errors.length },
         });
       } finally {
-        await agent.close();
+        await agentFSManager.release(projectId, branchId);
       }
     } catch (error) {
       logger.warn("Failed to restore from snapshot, initializing empty", {
@@ -192,14 +196,14 @@ async function createBranchFromFork(
       });
 
       // Initialize empty AgentFS if snapshot restore fails
-      const agent = await openAgentFS(branchDir);
-      await agent.close();
+      await agentFSManager.acquire(projectId, branchId, branchDir);
+      await agentFSManager.release(projectId, branchId);
     }
   } else {
     // No snapshot available, initialize empty AgentFS
     logger.info("No snapshot available, initializing empty AgentFS");
-    const agent = await openAgentFS(branchDir);
-    await agent.close();
+    await agentFSManager.acquire(projectId, branchId, branchDir);
+    await agentFSManager.release(projectId, branchId);
   }
 
   // Initialize Git repository
@@ -290,7 +294,7 @@ export async function syncBranchFromStorage(
     await fs.writeFile(agentfsPath, agentfsData);
 
     // Sync files from AgentFS to disk
-    const agent = await openAgentFS(branchDir);
+    const agent = await agentFSManager.acquire(projectId, branchId, branchDir);
     try {
       const { synced, errors } = await syncAgentFSToDisk(agent, branchDir);
 
@@ -300,7 +304,7 @@ export async function syncBranchFromStorage(
 
       return { success: true, skipped: false };
     } finally {
-      await agent.close();
+      await agentFSManager.release(projectId, branchId);
     }
   } catch (error) {
     logger.error("Failed to sync branch from storage", {
