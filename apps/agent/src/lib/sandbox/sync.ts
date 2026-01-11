@@ -1,13 +1,19 @@
 import { promises as fs } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir } from "@weldr/shared/state";
 
-import { syncAgentFSToDisk } from "./agentfs";
 import { CloudStorageBackend, type CloudStorageConfig } from "./cloud-storage";
-import { sandboxConnections } from "./connection-manager";
 import type { StorageBackend } from "./types";
+
+/**
+ * Get the path to the AgentFS database for a session.
+ * AgentFS CLI stores databases in ~/.agentfs/{branchId}.db
+ */
+export function getSessionDbPath(branchId: string): string {
+  return path.join(os.homedir(), ".agentfs", `${branchId}.db`);
+}
 
 /**
  * Get cloud storage configuration from environment variables
@@ -29,8 +35,8 @@ export function createStorageBackend(projectId: string): StorageBackend {
 }
 
 /**
- * Sync sandbox state to cloud storage.
- * Uploads the AgentFS database file to Tigris/S3.
+ * Sync session state to cloud storage.
+ * Uploads the AgentFS database file (~/.agentfs/{branchId}.db) to Tigris/S3.
  */
 export async function syncToCloud(
   branchId: string,
@@ -38,11 +44,10 @@ export async function syncToCloud(
 ): Promise<{ success: boolean }> {
   const logger = Logger.get({ branchId, projectId });
 
-  logger.info("Syncing sandbox to cloud storage");
+  logger.info("Syncing session to cloud storage");
 
   try {
-    const branchDir = getBranchDir(projectId, branchId);
-    const agentfsPath = path.join(branchDir, "agent.db");
+    const agentfsPath = getSessionDbPath(branchId);
 
     try {
       await fs.access(agentfsPath);
@@ -56,10 +61,10 @@ export async function syncToCloud(
     const backend = createStorageBackend(projectId);
     await backend.write(`branches/${branchId}.db`, agentfsData);
 
-    logger.info("Sandbox synced to cloud successfully");
+    logger.info("Session synced to cloud successfully");
     return { success: true };
   } catch (error) {
-    logger.error("Failed to sync sandbox to cloud", {
+    logger.error("Failed to sync session to cloud", {
       extra: { error: error instanceof Error ? error.message : String(error) },
     });
     return { success: false };
@@ -67,8 +72,11 @@ export async function syncToCloud(
 }
 
 /**
- * Sync sandbox state from cloud storage.
- * Downloads the AgentFS database file and syncs virtual files to disk.
+ * Sync session state from cloud storage.
+ * Downloads the AgentFS database file from Tigris/S3 to ~/.agentfs/{branchId}.db.
+ *
+ * When running with `agentfs run`, files are accessed through FUSE overlay
+ * directly from the database, so no additional disk sync is needed.
  */
 export async function syncFromCloud(
   branchId: string,
@@ -76,13 +84,14 @@ export async function syncFromCloud(
 ): Promise<{ success: boolean; skipped: boolean }> {
   const logger = Logger.get({ branchId, projectId });
 
-  logger.info("Syncing sandbox from cloud storage");
+  logger.info("Syncing session from cloud storage");
 
   try {
-    const branchDir = getBranchDir(projectId, branchId);
-    const agentfsPath = path.join(branchDir, "agent.db");
+    const agentfsPath = getSessionDbPath(branchId);
+    const agentfsDir = path.dirname(agentfsPath);
 
-    await fs.mkdir(branchDir, { recursive: true });
+    // Ensure ~/.agentfs directory exists
+    await fs.mkdir(agentfsDir, { recursive: true });
 
     const backend = createStorageBackend(projectId);
     const cloudPath = `branches/${branchId}.db`;
@@ -96,20 +105,13 @@ export async function syncFromCloud(
     const agentfsData = await backend.read(cloudPath);
     await fs.writeFile(agentfsPath, agentfsData);
 
-    const agent = await sandboxConnections.acquire(projectId, branchId, branchDir);
-    try {
-      const { synced, errors } = await syncAgentFSToDisk(agent, branchDir);
+    logger.info("Session synced from cloud successfully", {
+      extra: { dbSize: agentfsData.length },
+    });
 
-      logger.info("Sandbox synced from cloud successfully", {
-        extra: { synced, errorCount: errors.length },
-      });
-
-      return { success: true, skipped: false };
-    } finally {
-      await sandboxConnections.release(projectId, branchId);
-    }
+    return { success: true, skipped: false };
   } catch (error) {
-    logger.error("Failed to sync sandbox from cloud", {
+    logger.error("Failed to sync session from cloud", {
       extra: { error: error instanceof Error ? error.message : String(error) },
     });
     return { success: false, skipped: false };

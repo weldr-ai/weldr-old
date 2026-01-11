@@ -1,6 +1,5 @@
-import { promises as fs } from "node:fs";
-
-import { runCommand } from "@/lib/commands";
+import { exec, type ExecOptions } from "@/lib/sandbox/exec";
+import { readFile, writeFile } from "@/lib/sandbox/fs";
 import type {
   IntegrationCallbackResult,
   IntegrationPackageSets,
@@ -10,7 +9,8 @@ import { combineResults } from "./combine-results";
 
 export async function installPackages(
   packagesSets: IntegrationPackageSets,
-  branchDir: string,
+  sessionId: string,
+  projectId: string,
 ): Promise<IntegrationCallbackResult> {
   const results: IntegrationCallbackResult[] = [];
 
@@ -28,28 +28,41 @@ export async function installPackages(
 
     const target = packages.target;
 
+    const execOptions: ExecOptions = {
+      branchId: sessionId,
+      projectId,
+    };
+
     if (runtimeInstallCommand.length > 0) {
-      const runtimeResult = await runCommand(
-        "sh",
-        ["-c", `bun add ${runtimeInstallCommand.join(" ")} --cwd apps/${target}`],
-        {
-          cwd: branchDir,
-        },
+      const runtimeResult = exec(
+        `bun add ${runtimeInstallCommand.join(" ")} --cwd apps/${target}`,
+        execOptions,
       );
 
-      results.push(runtimeResult);
+      results.push({
+        success: runtimeResult.exitCode === 0,
+        message:
+          runtimeResult.exitCode === 0
+            ? `Successfully installed runtime packages for ${target}`
+            : `Failed to install runtime packages: ${runtimeResult.stderr}`,
+        errors: runtimeResult.exitCode !== 0 ? [runtimeResult.stderr] : undefined,
+      });
     }
 
     if (developmentInstallCommand.length > 0) {
-      const developmentResult = await runCommand(
-        "sh",
-        ["-c", `bun add -D ${developmentInstallCommand.join(" ")} --cwd apps/${target}`],
-        {
-          cwd: branchDir,
-        },
+      const developmentResult = exec(
+        `bun add -D ${developmentInstallCommand.join(" ")} --cwd apps/${target}`,
+        execOptions,
       );
 
-      results.push(developmentResult);
+      results.push({
+        success: developmentResult.exitCode === 0,
+        message:
+          developmentResult.exitCode === 0
+            ? `Successfully installed development packages for ${target}`
+            : `Failed to install development packages: ${developmentResult.stderr}`,
+        errors: developmentResult.exitCode !== 0 ? [developmentResult.stderr] : undefined,
+      });
     }
   }
 
@@ -58,14 +71,14 @@ export async function installPackages(
 
 export async function updatePackageJsonScripts(
   scriptSets: IntegrationScriptSets,
-  branchDir: string,
+  sessionId: string,
 ): Promise<IntegrationCallbackResult> {
   try {
     const results: IntegrationCallbackResult[] = [];
 
     for (const scriptSet of scriptSets) {
-      const directory =
-        scriptSet.target === "root" ? branchDir : `${branchDir}/apps/${scriptSet.target}`;
+      const packageJsonPath =
+        scriptSet.target === "root" ? "/package.json" : `/apps/${scriptSet.target}/package.json`;
 
       let packageJsonContent: {
         scripts?: Record<string, string>;
@@ -73,15 +86,21 @@ export async function updatePackageJsonScripts(
         devDependencies?: Record<string, string>;
       } = {};
 
-      try {
-        const packageJsonPath = `${directory}/package.json`;
-        const fileContent = await fs.readFile(packageJsonPath, "utf-8");
-        packageJsonContent = JSON.parse(fileContent);
-      } catch (error) {
-        console.error("Failed to read package.json:", error);
+      const readResult = readFile(sessionId, packageJsonPath);
+      if (!readResult.success || readResult.data === undefined) {
         return {
           success: false,
-          message: `Failed to read package.json: ${error instanceof Error ? error.message : String(error)}`,
+          message: `Failed to read package.json: ${readResult.error ?? "Unknown error"}`,
+          errors: [readResult.error ?? "Unknown error"],
+        };
+      }
+
+      try {
+        packageJsonContent = JSON.parse(readResult.data);
+      } catch (error) {
+        return {
+          success: false,
+          message: `Failed to parse package.json: ${error instanceof Error ? error.message : String(error)}`,
           errors: [error instanceof Error ? error.message : String(error)],
         };
       }
@@ -93,14 +112,16 @@ export async function updatePackageJsonScripts(
         };
       }
 
-      try {
-        const packageJsonPath = `${directory}/package.json`;
-        await fs.writeFile(packageJsonPath, JSON.stringify(packageJsonContent, null, 2), "utf-8");
-      } catch (error) {
+      const writeResult = writeFile(
+        sessionId,
+        packageJsonPath,
+        JSON.stringify(packageJsonContent, null, 2),
+      );
+      if (!writeResult.success) {
         return {
           success: false,
-          message: `Failed to write package.json: ${error instanceof Error ? error.message : String(error)}`,
-          errors: [error instanceof Error ? error.message : String(error)],
+          message: `Failed to write package.json: ${writeResult.error ?? "Unknown error"}`,
+          errors: [writeResult.error ?? "Unknown error"],
         };
       }
 
@@ -112,7 +133,6 @@ export async function updatePackageJsonScripts(
 
     return combineResults(results);
   } catch (error) {
-    console.error("Error updating package.json:", error);
     return {
       success: false,
       message: `Failed to update package.json scripts: ${error instanceof Error ? error.message : String(error)}`,
@@ -123,13 +143,15 @@ export async function updatePackageJsonScripts(
 
 export async function runBunScript(
   script: string,
-  branchDir: string,
+  sessionId: string,
+  projectId: string,
 ): Promise<IntegrationCallbackResult> {
-  const result = await runCommand("bun", ["run", script], {
-    cwd: branchDir,
+  const result = exec(`bun run ${script}`, {
+    branchId: sessionId,
+    projectId,
   });
 
-  if (result.success) {
+  if (result.exitCode === 0) {
     return {
       success: true,
       message: `Successfully ran script: ${script}`,

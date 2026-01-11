@@ -4,10 +4,10 @@ import { z } from "zod";
 import { and, eq } from "@weldr/db";
 import { environmentVariables, secrets } from "@weldr/db/schema";
 import { Fly } from "@weldr/shared/fly";
-import { isLocalMode } from "@weldr/shared/state";
 import { insertEnvironmentVariableSchema } from "@weldr/shared/validators/environment-variables";
 
 import { protectedProcedure } from "../init";
+import { isLocalMode } from "../utils";
 
 export const environmentVariablesRouter = {
   create: protectedProcedure

@@ -3,7 +3,6 @@ import { cors } from "hono/cors";
 import { requestId } from "hono/request-id";
 
 import { Logger } from "@weldr/shared/logger";
-import { initializeWorkspace } from "@weldr/shared/state";
 
 import { recoverEnrichingJobs } from "./ai/utils/enriching-jobs";
 import { closeRedisConnections } from "./lib/stream-utils";
@@ -81,7 +80,6 @@ serve(
   },
   async (info) => {
     Logger.info(`Server is running on http://localhost:${info.port}`);
-    await initializeWorkspace();
     await recoverSessions();
     await recoverEnrichingJobs();
   },

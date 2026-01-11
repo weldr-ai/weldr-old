@@ -1,10 +1,9 @@
-import { promises as fs } from "node:fs";
 import * as path from "node:path";
 
 import { db, eq } from "@weldr/db";
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir } from "@weldr/shared/state";
 
+import { readFile, walkDir } from "@/lib/sandbox/fs";
 import type { SessionContext } from "@/session";
 import { extractAndSaveDeclarations } from "./declarations";
 
@@ -42,37 +41,15 @@ export interface ChangedFile {
 }
 
 /**
- * Recursively scan a directory for code files
+ * Scan workspace for code files using agentfs
  */
-async function scanDirectory(
-  dir: string,
-  baseDir: string,
-  files: string[] = [],
-): Promise<string[]> {
-  let entries: { name: string; isDirectory: () => boolean }[];
-  try {
-    entries = await fs.readdir(dir, { withFileTypes: true });
-  } catch {
-    return files;
-  }
+function scanWorkspace(branchId: string): string[] {
+  const files = walkDir(branchId, "/", {
+    excludeDirs: EXCLUDED_DIRS,
+    extensions: CODE_EXTENSIONS,
+  });
 
-  for (const entry of entries) {
-    const entryPath = path.join(dir, entry.name);
-    const relativePath = path.relative(baseDir, entryPath);
-
-    if (entry.isDirectory()) {
-      if (!EXCLUDED_DIRS.has(entry.name)) {
-        await scanDirectory(entryPath, baseDir, files);
-      }
-    } else {
-      const ext = path.extname(entry.name);
-      if (CODE_EXTENSIONS.has(ext)) {
-        files.push(relativePath);
-      }
-    }
-  }
-
-  return files;
+  return files.map((f) => (f.startsWith("/") ? f.slice(1) : f));
 }
 
 /**
@@ -91,7 +68,7 @@ export async function extractDeclarationsFromProject({
 }): Promise<{ processed: number; errors: string[] }> {
   const project = context.project;
   const branch = context.branch;
-  const branchDir = getBranchDir(project.id, branch.id);
+  const branchId = branch.id;
 
   const logger = Logger.get({
     projectId: project.id,
@@ -117,7 +94,7 @@ export async function extractDeclarationsFromProject({
         .map((f) => f.path);
     } else {
       logger.info("Scanning project for code files...");
-      filesToProcess = await scanDirectory(branchDir, branchDir);
+      filesToProcess = scanWorkspace(branchId);
     }
 
     logger.info(
@@ -138,16 +115,24 @@ export async function extractDeclarationsFromProject({
 
     // Process added/modified files
     for (const filePath of filesToProcess) {
-      const fullPath = path.join(branchDir, filePath);
-
       try {
-        const sourceCode = await fs.readFile(fullPath, "utf-8");
+        const agentfsPath = filePath.startsWith("/") ? filePath : `/${filePath}`;
+        const result = readFile(branchId, agentfsPath);
+
+        if (!result.success) {
+          const errorMsg = `Failed to read ${filePath}: ${result.error}`;
+          logger.warn(errorMsg);
+          errors.push(errorMsg);
+          continue;
+        }
+
+        const sourceCode = result.data ?? "";
 
         await extractAndSaveDeclarations({
           context,
           filePath,
           sourceCode,
-          workspaceDir: branchDir,
+          branchId,
         });
 
         processed++;

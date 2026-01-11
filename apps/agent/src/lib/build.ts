@@ -1,12 +1,13 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import { put as tigrisPut } from "@tigrisdata/storage";
 
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir } from "@weldr/shared/state";
 
-import { runCommand } from "./commands";
+import { exec } from "@/lib/sandbox";
+import { dirExists } from "@/lib/sandbox/fs";
 
 interface BuildOptions {
   projectId: string;
@@ -20,8 +21,11 @@ interface BuildResult {
   error?: string;
 }
 
+const WELDR_HOME = path.join(os.homedir(), ".weldr");
+
 /**
- * Build an application and upload the artifact to Tigris
+ * Build an application and upload the artifact to Tigris.
+ * All commands run inside the agentfs virtual directory.
  */
 export async function build({
   projectId,
@@ -30,28 +34,25 @@ export async function build({
 }: BuildOptions): Promise<BuildResult> {
   const logger = Logger.get({ projectId, versionId });
 
-  const dir = getBranchDir(projectId, branchId);
-
   try {
-    logger.info("Starting build process", { dir });
+    logger.info("Starting build process");
 
     // Install dependencies
     logger.info("Installing dependencies");
-    const installResult = await runCommand(
-      "bun",
-      ["install", "--no-verify", "--no-progress", "--silent"],
-      { cwd: dir },
-    );
+    const installResult = await exec("bun install --no-verify --no-progress --silent", {
+      projectId,
+      branchId,
+    });
 
-    if (!installResult.success) {
+    if (installResult.exitCode !== 0) {
       throw new Error(`Failed to install dependencies: ${installResult.stderr}`);
     }
 
     // Run build
     logger.info("Running build");
-    const buildResult = await runCommand("bun", ["run", "build"], { cwd: dir });
+    const buildResult = await exec("bun run build", { projectId, branchId });
 
-    if (!buildResult.success) {
+    if (buildResult.exitCode !== 0) {
       throw new Error(`Build failed: ${buildResult.stderr}`);
     }
 
@@ -59,13 +60,12 @@ export async function build({
 
     // Install production dependencies only
     logger.info("Installing production dependencies");
-    const prodInstallResult = await runCommand(
-      "bun",
-      ["install", "--production", "--no-verify", "--no-progress", "--silent"],
-      { cwd: dir },
+    const prodInstallResult = await exec(
+      "bun install --production --no-verify --no-progress --silent",
+      { projectId, branchId },
     );
 
-    if (!prodInstallResult.success) {
+    if (prodInstallResult.exitCode !== 0) {
       throw new Error(`Failed to install production dependencies: ${prodInstallResult.stderr}`);
     }
 
@@ -73,17 +73,17 @@ export async function build({
     let buildDir: string;
     let filesToZip: string[];
 
-    if (existsSync(join(dir, ".output"))) {
+    if (dirExists(branchId, "/.output")) {
       // TanStack Start / Nitro output
       buildDir = ".output";
       filesToZip = [".output/", "node_modules/", "package.json"];
       logger.info("Detected TanStack Start build (.output)");
-    } else if (existsSync(join(dir, "dist"))) {
+    } else if (dirExists(branchId, "/dist")) {
       // Vite/esbuild/tsdown output
       buildDir = "dist";
       filesToZip = ["dist/", "node_modules/", "package.json"];
       logger.info("Detected dist build");
-    } else if (existsSync(join(dir, "build"))) {
+    } else if (dirExists(branchId, "/build")) {
       // CRA/other build output
       buildDir = "build";
       filesToZip = ["build/", "node_modules/", "package.json"];
@@ -93,16 +93,17 @@ export async function build({
     }
 
     // Create zip artifact
-    const artifactName = `build-artifact-${versionId}.zip`;
-    const artifactPath = `/tmp/${artifactName}`;
+    const artifactName = `build-${versionId}.zip`;
+    const artifactPath = path.join(WELDR_HOME, "builds", artifactName);
 
     logger.info("Creating build artifact", { artifactName, buildDir });
 
-    const zipResult = await runCommand("zip", ["-r", artifactPath, ...filesToZip, "-q"], {
-      cwd: dir,
+    const zipResult = await exec(`zip -r ${artifactPath} ${filesToZip.join(" ")} -q`, {
+      projectId,
+      branchId,
     });
 
-    if (!zipResult.success) {
+    if (zipResult.exitCode !== 0) {
       throw new Error(`Failed to create zip artifact: ${zipResult.stderr}`);
     }
 
@@ -139,7 +140,7 @@ export async function build({
     });
 
     // Clean up temporary artifact
-    await runCommand("rm", ["-f", artifactPath]);
+    await exec(`rm -f ${artifactPath}`, { projectId, branchId });
     logger.info("Cleaned up temporary artifact");
 
     return {

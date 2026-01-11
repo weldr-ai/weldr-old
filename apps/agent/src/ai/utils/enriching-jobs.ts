@@ -1,15 +1,12 @@
-import { promises as fs } from "node:fs";
-import * as path from "node:path";
-
 import { and, eq, not } from "drizzle-orm";
 
 import { db } from "@weldr/db";
 import { declarations, nodes, projects, versionDeclarations, versions } from "@weldr/db/schema";
 import { mergeJson } from "@weldr/db/utils";
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir } from "@weldr/shared/state";
 import type { DeclarationCodeMetadata } from "@weldr/shared/types/declarations";
 
+import { readFile } from "@/lib/sandbox/fs";
 import { embedDeclaration } from "./embed-declarations";
 import { enrichDeclaration } from "./enrich";
 import { type ExtractedSpecs, extractSpecsFromCode, type SpecType } from "./extract-specs";
@@ -137,32 +134,20 @@ export async function recoverEnrichingJobs(): Promise<void> {
           }
 
           let sourceCodeContent: string;
-          try {
-            // Use unified branch directory path
-            const workspaceDir = getBranchDir(project.id, version.branch.id);
-            const fullPath = path.resolve(workspaceDir, declaration.path);
+          const branchId = version.branch.id;
+          const result = readFile(branchId, declaration.path);
 
-            // Security check: ensure path is within workspace
-            if (!fullPath.startsWith(workspaceDir)) {
-              logger.error("Path traversal attempt detected", {
-                extra: {
-                  declarationId: declaration.id,
-                  path: declaration.path,
-                },
-              });
-              continue;
-            }
-
-            sourceCodeContent = await fs.readFile(fullPath, "utf-8");
-          } catch (error) {
+          if (!result.success || !result.data) {
             logger.error("Failed to read source code", {
               extra: {
                 declarationId: declaration.id,
-                error: error instanceof Error ? error.message : String(error),
+                error: result.error ?? "Unknown error",
               },
             });
             continue;
           }
+
+          sourceCodeContent = result.data;
 
           if (codeMetadata && declaration.path) {
             jobQueue.push({

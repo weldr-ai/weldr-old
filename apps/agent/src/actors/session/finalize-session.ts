@@ -3,11 +3,11 @@ import { fromPromise } from "xstate";
 import { db, eq } from "@weldr/db";
 import { versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir, isCloudMode } from "@weldr/shared/state";
 
 import { extractDeclarationsFromProject } from "@/ai/utils/extract-changed-files";
 import { build } from "@/lib/build";
 import { Git } from "@/lib/git";
+import { isCloudMode } from "@/lib/mode";
 import { createSnapshotService, syncToCloud } from "@/lib/sandbox";
 import { stream } from "@/lib/stream-utils";
 import type { SessionMachineContext } from "@/machines/types";
@@ -20,7 +20,6 @@ type FinalizeResult = {
 export const finalizeSessionActor = fromPromise<FinalizeResult, { context: SessionMachineContext }>(
   async ({ input }) => {
     const { project, branch, user } = input.context;
-    const branchDir = getBranchDir(project.id, branch.id);
 
     const logger = Logger.get({
       projectId: project.id,
@@ -33,7 +32,7 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
 
     // Get changed files using Git library
     logger.info("Getting changed files from git");
-    const changedFiles = await Git.getChangedFiles(project.id, branch.id, branchDir);
+    const changedFiles = await Git.getChangedFiles(project.id, branch.id);
 
     logger.info("Changed files detected", {
       extra: {
@@ -60,7 +59,7 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
       };
 
       try {
-        commitHash = await Git.commit(commitMessage, author, project.id, branch.id, branchDir);
+        commitHash = await Git.commit(commitMessage, author, project.id, branch.id);
         logger.info("Git commit created", { extra: { commitHash } });
       } catch (error) {
         logger.warn("Failed to create git commit", {

@@ -373,18 +373,18 @@ async function createDeclaration(
  * @param context - Session context containing project, branch, version info
  * @param filePath - Relative path to the source file being processed
  * @param sourceCode - Complete source code content of the file
- * @param workspaceDir - Absolute path to the workspace root directory
+ * @param branchId - Branch ID for agentfs session
  */
 export async function extractAndSaveDeclarations({
   context,
   filePath,
   sourceCode,
-  workspaceDir,
+  branchId,
 }: {
   context: SessionContext;
   filePath: string;
   sourceCode: string;
-  workspaceDir: string;
+  branchId: string;
 }): Promise<void> {
   const { project, branch } = context;
 
@@ -400,7 +400,7 @@ export async function extractAndSaveDeclarations({
       sourceCode: sourceCode,
       filename: filePath,
       pathAliases,
-      workspaceDir,
+      branchId,
     });
 
     logger.info(`Extracted ${extracted.length} declarations.`);

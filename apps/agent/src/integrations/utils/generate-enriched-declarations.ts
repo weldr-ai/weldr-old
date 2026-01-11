@@ -84,7 +84,6 @@ function createFileKey(filePath: string): string {
 async function processFile(
   filePath: string,
   outputPath: string,
-  workspaceDir: string,
   existingDeclarations: Record<string, EnrichedDeclaration[]>,
 ): Promise<void> {
   logger.info(`Processing: ${filePath}`);
@@ -104,7 +103,7 @@ async function processFile(
         : filePath.includes("/web/")
           ? { "@repo/web/*": "apps/web/src/*" }
           : undefined,
-      workspaceDir,
+      // No branchId - this is processing internal templates, not user workspace
     });
 
     if (declarations.length === 0) {
@@ -200,10 +199,7 @@ async function loadExistingDeclarations(
   }
 }
 
-export async function generateEnrichedDeclarations(
-  workspaceDir: string,
-  targetPath?: string,
-): Promise<void> {
+export async function generateEnrichedDeclarations(targetPath?: string): Promise<void> {
   const baseDir = __dirname;
 
   // Check if a specific file was provided
@@ -243,7 +239,7 @@ export async function generateEnrichedDeclarations(
     const outputPath = path.join(dataFolder, "declarations.json");
     const existingDeclarations = await loadExistingDeclarations(outputPath);
 
-    await processFile(absolutePath, outputPath, workspaceDir, existingDeclarations);
+    await processFile(absolutePath, outputPath, existingDeclarations);
     logger.info(`Completed processing ${absolutePath}`);
   } else {
     // Process all files grouped by data folder
@@ -285,7 +281,7 @@ export async function generateEnrichedDeclarations(
       const existingDeclarations = await loadExistingDeclarations(outputPath);
 
       for (const filePath of files) {
-        await processFile(filePath, outputPath, workspaceDir, existingDeclarations);
+        await processFile(filePath, outputPath, existingDeclarations);
       }
 
       logger.info(`  Completed processing ${files.length} files in ${dataFolder}`);
@@ -296,15 +292,9 @@ export async function generateEnrichedDeclarations(
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const workspaceDir = process.argv[2];
-  const targetPath = process.argv[3];
+  const targetPath = process.argv[2];
 
-  if (!workspaceDir) {
-    logger.error("Workspace directory is required");
-    process.exit(1);
-  }
-
-  generateEnrichedDeclarations(workspaceDir, targetPath)
+  generateEnrichedDeclarations(targetPath)
     .then(() => process.exit(0))
     .catch((error) => {
       console.error("Failed:", error);

@@ -2,8 +2,6 @@ import { fromPromise } from "xstate";
 
 import { Logger } from "@weldr/shared/logger";
 
-import { clearBashToolCache } from "@/ai/tools/bash";
-import { sandboxConnections } from "@/lib/sandbox";
 import { stream } from "@/lib/stream-utils";
 import type { SessionMachineContext } from "@/machines/types";
 
@@ -19,14 +17,8 @@ export const cleanupSessionActor = fromPromise<void, { context: SessionMachineCo
 
     logger.info("Cleaning up session resources");
 
-    try {
-      await clearBashToolCache(project.id, branch.id);
-      await sandboxConnections.forceClose(project.id, branch.id);
-    } catch (error) {
-      logger.warn("Failed to close sandbox connection during cleanup", {
-        extra: { error: error instanceof Error ? error.message : String(error) },
-      });
-    }
+    // No cleanup needed - agentfs CLI manages its own sessions
+    // The session database persists in ~/.agentfs/{branchId}.db
 
     await stream(branch.headVersion.chatId, {
       type: "end",

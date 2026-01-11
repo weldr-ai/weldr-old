@@ -1,10 +1,13 @@
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir } from "@weldr/shared/state";
 
-import { execRealBinary, sandboxConnections } from "@/lib/sandbox";
+import { exec } from "@/lib/sandbox";
 
 const TRUNK_BRANCH = "main";
 
+/**
+ * Git operations that execute inside an agentfs session.
+ * All commands run in the virtual /workspace directory.
+ */
 export namespace Git {
   export class MergeConflictError extends Error {
     constructor(
@@ -19,34 +22,19 @@ export namespace Git {
   interface GitExecOptions {
     projectId: string;
     branchId: string;
-    branchDir: string;
   }
 
   async function execGit(
     args: string[],
     options: GitExecOptions,
-    syncBackPatterns: string[] = [".git"],
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-    const { projectId, branchId, branchDir } = options;
+    const { projectId, branchId } = options;
+    const command = `git ${args.join(" ")}`;
 
-    const agent = await sandboxConnections.acquire(projectId, branchId, branchDir);
-
-    try {
-      return await execRealBinary("git", args, {
-        agent,
-        branchDir,
-        syncBackPatterns,
-      });
-    } finally {
-      await sandboxConnections.release(projectId, branchId);
-    }
-  }
-
-  async function execGitReadOnly(
-    args: string[],
-    options: GitExecOptions,
-  ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-    return execGit(args, options, []);
+    return await exec(command, {
+      projectId,
+      branchId,
+    });
   }
 
   export interface ChangedFile {
@@ -54,19 +42,9 @@ export namespace Git {
     type: "added" | "modified" | "deleted";
   }
 
-  export async function initRepository(
-    projectId: string,
-    branchId: string,
-    branchDir?: string,
-  ): Promise<string> {
-    const repoPath = branchDir ?? getBranchDir(projectId, branchId);
-
-    const logger = Logger.get({
-      operation: "git-init",
-      repoPath,
-    });
-
-    const options = { projectId, branchId, branchDir: repoPath };
+  export async function initRepository(projectId: string, branchId: string): Promise<void> {
+    const logger = Logger.get({ operation: "git-init" });
+    const options = { projectId, branchId };
 
     try {
       const result = await execGit(["init", "-b", TRUNK_BRANCH], options);
@@ -75,8 +53,7 @@ export namespace Git {
         throw new Error(`git init failed: ${result.stderr}`);
       }
 
-      logger.info("Repository initialized", { extra: { repoPath } });
-      return repoPath;
+      logger.info("Repository initialized");
     } catch (error) {
       logger.error("Failed to initialize repository", { extra: { error } });
       throw error;
@@ -88,15 +65,14 @@ export namespace Git {
     author: { name: string; email: string },
     projectId: string,
     branchId: string,
-    branchDir: string,
   ): Promise<string> {
     const logger = Logger.get({ operation: "git-commit" });
-    const options = { projectId, branchId, branchDir };
+    const options = { projectId, branchId };
 
     try {
-      await execGit(["config", "user.name", author.name], options);
-      await execGit(["config", "user.email", author.email], options);
-      await execGit(["add", "-A"], options);
+      execGit(["config", "user.name", author.name], options);
+      execGit(["config", "user.email", author.email], options);
+      execGit(["add", "-A"], options);
 
       const commitResult = await execGit(["commit", "-m", message], options);
 
@@ -107,7 +83,7 @@ export namespace Git {
         throw new Error(`git commit failed: ${commitResult.stderr}`);
       }
 
-      const hashResult = await execGitReadOnly(["rev-parse", "HEAD"], options);
+      const hashResult = await execGit(["rev-parse", "HEAD"], options);
       const commitHash = hashResult.stdout.trim();
 
       logger.info("Commit created", { extra: { commit: commitHash } });
@@ -123,15 +99,14 @@ export namespace Git {
     startRef: string | undefined,
     projectId: string,
     branchId: string,
-    branchDir: string,
-  ): Promise<string> {
+  ): Promise<void> {
     const logger = Logger.get({
       operation: "git-checkout-branch",
       branchName,
       startRef,
     });
 
-    const options = { projectId, branchId, branchDir };
+    const options = { projectId, branchId };
 
     try {
       const branchExists = await checkBranchExists(branchName, options);
@@ -148,50 +123,42 @@ export namespace Git {
           extra: { branchName, startRef },
         });
       }
-
-      return branchDir;
     } catch (error) {
       logger.error("Failed to checkout branch", { extra: { error } });
       throw error;
     }
   }
 
-  export async function hasGitRepository(
-    projectId: string,
-    branchId: string,
-    branchDir: string,
-  ): Promise<boolean> {
-    const options = { projectId, branchId, branchDir };
-    const result = await execGitReadOnly(["rev-parse", "--git-dir"], options);
+  export async function hasGitRepository(projectId: string, branchId: string): Promise<boolean> {
+    const options = { projectId, branchId };
+    const result = await execGit(["rev-parse", "--git-dir"], options);
     return result.exitCode === 0;
   }
 
   export async function getChangedFiles(
     projectId: string,
     branchId: string,
-    branchDir: string,
     fromRef?: string,
     toRef?: string,
   ): Promise<ChangedFile[]> {
     const logger = Logger.get({
       operation: "git-get-changed-files",
-      branchDir,
       fromRef,
       toRef,
     });
 
-    const options = { projectId, branchId, branchDir };
+    const options = { projectId, branchId };
     const changedFiles: ChangedFile[] = [];
 
     try {
       let result: { stdout: string; exitCode: number };
 
       if (fromRef && toRef) {
-        result = await execGitReadOnly(["diff", "--name-status", fromRef, toRef], options);
+        result = await execGit(["diff", "--name-status", fromRef, toRef], options);
       } else if (fromRef) {
-        result = await execGitReadOnly(["diff", "--name-status", fromRef], options);
+        result = await execGit(["diff", "--name-status", fromRef], options);
       } else {
-        result = await execGitReadOnly(["status", "--porcelain"], options);
+        result = await execGit(["status", "--porcelain"], options);
       }
 
       if (!result.stdout.trim()) {
@@ -251,24 +218,18 @@ export namespace Git {
     }
   }
 
-  export async function headCommit(
-    projectId: string,
-    branchId: string,
-    branchDir: string,
-  ): Promise<string> {
-    const result = await execGitReadOnly(["rev-parse", "HEAD"], { projectId, branchId, branchDir });
+  export async function headCommit(projectId: string, branchId: string): Promise<string> {
+    const result = await execGit(["rev-parse", "HEAD"], { projectId, branchId });
     return result.stdout.trim();
   }
 
   export async function getParentCommit(
     projectId: string,
     branchId: string,
-    branchDir: string,
   ): Promise<string | null> {
-    const result = await execGitReadOnly(["rev-parse", "HEAD~1"], {
+    const result = await execGit(["rev-parse", "HEAD~1"], {
       projectId,
       branchId,
-      branchDir,
     });
     if (result.exitCode !== 0) {
       return null;
@@ -281,7 +242,6 @@ export namespace Git {
     newName: string,
     projectId: string,
     branchId: string,
-    branchDir: string,
   ): Promise<void> {
     const logger = Logger.get({
       operation: "git-rename-branch",
@@ -289,7 +249,7 @@ export namespace Git {
       newName,
     });
 
-    const options = { projectId, branchId, branchDir };
+    const options = { projectId, branchId };
 
     try {
       const result = await execGit(["branch", "-m", oldName, newName], options);
@@ -311,7 +271,6 @@ export namespace Git {
     message: string | undefined,
     projectId: string,
     branchId: string,
-    branchDir: string,
   ): Promise<string> {
     const logger = Logger.get({
       operation: "git-revert",
@@ -319,11 +278,11 @@ export namespace Git {
       commitHash,
     });
 
-    const options = { projectId, branchId, branchDir };
+    const options = { projectId, branchId };
 
     try {
-      await execGit(["checkout", targetBranch], options);
-      await execGit(["revert", "--no-edit", commitHash], options);
+      execGit(["checkout", targetBranch], options);
+      execGit(["revert", "--no-edit", commitHash], options);
 
       const commitResult = await execGit(
         ["commit", "-m", message ?? `revert: ${commitHash}`],
@@ -334,31 +293,20 @@ export namespace Git {
         throw new Error(`git revert commit failed: ${commitResult.stderr}`);
       }
 
-      const hashResult = await execGitReadOnly(["rev-parse", "HEAD"], options);
+      const hashResult = await execGit(["rev-parse", "HEAD"], options);
       const newCommitHash = hashResult.stdout.trim();
 
       logger.info("Revert completed", { extra: { commit: newCommitHash } });
       return newCommitHash;
     } catch (e) {
-      await execGit(["revert", "--abort"], options).catch(() => {});
+      execGit(["revert", "--abort"], options);
       logger.error("Revert failed", { extra: { error: e } });
       throw e;
     }
   }
 
   async function checkBranchExists(branchName: string, options: GitExecOptions): Promise<boolean> {
-    const result = await execGitReadOnly(
-      ["show-ref", "--verify", `refs/heads/${branchName}`],
-      options,
-    );
+    const result = await execGit(["show-ref", "--verify", `refs/heads/${branchName}`], options);
     return result.exitCode === 0;
-  }
-
-  export function getMainRepoPath(projectId: string, mainBranchId: string): string {
-    return getBranchDir(projectId, mainBranchId);
-  }
-
-  export function getBranchWorkspacePath(projectId: string, branchId: string): string {
-    return getBranchDir(projectId, branchId);
   }
 }

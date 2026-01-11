@@ -1,16 +1,16 @@
-import { promises as fs } from "node:fs";
+import { promises as nodeFs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import Handlebars from "handlebars";
 
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir } from "@weldr/shared/state";
 import type { Integration } from "@weldr/shared/types";
 
 import { applyEdit } from "@/ai/utils/apply-edit";
 import type { FileItem } from "@/integrations/types";
 import { integrationRegistry } from "@/integrations/utils/registry";
+import { createDir, readFile, writeFile } from "@/lib/sandbox/fs";
 import type { SessionContext } from "@/session";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,14 +23,12 @@ export async function applyFiles({
   integration: Integration;
   context: SessionContext;
 }): Promise<void> {
-  const project = context.project;
   const branch = context.branch;
-  const branchDir = getBranchDir(project.id, branch.id);
+  const branchId = branch.id;
 
   const files = await generateFiles({
     integration,
     context,
-    branchDir,
   });
 
   const logger = Logger.get({ projectId: integration.projectId });
@@ -40,72 +38,44 @@ export async function applyFiles({
   for (const file of files) {
     logger.info(`Processing file: ${file.sourcePath} -> ${file.targetPath}`);
     const targetDir = path.dirname(file.targetPath);
-    const fullTargetDir = path.resolve(branchDir, targetDir);
 
-    try {
-      await fs.mkdir(fullTargetDir, { recursive: true });
-    } catch (error) {
-      throw new Error("Failed to create directories for ${file.targetPath}", { cause: error });
+    const mkdirResult = createDir(branchId, targetDir);
+    if (!mkdirResult.success) {
+      throw new Error(`Failed to create directories for ${file.targetPath}: ${mkdirResult.error}`);
     }
 
     try {
       switch (file.type) {
         case "copy": {
-          const fullTargetPath = path.resolve(branchDir, file.targetPath);
-
-          if (!fullTargetPath.startsWith(branchDir)) {
-            throw new Error(`Invalid target path: path traversal detected`);
+          const content = file.content.trim().length === 0 ? "" : file.content;
+          const writeResult = writeFile(branchId, file.targetPath, content);
+          if (!writeResult.success) {
+            throw new Error(`Failed to write content: ${writeResult.error}`);
           }
-
-          try {
-            if (file.content.trim().length === 0) {
-              await fs.writeFile(fullTargetPath, "", "utf-8");
-            } else {
-              await fs.writeFile(fullTargetPath, file.content, "utf-8");
-            }
-          } catch (error) {
-            throw new Error("Failed to write content", { cause: error });
-          }
-
           break;
         }
         case "llm_instruction": {
-          const fullTargetPath = path.resolve(branchDir, file.targetPath);
-
-          if (!fullTargetPath.startsWith(branchDir)) {
-            throw new Error(`Invalid target path: path traversal detected`);
-          }
-
-          let originalContent: string;
-          try {
-            originalContent = await fs.readFile(fullTargetPath, "utf-8");
-          } catch (error) {
+          const readResult = readFile(branchId, file.targetPath);
+          if (!readResult.success) {
             logger.error("Failed to read target file", {
               extra: { targetPath: file.targetPath },
             });
-            throw new Error("Failed to read target file", { cause: error });
+            throw new Error(`Failed to read target file: ${readResult.error}`);
           }
 
+          const originalContent = readResult.data ?? "";
           const updatedContent = await applyEdit({
             originalCode: originalContent,
             editInstructions: file.content,
           });
 
-          try {
-            await fs.writeFile(fullTargetPath, updatedContent, "utf-8");
-          } catch (error) {
-            throw new Error("Failed to write updated content", { cause: error });
+          const writeResult = writeFile(branchId, file.targetPath, updatedContent);
+          if (!writeResult.success) {
+            throw new Error(`Failed to write updated content: ${writeResult.error}`);
           }
-
           break;
         }
         case "handlebars": {
-          const fullTargetPath = path.resolve(branchDir, file.targetPath);
-
-          if (!fullTargetPath.startsWith(branchDir)) {
-            throw new Error(`Invalid target path: path traversal detected`);
-          }
-
           const template = Handlebars.compile(file.template);
 
           const integrationVariables = integration.environmentVariableMappings.reduce(
@@ -118,12 +88,10 @@ export async function applyFiles({
 
           const compiledContent = template(integrationVariables);
 
-          try {
-            await fs.writeFile(fullTargetPath, compiledContent, "utf-8");
-          } catch (error) {
-            throw new Error("Failed to write processed handlebars content", { cause: error });
+          const writeResult = writeFile(branchId, file.targetPath, compiledContent);
+          if (!writeResult.success) {
+            throw new Error(`Failed to write processed handlebars content: ${writeResult.error}`);
           }
-
           break;
         }
       }
@@ -139,11 +107,9 @@ export async function applyFiles({
 async function generateFiles({
   integration,
   context,
-  branchDir,
 }: {
   integration: Integration;
   context: SessionContext;
-  branchDir: string;
 }): Promise<FileItem[]> {
   const project = context.project;
 
@@ -151,7 +117,6 @@ async function generateFiles({
 
   const hasAnyIntegration = project.integrationCategories.size > 0;
 
-  // Consider both what's installed AND the current integration's category
   const hasFrontend = project.integrationCategories.has("frontend") || category.key === "frontend";
   const hasBackend = project.integrationCategories.has("backend") || category.key === "backend";
 
@@ -182,7 +147,7 @@ async function generateFiles({
   baseDataDir = path.join(baseDataDir, "data");
 
   try {
-    await fs.access(baseDataDir);
+    await nodeFs.access(baseDataDir);
   } catch {
     logger.error(`No data directory found for ${baseDataDir}`);
     throw new Error(`No data directory found for ${baseDataDir}`);
@@ -190,24 +155,23 @@ async function generateFiles({
 
   const files: FileItem[] = [];
 
-  // ALWAYS copy base files first when no integrations have been installed yet
   if (!hasAnyIntegration) {
     logger.info("No existing integrations found, copying base files first");
-    const baseFiles = await processBaseFiles(branchDir);
+    const baseFiles = await processBaseFiles();
     files.push(...baseFiles);
   }
 
   if (hasBackend || !hasAnyIntegration) {
     const serverPath = path.join(baseDataDir, "server");
     logger.info(`Processing server files from ${serverPath} for ${integration.key}`);
-    const serverFiles = await processDirectoryFiles(serverPath, "server", branchDir);
+    const serverFiles = await processDirectoryFiles(serverPath, "server");
     logger.info(`Found ${serverFiles.length} server files for ${integration.key}`);
     files.push(...serverFiles);
   }
 
   if (hasFrontend || !hasAnyIntegration) {
     const webPath = path.join(baseDataDir, "web");
-    const webFiles = await processDirectoryFiles(webPath, "web", branchDir);
+    const webFiles = await processDirectoryFiles(webPath, "web");
     files.push(...webFiles);
   }
 
@@ -217,14 +181,13 @@ async function generateFiles({
 async function processDirectoryFiles(
   sourcePath: string,
   target: "server" | "web",
-  workspaceDir: string,
 ): Promise<FileItem[]> {
   const files: FileItem[] = [];
 
   async function walkDir(dir: string): Promise<string[]> {
     const results: string[] = [];
     try {
-      const list = await fs.readdir(dir, { withFileTypes: true });
+      const list = await nodeFs.readdir(dir, { withFileTypes: true });
       for (const item of list) {
         const fullPath = path.join(dir, item.name);
         if (item.isDirectory()) {
@@ -246,7 +209,7 @@ async function processDirectoryFiles(
     if (typeof filePath !== "string") continue;
 
     const relativePath = filePath.replace(`${sourcePath}/`, "");
-    const targetPath = path.join(workspaceDir, "apps", target, relativePath);
+    const targetPath = `/apps/${target}/${relativePath}`;
 
     const file = await processFile(filePath, targetPath);
     files.push(...file);
@@ -268,10 +231,9 @@ async function processFile(filePath: string, targetPath: string): Promise<FileIt
     type = "copy";
   }
 
-  // Read the file content
   let fileContent: string;
   try {
-    fileContent = await fs.readFile(filePath, "utf-8");
+    fileContent = await nodeFs.readFile(filePath, "utf-8");
   } catch (error) {
     Logger.error("Failed to read file", {
       extra: { filePath },
@@ -301,11 +263,11 @@ async function processFile(filePath: string, targetPath: string): Promise<FileIt
   return files;
 }
 
-async function processBaseFiles(workspaceDir: string): Promise<FileItem[]> {
+async function processBaseFiles(): Promise<FileItem[]> {
   const baseDir = path.resolve(__dirname, "../base");
 
   try {
-    await fs.access(baseDir);
+    await nodeFs.access(baseDir);
   } catch {
     Logger.error(`No base directory found at ${baseDir}`);
     throw new Error(`No base directory found at ${baseDir}`);
@@ -317,7 +279,7 @@ async function processBaseFiles(workspaceDir: string): Promise<FileItem[]> {
 
   for (const fileName of baseFiles) {
     const sourcePath = path.join(baseDir, fileName);
-    const targetPath = path.join(workspaceDir, fileName);
+    const targetPath = `/${fileName}`;
 
     const file = await processFile(sourcePath, targetPath);
     files.push(...file);

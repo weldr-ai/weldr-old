@@ -3,7 +3,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@weldr/auth";
 import { and, db, eq } from "@weldr/db";
 import { branches, projects } from "@weldr/db/schema";
-import { isLocalMode } from "@weldr/shared/state";
+
+import { isLocalMode } from "@/lib/mode";
 
 export async function GET(
   request: NextRequest,

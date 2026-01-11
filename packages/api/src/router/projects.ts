@@ -5,12 +5,11 @@ import { and, eq } from "@weldr/db";
 import { attachments, branches, chatMessages, chats, projects, versions } from "@weldr/db/schema";
 import { Fly } from "@weldr/shared/fly";
 import { nanoid } from "@weldr/shared/nanoid";
-import { isLocalMode } from "@weldr/shared/state";
 import { Tigris } from "@weldr/shared/tigris";
 import { insertProjectSchema, updateProjectSchema } from "@weldr/shared/validators/projects";
 
 import { protectedProcedure } from "../init";
-import { callAgentProxy } from "../utils";
+import { callAgentProxy, isLocalMode } from "../utils";
 
 export const projectsRouter = {
   create: protectedProcedure.input(insertProjectSchema).mutation(async ({ ctx, input }) => {

@@ -1,15 +1,13 @@
 import { randomBytes } from "node:crypto";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 
 import { db } from "@weldr/db";
 import { environmentVariables, integrationEnvironmentVariables, secrets } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir } from "@weldr/shared/state";
 
 import type { IntegrationPackageSets } from "@/integrations/types";
 import { defineIntegration } from "@/integrations/utils/define-integration";
-import { runCommand } from "@/lib/commands";
+import { exec } from "@/lib/sandbox/exec";
+import { fileExists, readFile, writeFile } from "@/lib/sandbox/fs";
 
 export const betterAuthIntegration = defineIntegration<"better-auth">({
   category: "authentication",
@@ -67,10 +65,8 @@ export const betterAuthIntegration = defineIntegration<"better-auth">({
     const project = context.project;
     const branch = context.branch;
     const user = context.user;
-    const branchDir = getBranchDir(project.id, branch.id);
 
     try {
-      // Store secret in database
       await db.transaction(async (tx) => {
         const BETTER_AUTH_SECRET = randomBytes(32).toString("base64");
 
@@ -106,21 +102,19 @@ export const betterAuthIntegration = defineIntegration<"better-auth">({
         });
       });
 
-      // Check if schema/index.ts exists and is empty
-      const schemaIndexPath = path.join(branchDir, "apps/server/src/db/schema/index.ts");
+      const schemaIndexPath = "/apps/server/src/db/schema/index.ts";
 
-      // Read the file content to check if it's empty
+      const existsResult = fileExists(branch.id, schemaIndexPath);
       let fileContent = "";
-      let fileExists = false;
-      try {
-        fileContent = await fs.readFile(schemaIndexPath, "utf-8");
-        fileExists = true;
-      } catch {
-        // File doesn't exist, that's ok
+
+      if (existsResult) {
+        const readResult = readFile(branch.id, schemaIndexPath);
+        if (readResult.success) {
+          fileContent = readResult.data || "";
+        }
       }
 
-      // If file exists and is empty (or only whitespace), add dummy table
-      if (fileExists && fileContent.trim() === "") {
+      if (existsResult && fileContent.trim() === "") {
         const dummyTableContent = `import { pgTable, serial, varchar } from "drizzle-orm/pg-core";
 
 // Dummy table - delete this when you add your actual schema
@@ -129,54 +123,29 @@ export const dummyTable = pgTable("dummy_table", {
   name: varchar("name", { length: 255 }),
 });`;
 
-        try {
-          await fs.writeFile(schemaIndexPath, dummyTableContent, "utf-8");
-        } catch (error) {
-          Logger.warn("Failed to add dummy table to empty schema index", {
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
+        writeFile(branch.id, schemaIndexPath, dummyTableContent);
       }
 
-      // Generate schema
-      const generateSchemaResult = await runCommand(
-        "bun",
-        [
-          "x",
-          "@better-auth/cli@latest",
-          "generate",
-          "--config",
-          "src/lib/auth.ts",
-          "--output",
-          "src/db/schema/auth.ts",
-          "--y",
-        ],
+      const generateSchemaResult = exec(
+        `bun x @better-auth/cli@latest generate --config src/lib/auth.ts --output src/db/schema/auth.ts --y`,
         {
-          cwd: path.join(branchDir, "apps", "server"),
+          projectId: project.id,
+          branchId: branch.id,
         },
       );
 
-      if (!generateSchemaResult.success) {
+      if (generateSchemaResult.exitCode !== 0) {
         throw new Error(
           `Failed to generate schema for Better-Auth: ${generateSchemaResult.stderr}`,
         );
       }
 
-      // If we added dummy table (file was empty), clear it before appending auth export
-      if (fileExists && fileContent.trim() === "") {
-        // Clear the file and add only the auth export
-        try {
-          await fs.writeFile(schemaIndexPath, 'export * from "./auth";\n', "utf-8");
-        } catch (error) {
-          throw new Error("Failed to write auth export to schema index", { cause: error });
-        }
+      if (existsResult && fileContent.trim() === "") {
+        writeFile(branch.id, schemaIndexPath, 'export * from "./auth";\n');
       } else {
-        // File wasn't empty, just append the auth export
-        try {
-          await fs.appendFile(schemaIndexPath, '\nexport * from "./auth";\n', "utf-8");
-        } catch (error) {
-          throw new Error("Failed to append auth export to schema index", { cause: error });
-        }
+        const currentReadResult = readFile(branch.id, schemaIndexPath);
+        const currentContent = currentReadResult.success ? currentReadResult.data || "" : "";
+        writeFile(branch.id, schemaIndexPath, currentContent + '\nexport * from "./auth";\n');
       }
 
       return {

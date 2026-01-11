@@ -184,6 +184,9 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 - **IMPLEMENT** consistent naming conventions across the codebase
 - **REFACTOR** code regularly to reduce technical debt
 - **REMOVE** dead code and unused imports regularly
+- **NEVER** create deprecated exports or type aliases - remove old code entirely when refactoring
+- **ALWAYS** remove old exports, types, or functions instead of marking them as deprecated
+- **UPDATE** all usages of renamed/refactored code throughout the codebase rather than keeping deprecated aliases
 
 ### 9.1. Style Consistency & Pattern Matching
 
@@ -347,6 +350,8 @@ bun commit       # Create conventional commit
 - ❌ Mixed import styles (require/import)
 - ❌ Non-validated external data
 - ❌ SQL injection vulnerabilities
+- ❌ **Creating deprecated exports or type aliases** - remove old code entirely instead of keeping deprecated wrappers
+- ❌ **Keeping deprecated code around** - update all usages and remove old exports/types completely
 - ❌ **Implementing functionality without first checking if it already exists**
 - ❌ **Using functions without reading their parameters and signatures first**
 - ❌ **Creating duplicate utilities when existing ones could be reused**

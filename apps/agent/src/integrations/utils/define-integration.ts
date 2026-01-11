@@ -1,7 +1,7 @@
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir, isLocalMode } from "@weldr/shared/state";
 import type { Integration, IntegrationKey } from "@weldr/shared/types";
 
+import { isLocalMode } from "@/lib/mode";
 import type { SessionContext } from "@/session";
 import type { ExtractOptionsForKey, IntegrationDefinition } from "../types";
 import { combineResults } from "./combine-results";
@@ -24,7 +24,6 @@ export function defineIntegration<K extends IntegrationKey>(
       try {
         const project = context.project;
         const branch = context.branch;
-        const branchDir = getBranchDir(project.id, branch.id);
 
         const options = integration?.options as ExtractOptionsForKey<K> | undefined;
 
@@ -40,8 +39,8 @@ export function defineIntegration<K extends IntegrationKey>(
         }
 
         const results = await Promise.all([
-          updatePackageJsonScripts(scripts, branchDir),
-          installPackages(packages, branchDir),
+          updatePackageJsonScripts(scripts, branch.id),
+          installPackages(packages, branch.id, project.id),
           seedDeclarationTemplates({
             integration,
             context,

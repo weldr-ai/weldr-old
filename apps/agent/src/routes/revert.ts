@@ -3,7 +3,6 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { and, db, eq } from "@weldr/db";
 import { branches, projects, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir } from "@weldr/shared/state";
 
 import { auth } from "@/lib/auth";
 import { Git } from "@/lib/git";
@@ -106,8 +105,6 @@ router.openapi(route, async (c) => {
   });
 
   try {
-    const branchDir = getBranchDir(projectId, branchId);
-
     if (!version.snapshotPath) {
       return c.json({ error: "Version does not have a snapshot" }, 400);
     }
@@ -135,7 +132,6 @@ router.openapi(route, async (c) => {
         },
         projectId,
         branchId,
-        branchDir,
       );
 
       logger.info("Revert commit created", { extra: { commitHash } });
@@ -147,9 +143,9 @@ router.openapi(route, async (c) => {
       });
 
       // Initialize git and try again
-      const hasRepo = await Git.hasGitRepository(projectId, branchId, branchDir);
+      const hasRepo = await Git.hasGitRepository(projectId, branchId);
       if (!hasRepo) {
-        await Git.initRepository(projectId, branchId, branchDir);
+        await Git.initRepository(projectId, branchId);
         commitHash = await Git.commit(
           revertMessage,
           {
@@ -158,7 +154,6 @@ router.openapi(route, async (c) => {
           },
           projectId,
           branchId,
-          branchDir,
         );
       } else {
         throw error;

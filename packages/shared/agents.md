@@ -155,32 +155,23 @@ const parts = processText("Check <Reference type='page' id='home' /> page");
 
 ## State Management
 
-### Workspace Utilities
+### Environment Mode Detection
 
 ```typescript
-import {
-  isLocalMode,
-  isCloudMode,
-  WORKSPACE_DIR,
-  getProjectDir,
-  getBranchDir,
-  initializeWorkspace,
-} from "@weldr/shared/state";
+import { isLocalMode, isCloudMode, initializeWorkspace } from "@weldr/shared/state";
 
 // Check environment mode
 if (isLocalMode()) {
-  // Local development: ~/.weldr
+  // Local development mode
 } else {
-  // Cloud deployment: /workspace
+  // Cloud deployment mode (Fly.io)
 }
 
-// Get workspace paths
-const projectDir = getProjectDir("project_123");
-const branchDir = getBranchDir("project_123", "branch_456");
-
-// Initialize workspace directory
+// Initialize workspace directory for local state files
 await initializeWorkspace();
 ```
+
+Note: User project files are managed by **agentfs** (not real filesystem). The workspace utilities are only for local state files like branch metadata. Use `@/lib/sandbox` in the agent app for file operations.
 
 ## Fly.io Integration
 

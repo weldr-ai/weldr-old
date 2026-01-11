@@ -11,15 +11,14 @@
  * on the Fly.io machine directly.
  */
 
-import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import { db, eq } from "@weldr/db";
 import { secrets } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir } from "@weldr/shared/state";
 import type { Integration } from "@weldr/shared/types";
 
+import { createDir, readFile, writeFile } from "@/lib/sandbox/fs";
 import type { SessionContext } from "@/session";
 
 /**
@@ -51,16 +50,16 @@ function parseEnvFile(content: string): Map<string, string> {
 /**
  * Write environment variables to .env file for a specific target (server or web)
  */
-async function writeEnvToTarget({
-  branchDir,
+function writeEnvToTarget({
+  branchId,
   target,
   envVars,
 }: {
-  branchDir: string;
+  branchId: string;
   target: "server" | "web";
   envVars: Array<{ key: string; value: string }>;
-}): Promise<void> {
-  const envFilePath = path.join(branchDir, "apps", target, ".env");
+}): void {
+  const envFilePath = `/apps/${target}/.env`;
 
   Logger.info(`Writing ${envVars.length} environment variables to ${target}/.env`);
 
@@ -68,11 +67,11 @@ async function writeEnvToTarget({
   let existingEnvMap = new Map<string, string>();
 
   // Read existing .env file if it exists
-  try {
-    existingContent = await fs.readFile(envFilePath, "utf-8");
+  const readResult = readFile(branchId, envFilePath);
+  if (readResult.success && readResult.data) {
+    existingContent = readResult.data;
     existingEnvMap = parseEnvFile(existingContent);
-  } catch {
-    // File doesn't exist, that's ok
+  } else {
     Logger.info(`.env file doesn't exist at ${envFilePath}, will create new one`);
   }
 
@@ -108,10 +107,17 @@ async function writeEnvToTarget({
     finalContent += newLines.join("\n") + "\n";
 
     // Ensure the directory exists
-    await fs.mkdir(path.dirname(envFilePath), { recursive: true });
+    const dirPath = path.dirname(envFilePath);
+    const mkdirResult = createDir(branchId, dirPath);
+    if (!mkdirResult.success) {
+      throw new Error(`Failed to create directory ${dirPath}: ${mkdirResult.error}`);
+    }
 
     // Write the updated content
-    await fs.writeFile(envFilePath, finalContent, "utf-8");
+    const writeResult = writeFile(branchId, envFilePath, finalContent);
+    if (!writeResult.success) {
+      throw new Error(`Failed to write ${envFilePath}: ${writeResult.error}`);
+    }
 
     Logger.info(
       `Added ${addedCount} environment variables to ${target}/.env (${skippedCount} skipped)`,
@@ -182,8 +188,6 @@ export async function writeEnvironmentVariables({
     return;
   }
 
-  const branchDir = getBranchDir(project.id, branch.id);
-
   // Get environment variable values
   const envVarValues = await getEnvironmentVariableValues(integration);
 
@@ -219,8 +223,8 @@ export async function writeEnvironmentVariables({
   // Write environment variables to each target
   for (const target of targets) {
     try {
-      await writeEnvToTarget({
-        branchDir,
+      writeEnvToTarget({
+        branchId: branch.id,
         target,
         envVars: envVarValues,
       });

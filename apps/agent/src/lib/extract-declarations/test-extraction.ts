@@ -101,7 +101,7 @@ async function testExtractionAndDependencies(
       context,
       filePath,
       sourceCode,
-      workspaceDir: "~/.weldr/o05ymiamk4r50z8j/ug10j6rzb92gh254",
+      branchId: "o05ymiamk4r50z8j-ug10j6rzb92gh254",
     });
 
     const declarationsAfter = await db.query.declarations.findMany({

@@ -1,51 +1,29 @@
-import { promises as fs } from "node:fs";
-
 import { db, eq } from "@weldr/db";
 import { branches, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
-import { BRANCH_STATE_FILE, type BranchState, getBranchDir } from "@weldr/shared/state";
 
-import {
-  agentFSExists,
-  createSnapshotService,
-  sandboxConnections,
-  syncAgentFSToDisk,
-  syncFromCloud,
-} from "@/lib/sandbox";
+import { createSnapshotService, syncFromCloud } from "@/lib/sandbox";
+import { initSession, sessionExists } from "@/lib/sandbox/exec";
 import { Git } from "./git";
 
-export async function loadState(): Promise<BranchState> {
-  try {
-    const content = await fs.readFile(BRANCH_STATE_FILE, "utf-8");
-    return JSON.parse(content) as BranchState;
-  } catch (error) {
-    if ((error as { code?: string }).code === "ENOENT") {
-      return { branches: {} };
-    }
-    throw error;
-  }
-}
-
-export async function saveState(state: BranchState): Promise<void> {
-  const tmpFile = `${BRANCH_STATE_FILE}.tmp`;
-  await fs.writeFile(tmpFile, JSON.stringify(state, null, 2), "utf-8");
-  await fs.rename(tmpFile, BRANCH_STATE_FILE);
-}
-
 /**
- * Ensure branch directory exists with sandbox initialized.
+ * Ensure agentfs session exists for the branch.
  * Always syncs with cloud storage to ensure latest state.
+ *
+ * With the agentfs CLI architecture:
+ * - Files are stored in the AgentFS SQLite database (~/.agentfs/{branchId}.db)
+ * - All commands access files through FUSE overlay when executed via agentfs run
+ * - No real directories are created - everything is virtual
  */
-export async function ensureBranchDir(
+export async function ensureBranchSession(
   branchId: string,
   projectId: string,
 ): Promise<{
-  branchDir: string;
   status: "created" | "reused" | "forked";
 }> {
   const logger = Logger.get({ branchId, projectId });
 
-  logger.info("Ensuring branch directory exists");
+  logger.info("Ensuring agentfs session exists");
 
   const branch = await db.query.branches.findFirst({
     where: eq(branches.id, branchId),
@@ -61,63 +39,69 @@ export async function ensureBranchDir(
     throw new Error(`Branch not found: ${branchId}`);
   }
 
-  const branchDir = getBranchDir(projectId, branchId);
+  // Check if agentfs session already exists
+  const hasSession = sessionExists(branchId);
 
-  const sandboxExists = await agentFSExists(branchDir);
+  if (hasSession) {
+    logger.info("AgentFS session already exists", { extra: { branchId } });
 
-  if (sandboxExists) {
-    logger.info("Branch directory already exists", { extra: { branchDir } });
-
+    // Sync from cloud to get latest state
     const syncResult = await syncFromCloud(branchId, projectId);
 
     if (!syncResult.success) {
       logger.warn("Failed to sync existing branch from cloud, using local copy");
     }
 
-    return { branchDir, status: "reused" };
+    return { status: "reused" };
   }
-
-  await fs.mkdir(branchDir, { recursive: true });
 
   if (branch.forkedFromVersionId && !branch.isMain) {
     logger.info("Creating branch from fork point", {
       extra: { forkedFromVersionId: branch.forkedFromVersionId },
     });
 
-    return await createBranchFromFork(projectId, branchId, branch.forkedFromVersionId, branchDir);
+    return await createBranchFromFork(projectId, branchId, branch.forkedFromVersionId);
   }
 
-  logger.info("Initializing branch", { extra: { branchDir } });
+  logger.info("Initializing branch session");
 
+  // Try to sync from cloud first
   const syncResult = await syncFromCloud(branchId, projectId);
 
   if (syncResult.skipped || !syncResult.success) {
     if (!syncResult.success) {
-      logger.warn("Failed to sync from cloud, initializing empty sandbox");
+      logger.warn("Failed to sync from cloud, initializing empty session");
     }
-    await sandboxConnections.acquire(projectId, branchId, branchDir);
-    await sandboxConnections.release(projectId, branchId);
+    // Initialize a new agentfs session
+    const initResult = initSession(branchId);
+    if (initResult.exitCode !== 0) {
+      logger.error("Failed to initialize agentfs session", { error: initResult.stderr });
+    }
   }
 
-  const hasRepo = await Git.hasGitRepository(projectId, branchId, branchDir);
+  // Initialize git repository if needed
+  const hasRepo = await Git.hasGitRepository(projectId, branchId);
   if (!hasRepo) {
-    await Git.initRepository(projectId, branchId, branchDir);
+    await Git.initRepository(projectId, branchId);
   }
 
-  return { branchDir, status: "created" };
+  return { status: "created" };
 }
 
 /**
  * Create a branch from a version fork point.
  * Uses sandbox snapshot to restore files from the forked version.
+ *
+ * With the agentfs CLI architecture:
+ * - The snapshot is copied in cloud storage
+ * - The database is downloaded locally to ~/.agentfs/{branchId}.db
+ * - Files are accessed through FUSE overlay when commands run via agentfs run
  */
 async function createBranchFromFork(
   projectId: string,
   branchId: string,
   forkedFromVersionId: string,
-  branchDir: string,
 ): Promise<{
-  branchDir: string;
   status: "forked";
 }> {
   const logger = Logger.get({ branchId, forkedFromVersionId });
@@ -150,40 +134,35 @@ async function createBranchFromFork(
         throw new Error("Failed to sync forked branch from cloud");
       }
 
-      const agent = await sandboxConnections.acquire(projectId, branchId, branchDir);
-      try {
-        const { synced, errors } = await syncAgentFSToDisk(agent, branchDir);
-
-        logger.info("Files synced from snapshot", {
-          extra: { synced, errorCount: errors.length },
-        });
-      } finally {
-        await sandboxConnections.release(projectId, branchId);
-      }
+      logger.info("Branch forked from snapshot successfully");
     } catch (error) {
-      logger.warn("Failed to restore from snapshot, initializing empty sandbox", {
+      logger.warn("Failed to restore from snapshot, initializing empty session", {
         extra: {
           error: error instanceof Error ? error.message : String(error),
         },
       });
 
-      await sandboxConnections.acquire(projectId, branchId, branchDir);
-      await sandboxConnections.release(projectId, branchId);
+      // Initialize a new agentfs session as fallback
+      const initResult = initSession(branchId);
+      if (initResult.exitCode !== 0) {
+        logger.error("Failed to initialize agentfs session", { error: initResult.stderr });
+      }
     }
   } else {
-    logger.info("No snapshot available, initializing empty sandbox");
-    await sandboxConnections.acquire(projectId, branchId, branchDir);
-    await sandboxConnections.release(projectId, branchId);
+    logger.info("No snapshot available, initializing empty session");
+    const initResult = initSession(branchId);
+    if (initResult.exitCode !== 0) {
+      logger.error("Failed to initialize agentfs session", { error: initResult.stderr });
+    }
   }
 
-  const hasRepo = await Git.hasGitRepository(projectId, branchId, branchDir);
+  // Initialize git repository if needed
+  const hasRepo = await Git.hasGitRepository(projectId, branchId);
   if (!hasRepo) {
-    await Git.initRepository(projectId, branchId, branchDir);
+    await Git.initRepository(projectId, branchId);
   }
 
-  logger.info("Branch forked successfully", {
-    extra: { branchDir, forkedFromVersionId },
-  });
+  logger.info("Branch forked successfully", { extra: { forkedFromVersionId } });
 
-  return { branchDir, status: "forked" };
+  return { status: "forked" };
 }

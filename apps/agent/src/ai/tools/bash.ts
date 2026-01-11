@@ -1,68 +1,75 @@
+import type { Tool } from "ai";
+import { z } from "zod";
+
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir } from "@weldr/shared/state";
 
-import { type SandboxBashTools, createSandboxBashTools, sandboxConnections } from "@/lib/sandbox";
-
-/**
- * Cache for bash tool instances per branch.
- * The underlying sandbox connections are managed by sandboxConnections.
- */
-const bashToolCache = new Map<string, SandboxBashTools>();
+import { exec } from "@/lib/sandbox/exec";
 
 /**
- * Get or create a bash tool instance for a branch.
- * Uses sandboxConnections for connection lifecycle management.
+ * Result of a bash command execution
  */
-export async function getOrCreateBashTool(
-  projectId: string,
-  branchId: string,
-): Promise<SandboxBashTools> {
-  const cacheKey = `${projectId}:${branchId}`;
-
-  const cached = bashToolCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
-  const branchDir = getBranchDir(projectId, branchId);
-  const agent = await sandboxConnections.acquire(projectId, branchId, branchDir);
-
-  const bashTools = await createSandboxBashTools({
-    agent,
-    cwd: "/workspace",
-    branchDir,
-    onBeforeBashCall: ({ command }: { command: string }) => {
-      const logger = Logger.get({ projectId, branchId });
-      logger.debug(`Executing bash command: ${command}`);
-      return undefined;
-    },
-    onAfterBashCall: ({
-      command,
-      result,
-    }: {
-      command: string;
-      result: { exitCode: number; stdout: string };
-    }) => {
-      const logger = Logger.get({ projectId, branchId });
-      logger.debug(`Bash command completed with exit code ${result.exitCode}`, {
-        extra: { command, stdout: result.stdout.slice(0, 500) },
-      });
-      return undefined;
-    },
-  });
-
-  bashToolCache.set(cacheKey, bashTools);
-  return bashTools;
+export interface BashResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
 }
 
 /**
- * Clear the bash tool cache for a branch.
- * Also releases the underlying sandbox connection.
+ * Bash tools type - compatible with ToolSet
  */
-export async function clearBashToolCache(projectId: string, branchId: string): Promise<void> {
-  const cacheKey = `${projectId}:${branchId}`;
-  if (bashToolCache.has(cacheKey)) {
-    bashToolCache.delete(cacheKey);
-    await sandboxConnections.release(projectId, branchId);
-  }
+export type BashTools = Record<string, Tool>;
+
+const bashInputSchema = z.object({
+  command: z.string().describe("The bash command to execute"),
+});
+
+const bashOutputSchema = z.object({
+  stdout: z.string(),
+  stderr: z.string(),
+  exitCode: z.number(),
+});
+
+/**
+ * Create bash tools for AI agents.
+ * All commands are executed via agentfs CLI which provides FUSE-based isolation.
+ */
+export function createBashTools(projectId: string, branchId: string): BashTools {
+  const logger = Logger.get({ projectId, branchId, component: "bash-tool" });
+
+  const bashTool: Tool = {
+    description: `Execute a bash command in the sandboxed environment. All file changes are isolated and persisted to the session.`,
+    inputSchema: bashInputSchema,
+    outputSchema: bashOutputSchema,
+    execute: async (params: z.infer<typeof bashInputSchema>): Promise<BashResult> => {
+      const { command } = params;
+      logger.debug(`Executing bash command: ${command}`);
+
+      const result = exec(command, {
+        projectId,
+        branchId,
+      });
+
+      logger.debug(`Bash command completed with exit code ${result.exitCode}`, {
+        extra: { command, stdout: result.stdout.slice(0, 500) },
+      });
+
+      return {
+        stdout: result.stdout,
+        stderr: result.stderr,
+        exitCode: result.exitCode,
+      };
+    },
+  };
+
+  return {
+    bash: bashTool,
+  };
+}
+
+/**
+ * Get or create bash tools for a branch.
+ * This function is kept for backwards compatibility with existing code.
+ */
+export async function getOrCreateBashTool(projectId: string, branchId: string): Promise<BashTools> {
+  return createBashTools(projectId, branchId);
 }

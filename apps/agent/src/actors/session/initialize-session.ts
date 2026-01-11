@@ -11,7 +11,7 @@ import {
   searchCodebaseTool,
   spawnAgentsTool,
 } from "@/ai/tools";
-import { ensureBranchDir } from "@/lib/branch-state";
+import { ensureBranchSession } from "@/lib/branch-state";
 import { stream } from "@/lib/stream-utils";
 import type { SessionMachineContext } from "@/machines/types";
 import { createSessionContext } from "@/session";
@@ -26,7 +26,7 @@ const buildToolSet = async (context: SessionMachineContext): Promise<ToolSet> =>
   const bashTools = await getOrCreateBashTool(sessionContext.project.id, sessionContext.branch.id);
 
   return {
-    ...bashTools.tools,
+    ...bashTools,
     search_codebase: searchCodebaseTool(sessionContext),
     query_related_declarations: queryRelatedDeclarationsTool(sessionContext),
     spawn_agents: spawnAgentsTool(sessionContext),
@@ -35,7 +35,6 @@ const buildToolSet = async (context: SessionMachineContext): Promise<ToolSet> =>
 };
 
 type InitializeResult = {
-  branchDir: string;
   status: "created" | "reused" | "forked";
   tools: ToolSet;
   systemPrompt: string;
@@ -54,13 +53,11 @@ export const initializeSessionActor = fromPromise<
     actor: "session-machine",
   });
 
-  logger.info("Initializing session - ensuring branch directory exists");
+  logger.info("Initializing session - ensuring agentfs session exists");
 
-  const result = await ensureBranchDir(branch.id, project.id);
+  const result = await ensureBranchSession(branch.id, project.id);
 
-  logger.info("Branch directory ready", {
-    extra: { branchDir: result.branchDir, status: result.status },
-  });
+  logger.info("AgentFS session ready", { extra: { status: result.status } });
 
   await stream(branch.headVersion.chatId, {
     type: "status",

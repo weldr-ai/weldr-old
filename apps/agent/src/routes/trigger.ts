@@ -5,11 +5,11 @@ import { createActor } from "xstate";
 import { and, db, eq } from "@weldr/db";
 import { branches, projects } from "@weldr/db/schema";
 
-import { getOrCreateBashTool } from "@/ai/tools/bash";
 import { initVersion } from "@/ai/utils/init-version";
 import { insertMessages } from "@/ai/utils/insert-messages";
 import { getInstalledCategories } from "@/integrations/utils/get-installed-categories";
 import { auth } from "@/lib/auth";
+import { exec } from "@/lib/sandbox";
 import { createRouter } from "@/lib/utils";
 import { sessionMachine } from "@/machines/session";
 import { createSessionInput } from "@/session";
@@ -119,10 +119,12 @@ router.openapi(route, async (c) => {
 
   let activeVersion = branch.headVersion?.status !== "completed" ? branch.headVersion : null;
 
-  const bashTools = await getOrCreateBashTool(projectId, branchId);
-  const gitCheckResult = await bashTools.exec("test -d .git && echo exists || echo not_exists");
+  const gitCheckResult = await exec("test -d .git && echo exists || echo not_exists", {
+    projectId,
+    branchId,
+  });
   if (gitCheckResult.stdout.trim() === "not_exists") {
-    await bashTools.exec("git init");
+    await exec("git init", { projectId, branchId });
   }
 
   if (!activeVersion) {

@@ -73,6 +73,7 @@ router.openapi(route, async (c) => {
 // ALWAYS use createTool utility with proper schemas
 import { z } from "zod";
 import { createTool } from "./utils";
+import { exec } from "@/lib/sandbox";
 
 export const myTool = createTool({
   name: "toolName",
@@ -97,9 +98,6 @@ export const myTool = createTool({
     const project = context.get("project");
     const branch = context.get("branch");
 
-    // Get the correct workspace directory
-    const workspaceDir = Git.getBranchWorkspaceDir(branch.id, branch.isMain);
-
     // Initialize logger with context
     const logger = Logger.get({
       projectId: project.id,
@@ -108,12 +106,16 @@ export const myTool = createTool({
     });
 
     try {
-      // Tool implementation with correct workspace
-      const result = await performAction(input, workspaceDir);
+      // Tool implementation - use exec() for commands inside agentfs session
+      // All commands run in the virtual /workspace directory
+      const result = await exec("some-command", {
+        projectId: project.id,
+        branchId: branch.id,
+      });
 
       return {
         success: true as const,
-        data: result,
+        data: result.stdout,
       };
     } catch (error) {
       logger.error("Tool execution failed", { extra: { error } });
@@ -436,7 +438,7 @@ router.openapi(streamRoute, async (c) => {
 3. **Error Messages**: Provide clear, actionable error messages
 4. **Return Types**: Use discriminated unions for success/failure
 5. **Context Usage**: Always get project/branch from context
-6. **Workspace Awareness**: Use Git.getBranchWorkspaceDir() for file operations
+6. **Sandbox Execution**: Use `exec()` from `@/lib/sandbox` for all commands - they run inside the agentfs virtual `/workspace` directory
 7. **Logging**: Use structured logging with Logger.get()
 
 ### XML Tool Support
@@ -502,91 +504,75 @@ const chatId = context.get("chatId");
 const messages = context.get("messages");
 ```
 
+## AgentFS Sandbox
+
+### Architecture Overview
+
+All file operations and command execution happen inside an **agentfs session**. The agentfs CLI provides:
+
+- **Virtual `/workspace` directory**: All commands see files at `/workspace`, which is a FUSE-mounted overlay
+- **Copy-on-write isolation**: Each branch has its own SQLite database (`~/.agentfs/{branchId}.db`) storing file changes
+- **Cloud sync**: Session databases are synced to cloud storage for persistence
+
+### Command Execution
+
+```typescript
+// Use exec() from sandbox for all commands
+import { exec } from "@/lib/sandbox";
+
+// Commands automatically run in the virtual /workspace directory
+const result = await exec("bun install", {
+  projectId: project.id,
+  branchId: branch.id,
+});
+
+if (result.exitCode !== 0) {
+  throw new Error(`Command failed: ${result.stderr}`);
+}
+```
+
+### File Operations
+
+```typescript
+// Use sandbox fs utilities for file operations
+import { readFile, writeFile, listDir, fileExists } from "@/lib/sandbox/fs";
+
+// Read a file from the virtual workspace
+const content = readFile(branchId, "/package.json");
+
+// Write a file to the virtual workspace
+writeFile(branchId, "/src/index.ts", "export const foo = 'bar';");
+
+// Check if file exists
+if (fileExists(branchId, "/tsconfig.json")) {
+  // ...
+}
+
+// List directory contents
+const files = listDir(branchId, "/src");
+```
+
 ## Git Operations
 
-### Branch Workspace Management
+### Git Commands in AgentFS
 
 ```typescript
 // Use Git namespace for all git-related operations
 import { Git } from "@/lib/git";
 
-// Get the correct workspace directory for a branch
-const workspaceDir = Git.getBranchWorkspaceDir(branchId, isMainBranch);
-// Returns: /workspace (main) or /workspace/.weldr/{branchId} (feature)
-
-// Initialize git repository (only once per project)
-await Git.initRepository();
+// Initialize git repository (runs inside agentfs session)
+await Git.initRepository(projectId, branchId);
 
 // Create git commits
 const commitHash = await Git.commit(
   "commit message",
   { name: "Author", email: "author@example.com" },
-  { worktreeName: branchId }, // Only for feature branches
+  projectId,
+  branchId,
 );
 
-// Create worktrees for feature branches
-const worktreePath = await Git.getOrCreateWorktree(
-  branchId, // worktree name
-  `branch-${branchId}`, // git branch name
-  "main", // start from main
-);
-```
-
-## File Operations
-
-### Safe File Handling
-
-```typescript
-// For branch-aware file operations, use Git.getBranchWorkspaceDir()
-import { Git } from "@/lib/git";
-
-// Get the correct workspace directory for the branch
-const workspaceDir = Git.getBranchWorkspaceDir(branchId, isMainBranch);
-const safePath = path.resolve(workspaceDir, userInput);
-if (!safePath.startsWith(workspaceDir)) {
-  throw new Error("Path traversal attempt");
-}
-
-// For simple operations, use WORKSPACE_DIR constant
-import { WORKSPACE_DIR } from "@/lib/constants";
-const safePath = path.resolve(WORKSPACE_DIR, userInput);
-if (!safePath.startsWith(WORKSPACE_DIR)) {
-  throw new Error("Path traversal attempt");
-}
-
-// ALWAYS handle file errors
-try {
-  const content = await fs.readFile(filePath, "utf-8");
-} catch (error) {
-  if (error.code === "ENOENT") {
-    // File not found handling
-  }
-  throw error;
-}
-```
-
-### Command Execution
-
-```typescript
-// Use runCommand utility for shell commands
-import { runCommand } from "@/lib/commands";
-import { Git } from "@/lib/git";
-
-// For branch-aware commands, get the correct workspace directory
-const workspaceDir = Git.getBranchWorkspaceDir(branchId, isMainBranch);
-const { stdout, stderr, exitCode } = await runCommand("command", args, {
-  cwd: workspaceDir,
-});
-
-// For simple commands, use WORKSPACE_DIR
-import { WORKSPACE_DIR } from "@/lib/constants";
-const { stdout, stderr, exitCode } = await runCommand("command", args, {
-  cwd: WORKSPACE_DIR,
-});
-
-if (exitCode !== 0) {
-  // Handle command failure
-}
+// Get changed files
+const changedFiles = await Git.getChangedFiles(projectId, branchId);
 ```
 
 ## OpenAPI Documentation
@@ -816,8 +802,8 @@ router.use(loggingMiddleware);
 ✅ Handle all error cases explicitly
 ✅ Stream large responses
 ✅ Use Logger.get() for structured logging
-✅ Use Git.getBranchWorkspaceDir() for branch-aware file operations
-✅ Use WORKSPACE_DIR for simple file operations
+✅ Use `exec()` from `@/lib/sandbox` for all commands
+✅ Use sandbox fs utilities (`readFile`, `writeFile`, etc.) for file operations
 ✅ Document all API endpoints
 
 ### Don'ts
@@ -831,5 +817,5 @@ router.use(loggingMiddleware);
 ❌ Trust user input without validation
 ❌ Use console.log, console.error, console.warn, or any console methods (use Logger from @weldr/shared)
 ❌ Skip OpenAPI documentation
-❌ Access files outside the correct workspace directory
-❌ Use WORKSPACE_DIR when you need branch-specific operations
+❌ Use Node.js `fs` directly for user workspace files (use sandbox fs utilities)
+❌ Assume real filesystem paths exist (everything is virtual in agentfs)
