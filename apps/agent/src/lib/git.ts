@@ -502,6 +502,126 @@ export namespace Git {
   }
 
   /**
+   * Changed file information from git diff.
+   */
+  export interface ChangedFile {
+    path: string;
+    type: "added" | "modified" | "deleted";
+  }
+
+  /**
+   * Get changed files between two refs using git diff.
+   * If no refs provided, gets uncommitted changes (staged + unstaged).
+   *
+   * @param branchDir - The branch directory path
+   * @param fromRef - The starting ref (optional, defaults to HEAD for uncommitted changes)
+   * @param toRef - The ending ref (optional)
+   * @returns List of changed files with their change type
+   */
+  export async function getChangedFiles(
+    branchDir: string,
+    fromRef?: string,
+    toRef?: string,
+  ): Promise<ChangedFile[]> {
+    const logger = Logger.get({
+      operation: "git-get-changed-files",
+      branchDir,
+      fromRef,
+      toRef,
+    });
+
+    const git = simpleGit(branchDir);
+    const changedFiles: ChangedFile[] = [];
+
+    try {
+      let raw: string;
+
+      if (fromRef && toRef) {
+        raw = await git.raw(["diff", "--name-status", fromRef, toRef]);
+      } else if (fromRef) {
+        raw = await git.raw(["diff", "--name-status", fromRef]);
+      } else {
+        raw = await git.raw(["status", "--porcelain"]);
+      }
+
+      if (!raw.trim()) {
+        logger.debug("No changed files found");
+        return [];
+      }
+
+      const lines = raw.trim().split("\n");
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+
+        let type: ChangedFile["type"];
+        let filePath: string;
+
+        if (fromRef || toRef) {
+          const [status, ...pathParts] = line.split("\t");
+          filePath = pathParts.join("\t");
+
+          switch (status?.charAt(0)) {
+            case "A":
+              type = "added";
+              break;
+            case "D":
+              type = "deleted";
+              break;
+            case "M":
+            case "R":
+            case "C":
+            default:
+              type = "modified";
+              break;
+          }
+        } else {
+          const statusCode = line.substring(0, 2);
+          filePath = line.substring(3);
+
+          if (statusCode.includes("D")) {
+            type = "deleted";
+          } else if (statusCode.includes("A") || statusCode.includes("?")) {
+            type = "added";
+          } else {
+            type = "modified";
+          }
+        }
+
+        if (filePath) {
+          changedFiles.push({ path: filePath, type });
+        }
+      }
+
+      logger.debug("Changed files retrieved", {
+        extra: { count: changedFiles.length },
+      });
+
+      return changedFiles;
+    } catch (error) {
+      logger.error("Failed to get changed files", { extra: { error } });
+      return [];
+    }
+  }
+
+  /**
+   * Get the parent commit hash (HEAD~1).
+   * Returns null if there's no parent (initial commit).
+   *
+   * @param branchDir - The branch directory path
+   * @returns The parent commit hash or null
+   */
+  export async function getParentCommit(branchDir: string): Promise<string | null> {
+    const git = simpleGit(branchDir);
+    try {
+      const parentHash = (await git.raw(["rev-parse", "HEAD~1"])).trim();
+      return parentHash;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Check if a path exists.
    * @param p - The path to check
    * @returns True if the path exists, false otherwise

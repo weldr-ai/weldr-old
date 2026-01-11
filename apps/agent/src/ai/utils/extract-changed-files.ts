@@ -2,8 +2,6 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 
 import { db, eq } from "@weldr/db";
-import { versions } from "@weldr/db/schema";
-import { mergeJson } from "@weldr/db/utils";
 import { Logger } from "@weldr/shared/logger";
 import { getBranchDir } from "@weldr/shared/state";
 
@@ -35,7 +33,10 @@ const EXCLUDED_DIRS = new Set([
   ".react-router",
 ]);
 
-interface ChangedFile {
+/**
+ * Changed file information (compatible with Git.ChangedFile)
+ */
+export interface ChangedFile {
   path: string;
   type: "added" | "modified" | "deleted";
 }
@@ -102,10 +103,16 @@ export async function extractDeclarationsFromProject({
 
   try {
     let filesToProcess: string[];
+    let deletedFiles: string[] = [];
 
     if (changedFiles && changedFiles.length > 0) {
       filesToProcess = changedFiles
         .filter((f) => f.type !== "deleted")
+        .filter((f) => CODE_EXTENSIONS.has(path.extname(f.path)))
+        .map((f) => f.path);
+
+      deletedFiles = changedFiles
+        .filter((f) => f.type === "deleted")
         .filter((f) => CODE_EXTENSIONS.has(path.extname(f.path)))
         .map((f) => f.path);
     } else {
@@ -113,8 +120,21 @@ export async function extractDeclarationsFromProject({
       filesToProcess = await scanDirectory(branchDir, branchDir);
     }
 
-    logger.info(`Found ${filesToProcess.length} code files to process`);
+    logger.info(`Found ${filesToProcess.length} code files to process, ${deletedFiles.length} deleted files`);
 
+    // Handle deleted files - clean up their declarations
+    for (const filePath of deletedFiles) {
+      try {
+        await handleFileDeleted({ context, filePath });
+        processed++;
+      } catch (error) {
+        const errorMsg = `Failed to handle deleted file ${filePath}: ${error instanceof Error ? error.message : String(error)}`;
+        logger.warn(errorMsg);
+        errors.push(errorMsg);
+      }
+    }
+
+    // Process added/modified files
     for (const filePath of filesToProcess) {
       const fullPath = path.join(branchDir, filePath);
 
@@ -145,33 +165,6 @@ export async function extractDeclarationsFromProject({
     });
     return { processed, errors: [String(error)] };
   }
-}
-
-/**
- * Track a file change for later declaration extraction.
- * Updates the version's changedFiles list.
- *
- * @param context - Session context
- * @param filePath - Relative path to the changed file
- * @param type - Type of change: added, modified, or deleted
- */
-export async function trackFileChange({
-  context,
-  filePath,
-  type,
-}: {
-  context: SessionContext;
-  filePath: string;
-  type: "added" | "modified" | "deleted";
-}): Promise<void> {
-  const branch = context.branch;
-
-  await db
-    .update(versions)
-    .set({
-      changedFiles: mergeJson(versions.changedFiles, [{ path: filePath, type }]),
-    })
-    .where(eq(versions.id, branch.headVersion.id));
 }
 
 /**

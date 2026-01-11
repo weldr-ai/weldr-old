@@ -1,5 +1,3 @@
-import * as path from "node:path";
-
 import { z } from "zod";
 
 import { Logger } from "@weldr/shared/logger";
@@ -7,98 +5,7 @@ import { getBranchDir } from "@weldr/shared/state";
 
 import { type AgentFSBashTools, agentFSManager, createAgentFSBashTool } from "@/lib/storage";
 import type { SessionContext } from "@/session";
-import { trackFileChange } from "../utils/extract-changed-files";
 import { createTool } from "./utils";
-
-const CODE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mts", ".mjs", ".cts", ".cjs"]);
-const WORKSPACE_ROOT = "/workspace";
-const WORKSPACE_PREFIX = "workspace/";
-
-/**
- * Extract all regex matches from a string.
- */
-function getAllMatches(pattern: RegExp, text: string): RegExpExecArray[] {
-  const matches: RegExpExecArray[] = [];
-  let match = pattern.exec(text);
-  while (match !== null) {
-    matches.push(match);
-    match = pattern.exec(text);
-  }
-  return matches;
-}
-
-/**
- * Extract file paths that are being modified from a bash command.
- * Returns paths that are targets of write operations.
- */
-function extractModifiedFiles(command: string): string[] {
-  const files: string[] = [];
-
-  // Match output redirections: > file, >> file
-  const redirectMatches = getAllMatches(/(?:>>?)\s*["']?([^\s"'|;&]+)["']?/g, command);
-  for (const match of redirectMatches) {
-    if (match[1]) files.push(match[1]);
-  }
-
-  // Match tee command: tee file, tee -a file
-  const teeMatches = getAllMatches(/\btee\s+(?:-a\s+)?["']?([^\s"'|;&]+)["']?/g, command);
-  for (const match of teeMatches) {
-    if (match[1]) files.push(match[1]);
-  }
-
-  // Match touch command: touch file1 file2
-  const touchMatches = getAllMatches(/\btouch\s+((?:["']?[^\s"'|;&]+["']?\s*)+)/g, command);
-  for (const match of touchMatches) {
-    if (match[1]) {
-      const touchFiles = match[1].trim().split(/\s+/);
-      files.push(...touchFiles.map((f) => f.replace(/["']/g, "")));
-    }
-  }
-
-  // Match cp command: cp source dest (last arg is destination)
-  const cpMatches = getAllMatches(/\bcp\s+(?:-[a-zA-Z]+\s+)*(.+)/g, command);
-  for (const match of cpMatches) {
-    if (match[1]) {
-      const args = match[1].trim().split(/\s+/);
-      if (args.length >= 2) {
-        const dest = args[args.length - 1];
-        if (dest) files.push(dest.replace(/["']/g, ""));
-      }
-    }
-  }
-
-  // Match mv command: mv source dest (last arg is destination)
-  const mvMatches = getAllMatches(/\bmv\s+(?:-[a-zA-Z]+\s+)*(.+)/g, command);
-  for (const match of mvMatches) {
-    if (match[1]) {
-      const args = match[1].trim().split(/\s+/);
-      if (args.length >= 2) {
-        const dest = args[args.length - 1];
-        if (dest) files.push(dest.replace(/["']/g, ""));
-      }
-    }
-  }
-
-  // Match sed -i: sed -i 's/...' file
-  const sedMatches = getAllMatches(
-    /\bsed\s+(?:-[a-zA-Z]*i[a-zA-Z]*\s+).*?\s+["']?([^\s"'|;&]+)["']?$/g,
-    command,
-  );
-  for (const match of sedMatches) {
-    if (match[1]) files.push(match[1]);
-  }
-
-  // Filter to only include code files and normalize paths
-  return files
-    .map((filePath) => {
-      const trimmed = filePath.replace(/^\/+/, "");
-      if (filePath.startsWith(`${WORKSPACE_ROOT}/`)) {
-        return trimmed.slice(WORKSPACE_PREFIX.length);
-      }
-      return trimmed;
-    })
-    .filter((filePath) => CODE_EXTENSIONS.has(path.extname(filePath)));
-}
 
 /**
  * Cache for bash tool instances per branch.
@@ -171,6 +78,9 @@ export async function clearBashToolCache(projectId: string, branchId: string): P
  * - Compression: gzip, gunzip
  * - Data processing: jq, yq
  * - And many more standard Unix utilities
+ *
+ * File changes are detected via git during session finalization,
+ * so there's no need to track modifications inline.
  */
 export const bashTool = createTool({
   name: "bash",
@@ -222,23 +132,6 @@ Prefer this over specialized tools when you need flexibility or when combining m
           stderrLength: result.stderr.length,
         },
       });
-
-      // Track modified files for incremental declaration extraction
-      if (result.exitCode === 0) {
-        const modifiedFiles = extractModifiedFiles(command);
-        for (const filePath of modifiedFiles) {
-          await trackFileChange({
-            context,
-            filePath,
-            type: "modified",
-          });
-        }
-        if (modifiedFiles.length > 0) {
-          logger.debug("Tracked file changes", {
-            extra: { files: modifiedFiles },
-          });
-        }
-      }
 
       return {
         stdout: result.stdout,

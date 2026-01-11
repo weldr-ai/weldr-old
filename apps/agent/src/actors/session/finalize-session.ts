@@ -5,6 +5,7 @@ import { versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 import { getBranchDir, isCloudMode } from "@weldr/shared/state";
 
+import { extractDeclarationsFromProject } from "@/ai/utils/extract-changed-files";
 import { syncBranchToStorage } from "@/lib/branch-state";
 import { build } from "@/lib/build";
 import { Git } from "@/lib/git";
@@ -48,6 +49,19 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
       extra: { synced, errorCount: errors.length },
     });
 
+    // Get changed files from git BEFORE committing (uncommitted changes)
+    logger.info("Getting changed files from git");
+    const changedFiles = await Git.getChangedFiles(branchDir);
+
+    logger.info("Changed files detected", {
+      extra: {
+        count: changedFiles.length,
+        added: changedFiles.filter((f) => f.type === "added").length,
+        modified: changedFiles.filter((f) => f.type === "modified").length,
+        deleted: changedFiles.filter((f) => f.type === "deleted").length,
+      },
+    });
+
     logger.info("Creating git commit");
 
     const commitMessage = branch.headVersion.message
@@ -71,6 +85,29 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
           error: error instanceof Error ? error.message : String(error),
         },
       });
+    }
+
+    // Extract declarations from changed files (fire and forget - non-blocking)
+    if (changedFiles.length > 0) {
+      logger.info("Starting background declaration extraction");
+
+      extractDeclarationsFromProject({
+        context: input.context,
+        changedFiles,
+      })
+        .then((result) => {
+          logger.info("Declaration extraction completed", {
+            extra: {
+              processed: result.processed,
+              errors: result.errors.length,
+            },
+          });
+        })
+        .catch((error) => {
+          logger.error("Declaration extraction failed", {
+            extra: { error: error instanceof Error ? error.message : String(error) },
+          });
+        });
     }
 
     logger.info("Syncing branch to storage");
