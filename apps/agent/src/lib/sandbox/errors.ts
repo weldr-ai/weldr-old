@@ -1,21 +1,21 @@
 /**
- * Base error class for all storage-related errors
+ * Base error class for all sandbox-related errors
  */
-export class StorageError extends Error {
+export class SandboxError extends Error {
   constructor(
     message: string,
     public readonly operation: string,
     public readonly cause?: Error,
   ) {
     super(message);
-    this.name = "StorageError";
+    this.name = "SandboxError";
   }
 }
 
 /**
  * Error for AgentFS-specific operations
  */
-export class AgentFSError extends StorageError {
+export class AgentFSError extends SandboxError {
   constructor(
     message: string,
     operation: string,
@@ -28,9 +28,9 @@ export class AgentFSError extends StorageError {
 }
 
 /**
- * Error for Tigris storage operations
+ * Error for cloud storage operations (Tigris/S3)
  */
-export class TigrisError extends StorageError {
+export class CloudStorageError extends SandboxError {
   constructor(
     message: string,
     operation: string,
@@ -39,14 +39,14 @@ export class TigrisError extends StorageError {
     cause?: Error,
   ) {
     super(message, operation, cause);
-    this.name = "TigrisError";
+    this.name = "CloudStorageError";
   }
 }
 
 /**
  * Error for snapshot operations
  */
-export class SnapshotError extends StorageError {
+export class SnapshotError extends SandboxError {
   constructor(
     message: string,
     operation: string,

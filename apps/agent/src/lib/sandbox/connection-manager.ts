@@ -12,10 +12,13 @@ interface ConnectionInfo {
 /**
  * Centralized manager for AgentFS connections.
  * Uses acquire/release pattern with reference counting to manage connection lifecycle.
+ *
+ * This ensures multiple agents working on the same branch share the same SQLite connection,
+ * preventing conflicts and improving performance.
  */
-class AgentFSManager {
+class SandboxConnectionManager {
   private connections = new Map<string, ConnectionInfo>();
-  private logger = Logger.get({ service: "agentfs-manager" });
+  private logger = Logger.get({ service: "sandbox-connection-manager" });
 
   private getKey(projectId: string, branchId: string): string {
     return `${projectId}:${branchId}`;
@@ -32,13 +35,13 @@ class AgentFSManager {
     if (existing) {
       existing.refCount++;
       existing.lastAccessed = Date.now();
-      this.logger.debug("Reusing AgentFS connection", {
+      this.logger.debug("Reusing sandbox connection", {
         extra: { key, refCount: existing.refCount },
       });
       return existing.instance;
     }
 
-    this.logger.info("Opening new AgentFS connection", { extra: { key } });
+    this.logger.info("Opening new sandbox connection", { extra: { key } });
     const instance = await openAgentFS(branchDir);
 
     this.connections.set(key, {
@@ -82,12 +85,12 @@ class AgentFSManager {
     }
 
     info.refCount--;
-    this.logger.debug("Released AgentFS connection", {
+    this.logger.debug("Released sandbox connection", {
       extra: { key, refCount: info.refCount },
     });
 
     if (info.refCount <= 0) {
-      this.logger.info("Closing AgentFS connection (refCount reached 0)", {
+      this.logger.info("Closing sandbox connection (refCount reached 0)", {
         extra: { key },
       });
       await info.instance.close();
@@ -104,7 +107,7 @@ class AgentFSManager {
     const info = this.connections.get(key);
 
     if (info) {
-      this.logger.info("Force closing AgentFS connection", {
+      this.logger.info("Force closing sandbox connection", {
         extra: { key, refCount: info.refCount },
       });
       await info.instance.close();
@@ -123,7 +126,7 @@ class AgentFSManager {
    * Close all connections. Use at shutdown.
    */
   async closeAll(): Promise<void> {
-    this.logger.info("Closing all AgentFS connections", {
+    this.logger.info("Closing all sandbox connections", {
       extra: { count: this.connections.size },
     });
 
@@ -169,4 +172,4 @@ class AgentFSManager {
   }
 }
 
-export const agentFSManager = new AgentFSManager();
+export const sandboxConnections = new SandboxConnectionManager();

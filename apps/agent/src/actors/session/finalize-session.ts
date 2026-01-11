@@ -6,10 +6,9 @@ import { Logger } from "@weldr/shared/logger";
 import { getBranchDir, isCloudMode } from "@weldr/shared/state";
 
 import { extractDeclarationsFromProject } from "@/ai/utils/extract-changed-files";
-import { syncBranchToStorage } from "@/lib/branch-state";
 import { build } from "@/lib/build";
 import { Git } from "@/lib/git";
-import { agentFSManager, createSnapshotService, syncAgentFSToDisk } from "@/lib/storage";
+import { createSnapshotService, syncToCloud } from "@/lib/sandbox";
 import { stream } from "@/lib/stream-utils";
 import type { SessionMachineContext } from "@/machines/types";
 
@@ -21,6 +20,7 @@ type FinalizeResult = {
 export const finalizeSessionActor = fromPromise<FinalizeResult, { context: SessionMachineContext }>(
   async ({ input }) => {
     const { project, branch, user } = input.context;
+    const branchDir = getBranchDir(project.id, branch.id);
 
     const logger = Logger.get({
       projectId: project.id,
@@ -31,27 +31,9 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
 
     logger.info("Starting finalization");
 
-    const branchDir = getBranchDir(project.id, branch.id);
-
-    logger.info("Syncing AgentFS to disk");
-    const agent = await agentFSManager.acquire(project.id, branch.id, branchDir);
-    let synced: number;
-    let errors: string[];
-    try {
-      const result = await syncAgentFSToDisk(agent, branchDir);
-      synced = result.synced;
-      errors = result.errors;
-    } finally {
-      await agentFSManager.release(project.id, branch.id);
-    }
-
-    logger.info("AgentFS synced to disk", {
-      extra: { synced, errorCount: errors.length },
-    });
-
-    // Get changed files from git BEFORE committing (uncommitted changes)
+    // Get changed files using Git library
     logger.info("Getting changed files from git");
-    const changedFiles = await Git.getChangedFiles(branchDir);
+    const changedFiles = await Git.getChangedFiles(project.id, branch.id, branchDir);
 
     logger.info("Changed files detected", {
       extra: {
@@ -62,29 +44,31 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
       },
     });
 
-    logger.info("Creating git commit");
-
-    const commitMessage = branch.headVersion.message
-      ? `${branch.headVersion.message}${branch.headVersion.description ? `\n\n${branch.headVersion.description}` : ""}`
-      : `Version #${branch.headVersion.sequenceNumber}`;
-
+    // Create git commit using Git library (handles sync/cleanup automatically)
     let commitHash: string | null = null;
-    try {
-      commitHash = await Git.commit(
-        commitMessage,
-        {
-          name: user?.name ?? "Weldr",
-          email: user?.email ?? "agent@weldr.dev",
-        },
-        branchDir,
-      );
-      logger.info("Git commit created", { extra: { commitHash } });
-    } catch (error) {
-      logger.warn("Failed to create git commit (may have no changes)", {
-        extra: {
-          error: error instanceof Error ? error.message : String(error),
-        },
-      });
+
+    if (changedFiles.length > 0) {
+      logger.info("Creating git commit");
+
+      const commitMessage = branch.headVersion.message
+        ? `${branch.headVersion.message}${branch.headVersion.description ? `\n\n${branch.headVersion.description}` : ""}`
+        : `Version #${branch.headVersion.sequenceNumber}`;
+
+      const author = {
+        name: user?.name ?? "Weldr",
+        email: user?.email ?? "agent@weldr.dev",
+      };
+
+      try {
+        commitHash = await Git.commit(commitMessage, author, project.id, branch.id, branchDir);
+        logger.info("Git commit created", { extra: { commitHash } });
+      } catch (error) {
+        logger.warn("Failed to create git commit", {
+          extra: { error: error instanceof Error ? error.message : String(error) },
+        });
+      }
+    } else {
+      logger.info("No changes to commit");
     }
 
     // Extract declarations from changed files (fire and forget - non-blocking)
@@ -102,6 +86,7 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
               errors: result.errors.length,
             },
           });
+          return result;
         })
         .catch((error) => {
           logger.error("Declaration extraction failed", {
@@ -110,10 +95,10 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
         });
     }
 
-    logger.info("Syncing branch to storage");
-    await syncBranchToStorage(branch.id, project.id);
+    logger.info("Syncing sandbox to cloud storage");
+    await syncToCloud(branch.id, project.id);
 
-    logger.info("Creating AgentFS snapshot");
+    logger.info("Creating sandbox snapshot");
 
     const snapshotService = createSnapshotService(project.id);
     const snapshotPath = await snapshotService.createSnapshot(branch.id, branch.headVersion.id);

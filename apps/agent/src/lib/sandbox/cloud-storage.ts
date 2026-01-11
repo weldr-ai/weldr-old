@@ -2,29 +2,29 @@ import { get, head, list, put, remove } from "@tigrisdata/storage";
 
 import { Logger } from "@weldr/shared/logger";
 
-import { TigrisError, withRetry } from "./errors";
+import { CloudStorageError, withRetry } from "./errors";
 import type { StorageBackend } from "./types";
 
 /**
- * Tigris storage backend configuration
+ * Cloud storage configuration (Tigris/S3-compatible)
  */
-export interface TigrisConfig {
+export interface CloudStorageConfig {
   accessKeyId: string;
   secretAccessKey: string;
   endpoint?: string;
 }
 
 /**
- * Tigris storage backend
- * Uses @tigrisdata/storage SDK for smaller bundle size
+ * Cloud storage backend using Tigris (S3-compatible)
+ * Stores sandbox state (AgentFS .db files) in the cloud
  */
-export class TigrisStorageBackend implements StorageBackend {
-  private logger = Logger.get({ service: "tigris-backend" });
-  private config: { bucket: string } & TigrisConfig;
+export class CloudStorageBackend implements StorageBackend {
+  private logger = Logger.get({ service: "cloud-storage" });
+  private config: { bucket: string } & CloudStorageConfig;
 
-  constructor(bucket: string, config: TigrisConfig) {
+  constructor(bucket: string, config: CloudStorageConfig) {
     this.config = { bucket, ...config };
-    this.logger = Logger.get({ service: "tigris-backend", bucket });
+    this.logger = Logger.get({ service: "cloud-storage", bucket });
   }
 
   private getStorageConfig() {
@@ -43,7 +43,7 @@ export class TigrisStorageBackend implements StorageBackend {
       await this.write(dest, data);
       this.logger.debug("Object copied", { extra: { source, dest } });
     } catch (error) {
-      throw new TigrisError(
+      throw new CloudStorageError(
         `Failed to copy ${source} to ${dest}`,
         "copy",
         this.config.bucket,
@@ -62,7 +62,7 @@ export class TigrisStorageBackend implements StorageBackend {
         });
 
         if (result.error) {
-          throw new TigrisError(
+          throw new CloudStorageError(
             `Failed to read ${p}: ${result.error.message}`,
             "read",
             this.config.bucket,
@@ -88,7 +88,7 @@ export class TigrisStorageBackend implements StorageBackend {
         });
 
         if (result.error) {
-          throw new TigrisError(
+          throw new CloudStorageError(
             `Failed to write ${p}: ${result.error.message}`,
             "write",
             this.config.bucket,
@@ -110,7 +110,7 @@ export class TigrisStorageBackend implements StorageBackend {
         });
 
         if (result.error) {
-          throw new TigrisError(
+          throw new CloudStorageError(
             `Failed to delete ${p}: ${result.error.message}`,
             "delete",
             this.config.bucket,
@@ -146,7 +146,7 @@ export class TigrisStorageBackend implements StorageBackend {
           });
 
           if (result.error) {
-            throw new TigrisError(
+            throw new CloudStorageError(
               `Failed to list ${prefix}: ${result.error.message}`,
               "list",
               this.config.bucket,

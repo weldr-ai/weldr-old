@@ -3,7 +3,7 @@ import { fromPromise } from "xstate";
 import { Logger } from "@weldr/shared/logger";
 
 import { clearBashToolCache } from "@/ai/tools/bash";
-import { agentFSManager } from "@/lib/storage";
+import { sandboxConnections } from "@/lib/sandbox";
 import { stream } from "@/lib/stream-utils";
 import type { SessionMachineContext } from "@/machines/types";
 
@@ -21,9 +21,9 @@ export const cleanupSessionActor = fromPromise<void, { context: SessionMachineCo
 
     try {
       await clearBashToolCache(project.id, branch.id);
-      await agentFSManager.forceClose(project.id, branch.id);
+      await sandboxConnections.forceClose(project.id, branch.id);
     } catch (error) {
-      logger.warn("Failed to close AgentFS connection during cleanup", {
+      logger.warn("Failed to close sandbox connection during cleanup", {
         extra: { error: error instanceof Error ? error.message : String(error) },
       });
     }

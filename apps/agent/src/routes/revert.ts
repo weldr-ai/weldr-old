@@ -7,7 +7,7 @@ import { getBranchDir } from "@weldr/shared/state";
 
 import { auth } from "@/lib/auth";
 import { Git } from "@/lib/git";
-import { agentFSManager, createSnapshotService, syncAgentFSToDisk } from "@/lib/storage";
+import { createSnapshotService } from "@/lib/sandbox";
 import { createRouter } from "@/lib/utils";
 
 const route = createRoute({
@@ -71,7 +71,6 @@ router.openapi(route, async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  // Validate project, branch, version
   const [project, branch, version] = await Promise.all([
     db.query.projects.findFirst({
       where: and(eq(projects.id, projectId), eq(projects.userId, session.user.id)),
@@ -109,38 +108,19 @@ router.openapi(route, async (c) => {
   try {
     const branchDir = getBranchDir(projectId, branchId);
 
-    // Check if version has a snapshot to restore
     if (!version.snapshotPath) {
       return c.json({ error: "Version does not have a snapshot" }, 400);
     }
 
-    // 1. Restore AgentFS snapshot
-    logger.info("Restoring AgentFS snapshot", {
+    // 1. Restore sandbox snapshot (this copies the db file)
+    logger.info("Restoring sandbox snapshot", {
       extra: { snapshotPath: version.snapshotPath },
     });
 
     const snapshotService = createSnapshotService(projectId);
     await snapshotService.restoreSnapshot(versionId, branchId);
 
-    // 2. Sync files from AgentFS to disk
-    logger.info("Syncing files from AgentFS to disk");
-
-    const agent = await agentFSManager.acquire(projectId, branchId, branchDir);
-    let synced: number;
-    let errors: string[];
-    try {
-      const result = await syncAgentFSToDisk(agent, branchDir);
-      synced = result.synced;
-      errors = result.errors;
-    } finally {
-      await agentFSManager.release(projectId, branchId);
-    }
-
-    logger.info("Files synced from snapshot", {
-      extra: { synced, errorCount: errors.length },
-    });
-
-    // 3. Create revert commit in git (preserves history)
+    // 2. Create revert commit using Git (handles sync internally)
     const revertMessage = `revert: Revert to version #${version.sequenceNumber}${
       version.message ? ` - ${version.message}` : ""
     }`;
@@ -153,12 +133,13 @@ router.openapi(route, async (c) => {
           name: session.user.name || "Weldr",
           email: session.user.email || "user@weldr.dev",
         },
+        projectId,
+        branchId,
         branchDir,
       );
 
       logger.info("Revert commit created", { extra: { commitHash } });
     } catch (error) {
-      // If git commit fails, it might be because git isn't initialized
       logger.warn("Failed to create git commit", {
         extra: {
           error: error instanceof Error ? error.message : String(error),
@@ -166,7 +147,8 @@ router.openapi(route, async (c) => {
       });
 
       // Initialize git and try again
-      if (!(await Git.hasGitRepository(branchDir))) {
+      const hasRepo = await Git.hasGitRepository(projectId, branchId, branchDir);
+      if (!hasRepo) {
         await Git.initRepository(projectId, branchId, branchDir);
         commitHash = await Git.commit(
           revertMessage,
@@ -174,6 +156,8 @@ router.openapi(route, async (c) => {
             name: session.user.name || "Weldr",
             email: session.user.email || "user@weldr.dev",
           },
+          projectId,
+          branchId,
           branchDir,
         );
       } else {

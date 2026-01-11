@@ -175,6 +175,28 @@ ${taskContext ? `<task_context>\n${taskContext}\n</task_context>` : ""}
 - \`tail -n 20 file.txt\` - Last N lines
 - \`sed 's/old/new/g' file.txt\` - Find and replace
 
+**Package Management (bun):**
+Real bun binary available in the sandboxed environment:
+- \`bun install\` - Install dependencies
+- \`bun add <package>\` - Add a package
+- \`bun remove <package>\` - Remove a package
+- \`bun run <script>\` - Run package.json scripts
+- \`bun run build\` - Build the project
+- \`bun run typecheck\` - Run type checking
+
+**Version Control (git):**
+Real git binary available in the sandboxed environment:
+- \`git init\` - Initialize repository
+- \`git add <files>\` - Stage changes
+- \`git commit -m "message"\` - Commit changes
+- \`git status\` - Show working tree status
+- \`git diff\` - Show unstaged changes
+- \`git log --oneline\` - View commit history
+- \`git branch <name>\` - Create branch
+- \`git checkout <branch>\` - Switch branches
+
+Note: All changes are isolated per branch in the sandbox environment.
+
 **Integration Management:**
 - **\`add_integrations\`**: Add integrations to the project
   - Call only AFTER user confirms they want specific features

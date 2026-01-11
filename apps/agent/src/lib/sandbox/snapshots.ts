@@ -3,7 +3,13 @@ import { Logger } from "@weldr/shared/logger";
 import type { StorageBackend } from "./types";
 
 /**
- * Service for managing AgentFS snapshots
+ * Service for managing sandbox snapshots (versions/commits)
+ *
+ * Snapshots are immutable point-in-time copies of a branch's AgentFS database.
+ * They are stored in cloud storage and used for:
+ * - Version control (each commit creates a snapshot)
+ * - Forking branches from historical versions
+ * - Reverting to previous versions
  */
 export class SnapshotService {
   private logger = Logger.get({ service: "snapshot" });

@@ -1,8 +1,9 @@
 import { agentfs } from "agentfs-sdk/just-bash";
 import { type BashToolkit, type CreateBashToolOptions, createBashTool } from "bash-tool";
-import { Bash } from "just-bash";
+import { type CustomCommand, Bash } from "just-bash";
 
 import type { AgentFSInstance } from "./agentfs";
+import { createBunCommand, createGitCommand } from "./custom-commands";
 
 /**
  * Callback input for before bash execution
@@ -34,9 +35,9 @@ export interface AfterBashCallOutput {
 }
 
 /**
- * Options for creating a bash tool backed by AgentFS
+ * Options for creating a bash tool backed by the sandbox filesystem
  */
-export interface AgentFSBashToolOptions {
+export interface SandboxBashToolOptions {
   /**
    * The AgentFS instance to use as the filesystem backend
    */
@@ -49,6 +50,13 @@ export interface AgentFSBashToolOptions {
   cwd?: string;
 
   /**
+   * Enable full network access for the agent (curl, etc.)
+   * When true, agents can make HTTP requests to any URL
+   * @default true
+   */
+  enableNetwork?: boolean;
+
+  /**
    * Callback invoked before each bash command execution
    * Can be used for logging, validation, or command modification
    */
@@ -59,6 +67,11 @@ export interface AgentFSBashToolOptions {
    * Can be used for logging or result modification
    */
   onAfterBashCall?: (input: AfterBashCallInput) => AfterBashCallOutput | undefined;
+
+  /**
+   * The branch directory for real binary execution
+   */
+  branchDir?: string;
 }
 
 /**
@@ -71,24 +84,9 @@ export interface BashResult {
 }
 
 /**
- * The tools returned by createAgentFSBashTool
+ * The tools returned by createSandboxBashTools
  */
-export interface AgentFSBashTools {
-  /**
-   * The bash tool for AI SDK integration
-   */
-  bash: BashToolkit["tools"]["bash"];
-
-  /**
-   * The readFile tool for AI SDK integration
-   */
-  readFile: BashToolkit["tools"]["readFile"];
-
-  /**
-   * The writeFile tool for AI SDK integration
-   */
-  writeFile: BashToolkit["tools"]["writeFile"];
-
+export interface SandboxBashTools {
   /**
    * All tools as a record for AI SDK
    */
@@ -106,7 +104,7 @@ export interface AgentFSBashTools {
 }
 
 /**
- * Create a bash tool backed by AgentFS filesystem.
+ * Create bash tools backed by the sandbox virtual filesystem.
  *
  * This creates a sandboxed bash environment where:
  * - All file operations are persisted to AgentFS (SQLite-backed)
@@ -114,16 +112,37 @@ export interface AgentFSBashTools {
  * - The agent can use familiar bash commands (grep, cat, find, etc.)
  * - The AgentFS root is mounted at the configured working directory
  */
-export async function createAgentFSBashTool(
-  options: AgentFSBashToolOptions,
-): Promise<AgentFSBashTools> {
-  const { agent, cwd = "/workspace", onBeforeBashCall, onAfterBashCall } = options;
+export async function createSandboxBashTools(
+  options: SandboxBashToolOptions,
+): Promise<SandboxBashTools> {
+  const {
+    agent,
+    cwd = "/workspace",
+    enableNetwork = true,
+    onBeforeBashCall,
+    onAfterBashCall,
+    branchDir,
+  } = options;
 
   const fs = await agentfs(agent, cwd);
+
+  const customCommands: CustomCommand[] = [];
+  if (branchDir) {
+    customCommands.push(
+      createBunCommand({ agent, branchDir }),
+      createGitCommand({ agent, branchDir }),
+    );
+  }
 
   const bashInstance = new Bash({
     fs,
     cwd,
+    network: enableNetwork
+      ? {
+          dangerouslyAllowFullInternetAccess: true,
+        }
+      : undefined,
+    customCommands: customCommands.length > 0 ? customCommands : undefined,
   });
 
   const { tools, sandbox } = await createBashTool({
@@ -143,9 +162,6 @@ export async function createAgentFSBashTool(
   };
 
   return {
-    bash: tools.bash,
-    readFile: tools.readFile,
-    writeFile: tools.writeFile,
     tools,
     sandbox,
     exec,

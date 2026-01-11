@@ -6,7 +6,7 @@ import { Logger } from "@weldr/shared/logger";
 import { agentPrompt } from "@/ai/prompts";
 import {
   addIntegrationsTool,
-  bashTool,
+  getOrCreateBashTool,
   queryRelatedDeclarationsTool,
   searchCodebaseTool,
   spawnAgentsTool,
@@ -16,15 +16,17 @@ import { stream } from "@/lib/stream-utils";
 import type { SessionMachineContext } from "@/machines/types";
 import { createSessionContext } from "@/session";
 
-const buildToolSet = (context: SessionMachineContext): ToolSet => {
+const buildToolSet = async (context: SessionMachineContext): Promise<ToolSet> => {
   const sessionContext = createSessionContext({
     project: context.project,
     branch: context.branch,
     user: context.user,
   });
 
+  const bashTools = await getOrCreateBashTool(sessionContext.project.id, sessionContext.branch.id);
+
   return {
-    bash: bashTool(sessionContext),
+    ...bashTools.tools,
     search_codebase: searchCodebaseTool(sessionContext),
     query_related_declarations: queryRelatedDeclarationsTool(sessionContext),
     spawn_agents: spawnAgentsTool(sessionContext),
@@ -65,8 +67,10 @@ export const initializeSessionActor = fromPromise<
     status: "thinking",
   });
 
-  const tools = buildToolSet(input.context);
-  const systemPrompt = await agentPrompt(project);
+  const [tools, systemPrompt] = await Promise.all([
+    buildToolSet(input.context),
+    agentPrompt(project),
+  ]);
 
   return { ...result, tools, systemPrompt };
 });

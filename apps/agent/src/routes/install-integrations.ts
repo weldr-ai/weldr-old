@@ -155,15 +155,9 @@ router.openapi(route, async (c) => {
     if (triggerWorkflow) {
       const sessionActor = createActor(sessionMachine, {
         input: {
-          project: {
-            ...project,
-            integrationCategories: new Set(installedCategories),
-          },
-          branch: {
-            ...branch,
-            headVersion: branch.headVersion,
-          },
-          user: session.user,
+          project: sessionContext.project,
+          branch: sessionContext.branch,
+          user: sessionContext.user,
         },
       });
       sessionActor.start();
