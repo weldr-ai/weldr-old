@@ -120,7 +120,9 @@ export async function extractDeclarationsFromProject({
       filesToProcess = await scanDirectory(branchDir, branchDir);
     }
 
-    logger.info(`Found ${filesToProcess.length} code files to process, ${deletedFiles.length} deleted files`);
+    logger.info(
+      `Found ${filesToProcess.length} code files to process, ${deletedFiles.length} deleted files`,
+    );
 
     // Handle deleted files - clean up their declarations
     for (const filePath of deletedFiles) {
