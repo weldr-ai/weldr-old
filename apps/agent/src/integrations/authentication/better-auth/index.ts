@@ -109,9 +109,12 @@ export const betterAuthIntegration = defineIntegration<"better-auth">({
 
       if (existsResult) {
         const readResult = readFile(branch.id, schemaIndexPath);
-        if (readResult.success) {
-          fileContent = readResult.data || "";
+        if (!readResult.success) {
+          throw new Error(`Failed to read schema index file`, {
+            cause: readResult.error,
+          });
         }
+        fileContent = readResult.data || "";
       }
 
       if (existsResult && fileContent.trim() === "") {
@@ -123,7 +126,12 @@ export const dummyTable = pgTable("dummy_table", {
   name: varchar("name", { length: 255 }),
 });`;
 
-        writeFile(branch.id, schemaIndexPath, dummyTableContent);
+        const writeResult = writeFile(branch.id, schemaIndexPath, dummyTableContent);
+        if (!writeResult.success) {
+          throw new Error(`Failed to write dummy schema`, {
+            cause: writeResult.error,
+          });
+        }
       }
 
       const generateSchemaResult = exec(
@@ -141,11 +149,30 @@ export const dummyTable = pgTable("dummy_table", {
       }
 
       if (existsResult && fileContent.trim() === "") {
-        writeFile(branch.id, schemaIndexPath, 'export * from "./auth";\n');
+        const writeResult = writeFile(branch.id, schemaIndexPath, 'export * from "./auth";\n');
+        if (!writeResult.success) {
+          throw new Error(`Failed to update schema index`, {
+            cause: writeResult.error,
+          });
+        }
       } else {
         const currentReadResult = readFile(branch.id, schemaIndexPath);
-        const currentContent = currentReadResult.success ? currentReadResult.data || "" : "";
-        writeFile(branch.id, schemaIndexPath, currentContent + '\nexport * from "./auth";\n');
+        if (!currentReadResult.success) {
+          throw new Error(`Failed to read schema index file`, {
+            cause: currentReadResult.error,
+          });
+        }
+        const currentContent = currentReadResult.data || "";
+        const writeResult = writeFile(
+          branch.id,
+          schemaIndexPath,
+          currentContent + '\nexport * from "./auth";\n',
+        );
+        if (!writeResult.success) {
+          throw new Error(`Failed to update schema index`, {
+            cause: writeResult.error,
+          });
+        }
       }
 
       return {
