@@ -6,7 +6,6 @@ import { codingGuidelines } from "./coding-guidelines";
 
 export const agentPrompt = async (
   project: typeof projects.$inferSelect & { integrationCategories: Set<string> },
-  taskContext?: string,
 ) => {
   const allIntegrationCategories = await db.query.integrationCategories.findMany();
 
@@ -124,8 +123,6 @@ ${integrationCategoriesList}
 <context>
 ${projectContext}
 </context>
-
-${taskContext ? `<task_context>\n${taskContext}\n</task_context>` : ""}
 
 <tool_usage_guide>
 ## Tool Execution Protocol
