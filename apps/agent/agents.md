@@ -6,12 +6,31 @@ The Agent application is the core AI-powered backend service built with Hono and
 
 ## Current Structure
 
-- `src/ai`: agents (planner, coder), prompts, schemas, tools, shared utils
+- `src/ai`: prompts, schemas, tools, shared utils
+- `src/machines`: XState workflows and orchestration
+- `src/actors`: actor implementations for machines
+- `src/session`: session recovery and persistence helpers
 - `src/routes`: health, trigger, stream, revert, install-integrations (Hono OpenAPI routes)
-- `src/workflow`: engine, context, steps (generate-project-info, generate-branch-name, generate-version-details, planning, coding, finalizing)
 - `src/integrations`: authentication (better-auth), backend (orpc), frontend (tanstack-start), database (postgresql), utils (registry, queue-manager/installer, declaration templates, env writer)
 - `src/lib`: git/worktrees, branch-state, build, commands runner, constants, extract-declarations, storage, stream-utils, misc utils
 - `src/middlewares`: logger middleware for request logging
+
+## Commands
+
+- `bun dev`: `bun with-env tsx watch --clear-screen=false src/index.ts`
+- `bun build`: `tsdown`
+- `bun start`: `node dist/index.js`
+- `bun typecheck`: `tsc --noEmit --emitDeclarationOnly false`
+- `bun clean`: `git clean -xdf .turbo node_modules dist tsconfig.tsbuildinfo`
+- `bun with-env`: `dotenv -e ../../.env --`
+
+## Build Notes
+
+- `tsdown.config.ts` copies integration template data from `src/integrations/**/data` into the build output.
+
+## Streaming Route
+
+- `GET /stream/:projectId/:branchId` supports SSE resumption with the `lastEventId` query param.
 
 ## Type Safety Requirements
 
@@ -714,16 +733,17 @@ logger.info("Operation completed", {
 ### Tool Registry Pattern
 
 ```typescript
-// Tools are registered automatically via index.ts
+// Tools are exported from src/ai/tools/index.ts
 export const tools = {
-  grep: grepTool,
-  readFile: readFileTool,
-  writeFile: writeFileTool,
-  // ... other tools
+  addIntegrationsTool,
+  queryRelatedDeclarationsTool,
+  searchCodebaseTool,
+  spawnAgentsTool,
+  ...createBashTools(projectId, branchId),
 };
 
 // Use in agent
-const availableTools = Object.values(tools).map((tool) => tool(context));
+const availableTools = Object.values(tools);
 ```
 
 ### Context Propagation

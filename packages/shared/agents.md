@@ -153,26 +153,6 @@ const parts = processText("Check <Reference type='page' id='home' /> page");
 // Returns: [{ type: 'text', content: 'Check ' }, { type: 'reference', ... }, ...]
 ```
 
-## State Management
-
-### Environment Mode Detection
-
-```typescript
-import { isLocalMode, isCloudMode, initializeWorkspace } from "@weldr/shared/state";
-
-// Check environment mode
-if (isLocalMode()) {
-  // Local development mode
-} else {
-  // Cloud deployment mode (Fly.io)
-}
-
-// Initialize workspace directory for local state files
-await initializeWorkspace();
-```
-
-Note: User project files are managed by **agentfs** (not real filesystem). The workspace utilities are only for local state files like branch metadata. Use `@/lib/sandbox` in the agent app for file operations.
-
 ## Fly.io Integration
 
 ### App Operations
@@ -292,7 +272,6 @@ src/validators/
 ├── nodes.ts             # Node schemas
 ├── openapi.ts           # OpenAPI validators
 ├── packages.ts          # Package schemas
-├── plans.ts             # Plan/task schemas
 ├── projects.ts          # Project schemas
 ├── themes.ts            # Theme schemas
 ├── vault.ts             # Vault schemas
@@ -402,10 +381,10 @@ export interface DeclarationMetadata {
     "./fly": "./src/fly/index.ts",
     "./tigris": "./src/tigris.ts",
     "./color-utils": "./src/color-utils.ts",
+    "./machine-lookup-store": "./src/machine-lookup-store.ts",
     "./nanoid": "./src/nanoid.ts",
     "./logger": "./src/logger.ts",
-    "./process-text": "./src/process-text.ts",
-    "./state": "./src/state/index.ts"
+    "./process-text": "./src/process-text.ts"
   }
 }
 ```
@@ -436,7 +415,6 @@ export interface DeclarationMetadata {
 - Create insert/update schema variants
 - Document schema fields with `.describe()`
 - Use discriminated unions for variants
-- Check `isLocalMode()` before cloud operations
 
 ### Don'ts
 

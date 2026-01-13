@@ -28,8 +28,22 @@
 - `src/app`: app router routes (landing, pricing, projects, auth flows, API handlers), shared layout/loading/not-found
 - `src/components`: auth, billing, chat, editor, integrations, projects, openapi viewer, command center, timeline, dialogs
 - `src/hooks`: event stream, workflow trigger, messages, chat visibility, editor references, scroll management, status
-- `src/lib`: tRPC client/server utils, context providers, gradient and preview helpers, dev-server manager, shutdown helpers
+- `src/lib`: tRPC client/server helpers, context providers (ui-store), action helpers (get-active-subscription), shared utilities
 - `src/types`: shared client-side types for UI
+
+## Local Commands
+
+- `bun dev`: `bun with-env next dev --turbopack -p 3000`
+- `bun build`: `next build`
+- `bun start`: `next start`
+- `bun typecheck`: `tsc --noEmit --emitDeclarationOnly false`
+- `bun clean`: `git clean -xdf .next .turbo node_modules dist tsconfig.tsbuildinfo`
+- `bun with-env`: `dotenv -e ../../.env --`
+
+## Providers & Globals
+
+- Root providers are configured in `src/app/layout.tsx` (ReactFlow, tRPC/query client, theme provider, tooltips).
+- Global styles are pulled from `@weldr/ui/styles/globals.css` in the root layout.
 
 ## Type Safety Requirements
 
@@ -373,32 +387,21 @@ const buttonVariants = cva("inline-flex items-center justify-center", {
 
 ## Authentication
 
-### Protected Routes
+### Better Auth Route Handler
 
 ```typescript
-// middleware.ts
+// src/app/api/auth/[...all]/route.ts
 import { auth } from "@weldr/auth";
+import { toNextJsHandler } from "better-auth/next-js";
 
-export default auth((req) => {
-  const isAuth = !!req.auth;
-  const isAuthPage = req.nextUrl.pathname.startsWith("/auth");
-
-  if (isAuthPage) {
-    if (isAuth) {
-      return Response.redirect(new URL("/dashboard", req.url));
-    }
-    return null;
-  }
-
-  if (!isAuth) {
-    return Response.redirect(new URL("/auth/sign-in", req.url));
-  }
-});
-
-export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
-};
+export const { GET, POST } = toNextJsHandler(auth);
 ```
+
+## API Route Patterns
+
+- tRPC handler: `src/app/api/trpc/[trpc]/route.ts`
+- Attachment uploads: `src/app/api/attachments/route.ts`
+- Agent SSE proxy: `src/app/api/chat/[projectId]/[branchId]/stream/route.ts`
 
 ## Real-time Features
 

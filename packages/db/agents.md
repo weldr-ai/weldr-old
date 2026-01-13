@@ -6,7 +6,7 @@ The @weldr/db package manages all database operations using Drizzle ORM with Pos
 
 ## Current Structure
 
-- `src/schema`: tables for projects, branches, versions, chats/messages, declarations, declaration-templates, dependencies, nodes, tasks, integrations (and categories/templates), environment-variables, themes, vault, auth tables, ai-models
+- `src/schema`: tables for projects, branches/versions, chats/messages, declarations/templates, dependencies, nodes, integrations (categories/templates), environment variables, themes, vault, auth tables, ai models, plus `relations.ts` and `version-declarations.ts`
 - `src/migrations`: SQL migration history and meta tracking
 - `src/index.ts`: drizzle client setup and exports
 - `src/types.ts`: shared types from schemas
@@ -20,12 +20,12 @@ The @weldr/db package manages all database operations using Drizzle ORM with Pos
 ```typescript
 // ALWAYS define schemas with proper types and constraints
 import { pgTable, text, timestamp, boolean, integer, uuid } from "drizzle-orm/pg-core";
-import { createId } from "@paralleldrive/cuid2";
+import { nanoid } from "@weldr/shared/nanoid";
 
 export const tableName = pgTable("table_name", {
-  // Use cuid2 for primary keys
+  // Use nanoid for primary keys
   id: text("id")
-    .$defaultFn(() => createId())
+    .$defaultFn(() => nanoid())
     .primaryKey(),
 
   // Required fields
@@ -90,14 +90,17 @@ export type UpdateTableName = Partial<InsertTableName>;
 
 ```
 src/schema/
-├── index.ts           # Main export file
-├── auth.ts           # Authentication tables
-├── projects.ts       # Project-related tables
-├── chats.ts         # Chat and messaging tables
-├── declarations.ts   # Code declarations tables
-├── integrations.ts   # Integration tables
+├── index.ts                 # Main export file
+├── auth.ts                  # Authentication tables
+├── projects.ts              # Project-related tables
+├── chats.ts                 # Chat and messaging tables
+├── declarations.ts          # Code declarations tables
+├── integrations.ts          # Integration tables
 ├── environment-variables.ts
-└── types.ts         # Shared types and enums
+├── branches-versions.ts
+├── version-declarations.ts
+├── relations.ts
+└── vault.ts
 ```
 
 ### Naming Conventions
@@ -113,16 +116,18 @@ src/schema/
 
 ```bash
 # Generate migration from schema changes
-bun db:generate
+bun generate
 
 # Apply migrations to database
-bun db:migrate
+bun migrate
 
 # Push schema directly (development only)
-bun db:push
+bun push
 ```
 
 ### Migration Best Practices
+
+- `drizzle.config.ts` enumerates schema files explicitly; update it when adding/removing schema files.
 
 ```typescript
 // ALWAYS test migrations locally first
@@ -308,27 +313,24 @@ seed();
 // src/index.ts
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+
 import * as schema from "./schema";
 
-const connectionString = process.env.DATABASE_URL;
+const globalForDb = globalThis as unknown as {
+  conn: postgres.Sql | undefined;
+};
 
+const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
   throw new Error("DATABASE_URL is not defined");
 }
 
-const client = postgres(connectionString, {
-  max: 10, // Connection pool size
-  idle_timeout: 20,
-  connect_timeout: 10,
-});
+const conn = globalForDb.conn ?? postgres(connectionString);
+if (process.env.NODE_ENV !== "production") {
+  globalForDb.conn = conn;
+}
 
-export const db = drizzle(client, {
-  schema,
-  logger: process.env.NODE_ENV === "development",
-});
-
-// Export all schema and types
-export * from "./schema";
+export const db = drizzle(conn, { schema });
 export * from "drizzle-orm";
 ```
 

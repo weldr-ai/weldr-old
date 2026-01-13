@@ -4,6 +4,11 @@
 
 The @weldr/api package provides the tRPC API layer for the Weldr platform. It handles all client-server communication with type-safe procedures, authentication, and database operations using Drizzle ORM.
 
+## Package Scripts
+
+- `bun run clean`: `git clean -xdf .turbo node_modules dist`
+- `bun run typecheck`: `tsc --noEmit --emitDeclarationOnly false`
+
 ## Type Safety Requirements
 
 ### Router Definition Patterns
@@ -246,25 +251,40 @@ const result = await callAgentProxy<TriggerWorkflowResponse>(
 ### callAgentProxy Implementation
 
 ```typescript
+import { TRPCError } from "@trpc/server";
+
 async function callAgentProxy<T = unknown>(
   endpoint: string,
   body: { projectId: string } & Record<string, unknown>,
   requestHeaders?: Headers,
 ): Promise<T> {
-  const response = await fetch(`${AGENT_URL}${endpoint}`, {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const proxyUrl = `${baseUrl}/api/proxy`;
+
+  const proxyHeaders = new Headers();
+  proxyHeaders.set("content-type", "application/json");
+
+  const headersToExclude = new Set(["content-length", "host", "connection", "transfer-encoding"]);
+  requestHeaders?.forEach((value, key) => {
+    if (!headersToExclude.has(key.toLowerCase())) {
+      proxyHeaders.set(key, value);
+    }
+  });
+
+  const response = await fetch(proxyUrl, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Cookie: requestHeaders?.get("cookie") || "",
-    },
-    body: JSON.stringify(body),
+    headers: proxyHeaders,
+    body: JSON.stringify({ endpoint, ...body }),
   });
 
   if (!response.ok) {
-    throw new Error(`Agent proxy failed: ${response.statusText}`);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Agent proxy request failed",
+    });
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
 }
 ```
 
@@ -273,7 +293,7 @@ async function callAgentProxy<T = unknown>(
 ### Checking Local Mode
 
 ```typescript
-import { isLocalMode } from "@weldr/shared/state";
+import { isLocalMode } from "../utils";
 
 if (!isLocalMode()) {
   // Cloud-only operations

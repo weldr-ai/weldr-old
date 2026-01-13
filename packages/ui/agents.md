@@ -325,6 +325,7 @@ function MyComponent() {
   "exports": {
     "./styles/globals.css": "./src/styles/globals.css",
     "./styles/canvas.css": "./src/styles/canvas.css",
+    "./postcss.config": "./postcss.config.mjs",
     "./lib/*": "./src/lib/*.tsx",
     "./components/*": "./src/components/*.tsx",
     "./hooks/*": "./src/hooks/*.ts",
@@ -353,6 +354,12 @@ import { cn } from "@weldr/ui/lib/utils";
 import "@weldr/ui/styles/globals.css";
 ```
 
+## Package Scripts
+
+- `bun run add-component`: `bunx --bun shadcn@latest add`
+- `bun run clean`: `git clean -xdf .turbo node_modules dist`
+- `bun run typecheck`: `tsc --noEmit --emitDeclarationOnly false`
+
 ## Adding Components
 
 ### Using shadcn CLI
@@ -379,10 +386,10 @@ bun add-component <component-name>
 
 ## Component List
 
-### Core Components (56)
+### Core Components (51)
 
-accordion, alert, alert-dialog, avatar, badge, breadcrumb,
-button, calendar, card, carousel, chart, checkbox,
+accordion, alert, alert-dialog, aspect-ratio, avatar, badge,
+breadcrumb, button, calendar, card, carousel, chart, checkbox,
 collapsible, command, context-menu, dialog, drawer, dropdown-menu,
 expandable-card, form, hover-card, input, input-otp, label,
 menubar, navigation-menu, pagination, popover, progress,
@@ -419,6 +426,11 @@ Custom icons (LogoIcon, GradientSparklesIcon, etc.)
 - `sonner` - Toast notifications
 - `recharts` - Charts
 - `next-themes` - Theme switching
+- `embla-carousel-react` - Carousel utilities
+- `input-otp` - OTP inputs
+- `react-resizable-panels` - Resizable layout panels
+- `tailwind-scrollbar` - Scrollbar styling
+- `tw-animate-css` - Animation utilities
 
 ## Do's and Don'ts
 
