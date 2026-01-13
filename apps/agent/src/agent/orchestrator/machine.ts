@@ -63,14 +63,6 @@ export function createSubAgentOrchestratorMachine({
         error: context.validationError ?? "Unknown validation error",
       })),
 
-      emitAgentStarted: emit((_, params: { agent: SubAgentState }) => ({
-        type: "orchestrator.agent.started" as const,
-        toolCallId: "",
-        agentId: params.agent.id,
-        task: params.agent.task,
-        depends: params.agent.depends,
-      })),
-
       emitAgentCompleted: emit(({ context }, params: { agentId: string; result: string }) => ({
         type: "orchestrator.agent.completed" as const,
         toolCallId: context.toolCallId,

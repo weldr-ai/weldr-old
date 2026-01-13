@@ -1,4 +1,4 @@
-import { assign, createActor, emit, sendParent, setup } from "xstate";
+import { assign, emit, sendParent, setup, type AnyActorRef } from "xstate";
 
 import { nanoid } from "@weldr/shared/nanoid";
 
@@ -102,17 +102,58 @@ const agentMachineSetup = setup({
     resetAssistantContent: assign({
       assistantContent: (): AssistantContentArray => [],
     }),
-    stopOrchestrators: ({ context }) => {
+    stopOrchestrators: assign(({ context }) => {
       for (const ref of context.orchestratorRefs.values()) {
         try {
-          (ref as { stop: () => void }).stop();
+          ref.stop();
         } catch {
           // Ignore if already stopped
         }
       }
-    },
+      return { orchestratorRefs: new Map<string, AnyActorRef>() };
+    }),
     clearOrchestrators: assign({
-      orchestratorRefs: () => new Map<string, unknown>(),
+      orchestratorRefs: () => new Map<string, AnyActorRef>(),
+    }),
+    spawnOrchestrators: assign({
+      orchestratorRefs: ({ context, spawn }) => {
+        const orchestratorMachine = createSubAgentOrchestratorMachine({
+          agentMachine,
+        });
+
+        const refs = new Map<string, AnyActorRef>();
+
+        for (const request of context.pendingSpawnRequests) {
+          const spawnAny = spawn as (
+            logic: unknown,
+            options: { id: string; input: unknown },
+          ) => AnyActorRef;
+
+          const actorRef = spawnAny(orchestratorMachine, {
+            id: `orchestrator-${request.toolCallId}`,
+            input: {
+              toolCallId: request.toolCallId,
+              agents: request.agents.map((agent) => ({
+                id: agent.id,
+                task: agent.task,
+                context: agent.context,
+                depends: agent.depends ?? [],
+              })),
+              maxRetries: 3,
+              project: context.project,
+              branch: context.branch,
+              user: context.user,
+              tools: context.tools,
+              modelId: context.modelId,
+              cooldownMs: context.cooldownMs,
+            },
+          });
+
+          refs.set(request.toolCallId, actorRef);
+        }
+
+        return refs;
+      },
     }),
     processOrchestratorComplete: assign({
       assistantContent: ({ context, event }) => {
@@ -152,15 +193,7 @@ const agentMachineSetup = setup({
         }
 
         const refs = new Map(context.orchestratorRefs);
-        const ref = refs.get(event.toolCallId);
-        if (ref) {
-          try {
-            (ref as { stop: () => void }).stop();
-          } catch {
-            // Ignore if already stopped
-          }
-          refs.delete(event.toolCallId);
-        }
+        refs.delete(event.toolCallId);
         return refs;
       },
     }),
@@ -188,15 +221,7 @@ const agentMachineSetup = setup({
         }
 
         const refs = new Map(context.orchestratorRefs);
-        const ref = refs.get(event.toolCallId);
-        if (ref) {
-          try {
-            (ref as { stop: () => void }).stop();
-          } catch {
-            // Ignore if already stopped
-          }
-          refs.delete(event.toolCallId);
-        }
+        refs.delete(event.toolCallId);
         return refs;
       },
     }),
@@ -239,7 +264,7 @@ export const agentMachine = agentMachineSetup.createMachine({
     pendingSpawnRequests: [],
     subAgentResults: [],
     metrics: new MetricsCollector(),
-    orchestratorRefs: new Map<string, unknown>(),
+    orchestratorRefs: new Map<string, AnyActorRef>(),
   }),
   states: {
     idle: {
@@ -332,85 +357,7 @@ export const agentMachine = agentMachineSetup.createMachine({
     },
 
     runningSubAgents: {
-      entry: assign({
-        orchestratorRefs: ({ context, self }) => {
-          const orchestratorMachine = createSubAgentOrchestratorMachine({
-            agentMachine,
-          });
-
-          const refs = new Map<string, unknown>();
-
-          for (const request of context.pendingSpawnRequests) {
-            const orchestratorActor = createActor(orchestratorMachine, {
-              input: {
-                toolCallId: request.toolCallId,
-                agents: request.agents.map((agent) => ({
-                  id: agent.id,
-                  task: agent.task,
-                  context: agent.context,
-                  depends: agent.depends ?? [],
-                })),
-                maxRetries: 3,
-                project: context.project,
-                branch: context.branch,
-                user: context.user,
-                tools: context.tools,
-                modelId: context.modelId,
-                cooldownMs: context.cooldownMs,
-              },
-            });
-
-            orchestratorActor.subscribe((snapshot) => {
-              if (snapshot.status === "done") {
-                const orchestratorContext = snapshot.context as {
-                  agents: Array<{
-                    id: string;
-                    task: string;
-                    status: string;
-                    result?: string;
-                    error?: string;
-                  }>;
-                  validationError?: string;
-                };
-
-                const isFailed = snapshot.value === "failed";
-
-                if (isFailed || orchestratorContext.validationError) {
-                  self.send({
-                    type: "_orchestrator.failed",
-                    toolCallId: request.toolCallId,
-                    error: orchestratorContext.validationError ?? "Orchestration failed",
-                  });
-                } else {
-                  const results = orchestratorContext.agents.map((a) => ({
-                    id: a.id,
-                    task: a.task,
-                    success: a.status === "completed",
-                    result: a.result ?? a.error ?? "No result",
-                  }));
-
-                  self.send({
-                    type: "_orchestrator.completed",
-                    toolCallId: request.toolCallId,
-                    results,
-                  });
-                }
-              } else if (snapshot.status === "error") {
-                self.send({
-                  type: "_orchestrator.failed",
-                  toolCallId: request.toolCallId,
-                  error: "Orchestrator encountered an unhandled error",
-                });
-              }
-            });
-
-            orchestratorActor.start();
-            refs.set(request.toolCallId, orchestratorActor);
-          }
-
-          return refs;
-        },
-      }),
+      entry: ["spawnOrchestrators"],
       always: {
         target: "savingMessages",
         guard: "allOrchestratorsComplete",

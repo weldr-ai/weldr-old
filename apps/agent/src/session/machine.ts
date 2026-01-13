@@ -329,7 +329,7 @@ export const sessionMachine = setup({
     }),
 
     // Orchestrator management
-    stopOrchestrators: ({ context }) => {
+    stopOrchestrators: assign(({ context }) => {
       for (const [, ref] of context.orchestratorRefs) {
         try {
           stopChild(ref);
@@ -337,7 +337,8 @@ export const sessionMachine = setup({
           // Ignore if already stopped
         }
       }
-    },
+      return { orchestratorRefs: new Map() };
+    }),
 
     clearOrchestrators: assign({
       orchestratorRefs: () => new Map(),
@@ -371,6 +372,14 @@ export const sessionMachine = setup({
         }
 
         const refs = new Map(context.orchestratorRefs);
+        const ref = refs.get(event.toolCallId);
+        if (ref) {
+          try {
+            stopChild(ref);
+          } catch {
+            // Ignore if already stopped
+          }
+        }
         refs.delete(event.toolCallId);
         return refs;
       },
@@ -398,6 +407,14 @@ export const sessionMachine = setup({
         }
 
         const refs = new Map(context.orchestratorRefs);
+        const ref = refs.get(event.toolCallId);
+        if (ref) {
+          try {
+            stopChild(ref);
+          } catch {
+            // Ignore if already stopped
+          }
+        }
         refs.delete(event.toolCallId);
         return refs;
       },

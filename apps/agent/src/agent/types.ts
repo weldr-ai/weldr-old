@@ -1,42 +1,25 @@
 import type { AssistantContent, ModelMessage, ToolSet } from "ai";
+import type { AnyActorRef } from "xstate";
 
 import type { AiModel } from "@weldr/db/schema";
 
+import type {
+  FinishReason,
+  PendingSpawnRequest,
+  SubAgentResult,
+  SubAgentTask,
+} from "@/core/events/types";
 import type { LLMUsage, MetricsCollector } from "@/core/metrics";
 import type { BranchWithVersion, ProjectWithConfig, User } from "@/core/types";
 
-export type PendingAgentTask = {
-  id: string;
-  task: string;
-  context?: string;
-  depends?: string[];
-};
+export type { FinishReason, PendingSpawnRequest, SubAgentResult, SubAgentTask };
 
-export type PendingSpawnRequest = {
-  toolCallId: string;
-  agents: PendingAgentTask[];
-};
-
-export type SubAgentResult = {
-  id: string;
-  task: string;
-  success: boolean;
-  result: string;
-};
+export type PendingAgentTask = SubAgentTask;
 
 export type SubAgentBatchResult = {
   toolCallId: string;
   results: SubAgentResult[];
 };
-
-export type FinishReason =
-  | "length"
-  | "stop"
-  | "content-filter"
-  | "tool-calls"
-  | "error"
-  | "other"
-  | "unknown";
 
 export type AssistantContentArray = Exclude<AssistantContent, string>;
 
@@ -68,7 +51,7 @@ export type AgentContext = {
   pendingSpawnRequests: PendingSpawnRequest[];
   subAgentResults: SubAgentResult[];
   metrics: MetricsCollector;
-  orchestratorRefs: Map<string, unknown>;
+  orchestratorRefs: Map<string, AnyActorRef>;
 };
 
 export type AgentInput = {

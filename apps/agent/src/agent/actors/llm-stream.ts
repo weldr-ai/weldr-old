@@ -31,6 +31,8 @@ type LLMStreamResult = {
 export const llmStreamActor = fromPromise<LLMStreamResult, LLMStreamInput>(async ({ input }) => {
   let shouldContinue = false;
   let forceContinue = false;
+  let hasToolResults = false;
+  let hasAddIntegrations = false;
   const pendingSpawnRequests: PendingSpawnRequest[] = [];
   const assistantContent: AssistantContentArray = [];
   let usage: LLMUsage | null = null;
@@ -136,6 +138,11 @@ export const llmStreamActor = fromPromise<LLMStreamResult, LLMStreamInput>(async
           toolName: part.toolName,
           output: part.output,
         });
+        hasToolResults = true;
+
+        if (part.toolName === "add_integrations") {
+          hasAddIntegrations = true;
+        }
         break;
       }
       case "error": {
@@ -168,7 +175,13 @@ export const llmStreamActor = fromPromise<LLMStreamResult, LLMStreamInput>(async
     finishReason = resultFinishReason as FinishReason;
   }
 
-  shouldContinue = forceContinue || resultFinishReason === "length";
+  const hasToolCallResults = hasToolResults && resultFinishReason === "tool-calls";
+  const shouldStopForIntegrations = hasAddIntegrations;
+
+  shouldContinue =
+    forceContinue ||
+    resultFinishReason === "length" ||
+    (hasToolCallResults && !shouldStopForIntegrations);
 
   return {
     shouldContinue,

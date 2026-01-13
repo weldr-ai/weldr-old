@@ -4,7 +4,10 @@ import type { ActorRefFrom } from "xstate";
 import type { AiModel } from "@weldr/db/schema";
 
 import type { AgentMachine } from "@/agent/machine";
+import type { SubAgentResult } from "@/core/events/types";
 import type { BranchWithVersion, ProjectWithConfig, User } from "@/core/types";
+
+export type { SubAgentResult };
 
 export type SubAgentTask = {
   id: string;
@@ -25,13 +28,6 @@ export type SubAgentState = {
   result?: string;
   error?: string;
   actorRef?: ActorRefFrom<AgentMachine>;
-};
-
-export type SubAgentResult = {
-  id: string;
-  task: string;
-  success: boolean;
-  result: string;
 };
 
 export type OrchestratorContext = {

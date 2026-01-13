@@ -1,10 +1,12 @@
-import type { OrchestratorContext, SubAgentState, SubAgentTask } from "./types";
+import type { OrchestratorContext, SubAgentState } from "./types";
+
+type AgentWithDependencies = Pick<SubAgentState, "id" | "depends">;
 
 /**
  * Validates the dependency graph for circular dependencies using Kahn's algorithm.
  * Returns an error message if a cycle is detected, undefined if valid.
  */
-export function validateDependencyGraph(agents: SubAgentTask[]): string | undefined {
+export function validateDependencyGraph(agents: AgentWithDependencies[]): string | undefined {
   const agentIds = new Set(agents.map((a) => a.id));
 
   for (const agent of agents) {
