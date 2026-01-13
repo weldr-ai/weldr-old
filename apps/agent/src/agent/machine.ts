@@ -1,0 +1,505 @@
+import { assign, createActor, emit, sendParent, setup } from "xstate";
+
+import { nanoid } from "@weldr/shared/nanoid";
+
+import { cooldownActor } from "@/agent/actors/cooldown";
+import { llmStreamActor } from "@/agent/actors/llm-stream";
+import { loadMessagesActor } from "@/agent/actors/load-messages";
+import { saveMessagesActor } from "@/agent/actors/save-messages";
+import {
+  createSubAgentOrchestratorMachine,
+  type SubAgentResult as OrchestratorSubAgentResult,
+} from "@/agent/orchestrator";
+import type {
+  AgentContext,
+  AgentInput,
+  AssistantContentArray,
+  SubAgentResult,
+} from "@/agent/types";
+import type { AgentEmittedEvent } from "@/core/events";
+import { MetricsCollector } from "@/core/metrics";
+
+const DEFAULT_MAX_SUB_AGENTS = 10;
+
+const normalizeError = (error: unknown): Error => {
+  return error instanceof Error ? error : new Error(String(error));
+};
+
+type AgentMachineEvent =
+  | { type: "PROCESS" }
+  | { type: "CANCEL" }
+  | { type: "ERROR"; error: Error }
+  | { type: "_orchestrator.completed"; toolCallId: string; results: OrchestratorSubAgentResult[] }
+  | { type: "_orchestrator.failed"; toolCallId: string; error: string };
+
+const agentMachineSetup = setup({
+  types: {
+    context: {} as AgentContext,
+    input: {} as AgentInput,
+    events: {} as AgentMachineEvent,
+    emitted: {} as AgentEmittedEvent,
+  },
+  actors: {
+    loadMessages: loadMessagesActor,
+    saveMessages: saveMessagesActor,
+    llmStream: llmStreamActor,
+    cooldown: cooldownActor,
+  },
+  actions: {
+    emitAgentStarted: emit(({ context }) => ({
+      type: "agent.started",
+      agentId: context.agentId,
+      modelId: context.modelId,
+      isSubAgent: context.isSubAgent,
+      task: context.task,
+    })),
+    emitIterationStarted: emit(({ context }) => ({
+      type: "agent.iteration.started",
+      agentId: context.agentId,
+      iteration: context.iterationCount,
+    })),
+    emitIterationCompleted: emit(({ context }) => ({
+      type: "agent.iteration.completed",
+      agentId: context.agentId,
+      iteration: context.iterationCount,
+      usage: context.lastUsage ?? { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      finishReason: context.lastFinishReason ?? "unknown",
+      durationMs: context.iterationStartedAt ? Date.now() - context.iterationStartedAt : 0,
+    })),
+    emitAgentCompleted: emit(({ context }) => ({
+      type: "agent.completed",
+      agentId: context.agentId,
+      metrics: context.metrics.getAgentMetrics(),
+    })),
+    emitAgentFailed: emit(({ context }) => ({
+      type: "agent.failed",
+      agentId: context.agentId,
+      error: {
+        message: context.error?.message ?? "Unknown agent error",
+        stack: context.error?.stack,
+      },
+      metrics: context.metrics.getAgentMetrics(),
+    })),
+    emitAgentCancelled: emit(({ context }) => ({
+      type: "agent.cancelled",
+      agentId: context.agentId,
+    })),
+    recordAgentDuration: ({ context }) => {
+      context.metrics.recordAgentDuration(Date.now() - context.agentStartedAt);
+    },
+    setIterationStart: assign({
+      iterationStartedAt: () => Date.now(),
+    }),
+    incrementIteration: assign({
+      iterationCount: ({ context }) => {
+        context.metrics.recordIteration();
+        return context.iterationCount + 1;
+      },
+    }),
+    resetMessageId: assign({
+      messageId: () => nanoid(),
+    }),
+    resetAssistantContent: assign({
+      assistantContent: (): AssistantContentArray => [],
+    }),
+    stopOrchestrators: ({ context }) => {
+      for (const ref of context.orchestratorRefs.values()) {
+        try {
+          (ref as { stop: () => void }).stop();
+        } catch {
+          // Ignore if already stopped
+        }
+      }
+    },
+    clearOrchestrators: assign({
+      orchestratorRefs: () => new Map<string, unknown>(),
+    }),
+    processOrchestratorComplete: assign({
+      assistantContent: ({ context, event }) => {
+        if (event.type !== "_orchestrator.completed") {
+          return context.assistantContent;
+        }
+
+        const toolResult = {
+          type: "tool-result" as const,
+          toolCallId: event.toolCallId,
+          toolName: "spawn_agents",
+          output: {
+            type: "json" as const,
+            value: { results: event.results },
+          },
+        };
+
+        return [...context.assistantContent, toolResult];
+      },
+      subAgentResults: ({ context, event }) => {
+        if (event.type !== "_orchestrator.completed") {
+          return context.subAgentResults;
+        }
+
+        const newResults: SubAgentResult[] = event.results.map((r) => ({
+          id: r.id,
+          task: r.task,
+          success: r.success,
+          result: r.result,
+        }));
+
+        return [...context.subAgentResults, ...newResults];
+      },
+      orchestratorRefs: ({ context, event }) => {
+        if (event.type !== "_orchestrator.completed") {
+          return context.orchestratorRefs;
+        }
+
+        const refs = new Map(context.orchestratorRefs);
+        const ref = refs.get(event.toolCallId);
+        if (ref) {
+          try {
+            (ref as { stop: () => void }).stop();
+          } catch {
+            // Ignore if already stopped
+          }
+          refs.delete(event.toolCallId);
+        }
+        return refs;
+      },
+    }),
+    processOrchestratorFailed: assign({
+      assistantContent: ({ context, event }) => {
+        if (event.type !== "_orchestrator.failed") {
+          return context.assistantContent;
+        }
+
+        const toolResult = {
+          type: "tool-result" as const,
+          toolCallId: event.toolCallId,
+          toolName: "spawn_agents",
+          output: {
+            type: "error-json" as const,
+            value: { success: false, error: event.error },
+          },
+        };
+
+        return [...context.assistantContent, toolResult];
+      },
+      orchestratorRefs: ({ context, event }) => {
+        if (event.type !== "_orchestrator.failed") {
+          return context.orchestratorRefs;
+        }
+
+        const refs = new Map(context.orchestratorRefs);
+        const ref = refs.get(event.toolCallId);
+        if (ref) {
+          try {
+            (ref as { stop: () => void }).stop();
+          } catch {
+            // Ignore if already stopped
+          }
+          refs.delete(event.toolCallId);
+        }
+        return refs;
+      },
+    }),
+  },
+  guards: {
+    shouldContinueLoop: ({ context }) =>
+      context.shouldContinue && context.iterationCount < context.maxIterations,
+    allOrchestratorsComplete: ({ context }) => context.orchestratorRefs.size === 0,
+  },
+});
+
+export const agentMachine = agentMachineSetup.createMachine({
+  id: "agent",
+  initial: "idle",
+  context: ({ input }) => ({
+    agentId: input.agentId ?? nanoid(),
+    isSubAgent: input.isSubAgent ?? false,
+    parentAgentId: input.parentAgentId,
+    task: input.task,
+    project: input.project,
+    branch: input.branch,
+    user: input.user,
+    messages: [],
+    assistantContent: [],
+    messageId: nanoid(),
+    iterationCount: 0,
+    iterationStartedAt: null,
+    agentStartedAt: Date.now(),
+    maxIterations: input.maxIterations ?? 100,
+    maxSubAgents: Math.min(input.maxSubAgents ?? DEFAULT_MAX_SUB_AGENTS, DEFAULT_MAX_SUB_AGENTS),
+    cooldownMs: input.cooldownMs ?? 100,
+    tools: input.tools,
+    activeTools: input.activeTools,
+    systemPrompt: input.systemPrompt,
+    modelId: input.modelId ?? "google:gemini-2.5-pro",
+    error: null,
+    shouldContinue: false,
+    lastUsage: null,
+    lastFinishReason: null,
+    pendingSpawnRequests: [],
+    subAgentResults: [],
+    metrics: new MetricsCollector(),
+    orchestratorRefs: new Map<string, unknown>(),
+  }),
+  states: {
+    idle: {
+      on: {
+        PROCESS: {
+          target: "loading",
+          actions: ["emitAgentStarted"],
+        },
+      },
+    },
+
+    loading: {
+      entry: ["resetMessageId", "resetAssistantContent"],
+      invoke: {
+        id: "loadMessages",
+        src: "loadMessages",
+        input: ({ context }) => ({
+          chatId: context.branch.headVersion.chatId,
+        }),
+        onDone: {
+          target: "thinking",
+          actions: [
+            assign({
+              messages: ({ event }) => event.output,
+            }),
+            "incrementIteration",
+            "emitIterationStarted",
+          ],
+        },
+        onError: {
+          target: "failed",
+          actions: assign({
+            error: ({ event }) => normalizeError(event.error),
+          }),
+        },
+      },
+    },
+
+    thinking: {
+      entry: ["setIterationStart"],
+      invoke: {
+        id: "llmStream",
+        src: "llmStream",
+        input: ({ context }) => ({
+          messages: context.messages,
+          tools: context.tools,
+          activeTools: context.activeTools,
+          systemPrompt: context.systemPrompt,
+          modelId: context.modelId,
+          chatId: context.branch.headVersion.chatId,
+          messageId: context.messageId,
+          maxSubAgents: context.maxSubAgents,
+        }),
+        onDone: [
+          {
+            target: "runningSubAgents",
+            guard: ({ event }) => event.output.pendingSpawnRequests.length > 0,
+            actions: [
+              assign({
+                shouldContinue: ({ event }) => event.output.shouldContinue,
+                assistantContent: ({ event }) => event.output.assistantContent,
+                lastUsage: ({ event }) => event.output.usage,
+                lastFinishReason: ({ event }) => event.output.finishReason,
+                pendingSpawnRequests: ({ event }) => event.output.pendingSpawnRequests,
+              }),
+              "emitIterationCompleted",
+            ],
+          },
+          {
+            target: "savingMessages",
+            actions: [
+              assign({
+                shouldContinue: ({ event }) => event.output.shouldContinue,
+                assistantContent: ({ event }) => event.output.assistantContent,
+                lastUsage: ({ event }) => event.output.usage,
+                lastFinishReason: ({ event }) => event.output.finishReason,
+                pendingSpawnRequests: () => [],
+              }),
+              "emitIterationCompleted",
+            ],
+          },
+        ],
+        onError: {
+          target: "failed",
+          actions: assign({
+            error: ({ event }) => normalizeError(event.error),
+          }),
+        },
+      },
+    },
+
+    runningSubAgents: {
+      entry: assign({
+        orchestratorRefs: ({ context, self }) => {
+          const orchestratorMachine = createSubAgentOrchestratorMachine({
+            agentMachine,
+          });
+
+          const refs = new Map<string, unknown>();
+
+          for (const request of context.pendingSpawnRequests) {
+            const orchestratorActor = createActor(orchestratorMachine, {
+              input: {
+                toolCallId: request.toolCallId,
+                agents: request.agents.map((agent) => ({
+                  id: agent.id,
+                  task: agent.task,
+                  context: agent.context,
+                  depends: agent.depends ?? [],
+                })),
+                maxRetries: 3,
+                project: context.project,
+                branch: context.branch,
+                user: context.user,
+                tools: context.tools,
+                modelId: context.modelId,
+                cooldownMs: context.cooldownMs,
+              },
+            });
+
+            orchestratorActor.subscribe((snapshot) => {
+              if (snapshot.status === "done") {
+                const orchestratorContext = snapshot.context as {
+                  agents: Array<{
+                    id: string;
+                    task: string;
+                    status: string;
+                    result?: string;
+                    error?: string;
+                  }>;
+                  validationError?: string;
+                };
+
+                const results = orchestratorContext.agents.map((a) => ({
+                  id: a.id,
+                  task: a.task,
+                  success: a.status === "completed",
+                  result: a.result ?? a.error ?? "No result",
+                }));
+
+                if (orchestratorContext.validationError) {
+                  self.send({
+                    type: "_orchestrator.failed",
+                    toolCallId: request.toolCallId,
+                    error: orchestratorContext.validationError,
+                  });
+                } else {
+                  self.send({
+                    type: "_orchestrator.completed",
+                    toolCallId: request.toolCallId,
+                    results,
+                  });
+                }
+              }
+            });
+
+            orchestratorActor.start();
+            refs.set(request.toolCallId, orchestratorActor);
+          }
+
+          return refs;
+        },
+      }),
+      always: {
+        target: "savingMessages",
+        guard: "allOrchestratorsComplete",
+        actions: [
+          assign({
+            shouldContinue: () => true,
+            pendingSpawnRequests: () => [],
+          }),
+        ],
+      },
+      on: {
+        "_orchestrator.completed": {
+          actions: ["processOrchestratorComplete"],
+        },
+        "_orchestrator.failed": {
+          actions: ["processOrchestratorFailed"],
+        },
+      },
+    },
+
+    savingMessages: {
+      invoke: {
+        id: "saveMessages",
+        src: "saveMessages",
+        input: ({ context }) => ({
+          chatId: context.branch.headVersion.chatId,
+          userId: context.user.id,
+          messageId: context.messageId,
+          assistantContent: context.assistantContent,
+          modelId: context.modelId,
+          usage: context.lastUsage,
+          finishReason: context.lastFinishReason,
+        }),
+        onDone: [
+          {
+            target: "cooldown",
+            guard: "shouldContinueLoop",
+          },
+          {
+            target: "completed",
+          },
+        ],
+        onError: {
+          target: "failed",
+          actions: assign({
+            error: ({ event }) => normalizeError(event.error),
+          }),
+        },
+      },
+    },
+
+    cooldown: {
+      invoke: {
+        id: "cooldown",
+        src: "cooldown",
+        input: ({ context }) => ({
+          ms: context.cooldownMs,
+        }),
+        onDone: {
+          target: "loading",
+        },
+      },
+    },
+
+    completed: {
+      type: "final",
+      entry: ["recordAgentDuration", "emitAgentCompleted", sendParent({ type: "AGENT_COMPLETE" })],
+    },
+
+    failed: {
+      type: "final",
+      entry: [
+        "stopOrchestrators",
+        "clearOrchestrators",
+        "recordAgentDuration",
+        "emitAgentFailed",
+        sendParent(({ context }) => ({
+          type: "AGENT_ERROR" as const,
+          error: context.error ?? new Error("Unknown agent error"),
+        })),
+      ],
+    },
+  },
+
+  on: {
+    CANCEL: {
+      target: ".completed",
+      actions: ["stopOrchestrators", "clearOrchestrators", "emitAgentCancelled"],
+    },
+    ERROR: {
+      target: ".failed",
+      actions: assign({
+        error: ({ event }) => normalizeError(event.error),
+      }),
+    },
+  },
+});
+
+export type AgentMachine = typeof agentMachine;
+export type AgentSnapshot = ReturnType<typeof agentMachine.getInitialSnapshot>;

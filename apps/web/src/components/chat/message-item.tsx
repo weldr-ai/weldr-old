@@ -106,9 +106,9 @@ const PureMessageItem = ({
           }
         })}
         {message.role === "tool" &&
-          message.content.some((content) => content.toolName === "add_integrations") && (
-            <IntegrationsInstallationStatus message={message as IntegrationToolMessage} />
-          )}
+          message.content.some(
+            (content) => "toolName" in content && content.toolName === "add_integrations",
+          ) && <IntegrationsInstallationStatus message={message as IntegrationToolMessage} />}
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ import {
   versionDeclarations,
   versions,
 } from "@weldr/db/schema";
-import type { AssistantMessage, ChatMessage, ToolMessage } from "@weldr/shared/types";
+import type { ChatMessage } from "@weldr/shared/types";
 
 import { protectedProcedure } from "../init";
 import { callAgentProxy } from "../utils";
@@ -163,16 +163,32 @@ export const versionRouter = {
 
       for (const message of version.chat.messages) {
         // Filter assistant messages for call_coder tool calls
-        let content = message.content as ToolMessage["content"] | AssistantMessage["content"];
+        let content: unknown[] = message.content as unknown[];
 
         // Skip tool messages with call_coder results
         if (message.role === "tool" && Array.isArray(message.content)) {
           content = content.filter(
-            (item) => !(item?.type === "tool-result" && item?.toolName === "call_coder"),
+            (item: unknown) =>
+              !(
+                typeof item === "object" &&
+                item !== null &&
+                "type" in item &&
+                item.type === "tool-result" &&
+                "toolName" in item &&
+                item.toolName === "call_coder"
+              ),
           );
         } else if (message.role === "assistant") {
           content = content.filter(
-            (item) => !(item?.type === "tool-call" && item?.toolName === "call_coder"),
+            (item: unknown) =>
+              !(
+                typeof item === "object" &&
+                item !== null &&
+                "type" in item &&
+                item.type === "tool-call" &&
+                "toolName" in item &&
+                item.toolName === "call_coder"
+              ),
           );
         }
 

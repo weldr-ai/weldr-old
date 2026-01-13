@@ -1,7 +1,7 @@
 import { db } from "@weldr/db";
 import type { projects } from "@weldr/db/schema";
 
-import { getProjectContext } from "@/ai/utils/get-project-context";
+import { getProjectContext } from "@/core/project";
 import { codingGuidelines } from "./coding-guidelines";
 
 export const agentPrompt = async (

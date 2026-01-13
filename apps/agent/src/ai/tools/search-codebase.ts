@@ -5,9 +5,9 @@ import { and, cosineDistance, db, desc, eq, getTableColumns, gt, isNotNull, sql 
 import { declarations, versionDeclarations, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
-import { formatDeclarationData, formatDeclarationSpecs } from "@/ai/utils/formatters";
-import { registry } from "@/ai/utils/registry";
-import { createTool } from "./utils";
+import { registry } from "@/ai/providers";
+import { formatDeclarationData, formatDeclarationSpecs } from "@/core/project/declarations";
+import { createTool } from "./create-tool";
 
 export const searchCodebaseTool = createTool({
   name: "search_codebase",
@@ -59,7 +59,7 @@ When you need to find declarations (functions, components, models, endpoints) th
     try {
       // Generate embedding for the query
       logger.info("Generating embedding for search query");
-      const embeddingModel = registry.textEmbeddingModel("openai:text-embedding-ada-002");
+      const embeddingModel = registry.embeddingModel("openai:text-embedding-ada-002");
 
       const { embeddings } = await embedMany({
         model: embeddingModel,

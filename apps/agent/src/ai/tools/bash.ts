@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { Logger } from "@weldr/shared/logger";
 
-import { exec } from "@/lib/sandbox/exec";
+import { exec } from "@/core/sandbox/exec";
 
 /**
  * Result of a bash command execution

@@ -4,13 +4,27 @@ import { and, db, eq, inArray } from "@weldr/db";
 import { projects, users, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
-import { getInstalledCategories } from "@/integrations/utils/get-installed-categories";
-import { sessionMachine } from "@/machines";
+import { getInstalledCategories } from "@/core/integrations/utils/get-installed-categories";
+import { sessionStorage, type SessionSnapshot } from "@/core/persistence";
 import { createSessionInput } from "./context";
+import { sessionMachine } from "./machine";
+
+/**
+ * Try to load a session snapshot for a version.
+ * Returns the snapshot if found, null otherwise.
+ */
+async function loadSnapshot(versionId: string): Promise<SessionSnapshot | null> {
+  try {
+    return await sessionStorage.loadSessionState(versionId);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Recover in-progress sessions on startup.
  * Queries the database for versions that need processing and restarts them.
+ * If a snapshot exists, it restores from the snapshot.
  */
 export async function recoverSessions(): Promise<void> {
   Logger.info("Recovering sessions");
@@ -72,6 +86,8 @@ export async function recoverSessions(): Promise<void> {
 
     for (const version of versionsList) {
       try {
+        const snapshot = await loadSnapshot(version.id);
+
         const sessionInput = createSessionInput({
           project: {
             ...project,
@@ -81,11 +97,37 @@ export async function recoverSessions(): Promise<void> {
           user,
         });
 
-        const sessionActor = createActor(sessionMachine, { input: sessionInput });
-        sessionActor.start();
-        sessionActor.send({ type: "START" });
+        if (snapshot) {
+          Logger.info(`Restoring session from snapshot for version ${version.id}`, {
+            extra: {
+              previousState: snapshot.state,
+              pauseReason: snapshot.pauseReason,
+              previousIterations: snapshot.iterationCount,
+            },
+          });
 
-        Logger.info(`Recovered session for version ${version.id}`);
+          const sessionActor = createActor(sessionMachine, {
+            input: {
+              ...sessionInput,
+              restoredSnapshot: snapshot,
+            },
+          });
+
+          sessionActor.start();
+          sessionActor.send({ type: "START" });
+
+          Logger.info(`Recovered session from snapshot for version ${version.id}`, {
+            extra: {
+              restoredIterations: snapshot.iterationCount,
+            },
+          });
+        } else {
+          const sessionActor = createActor(sessionMachine, { input: sessionInput });
+          sessionActor.start();
+          sessionActor.send({ type: "START" });
+
+          Logger.info(`Recovered session (fresh start) for version ${version.id}`);
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         Logger.error("Failed to recover session", {

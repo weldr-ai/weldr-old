@@ -16,6 +16,7 @@ import {
 import { nodes } from "./nodes";
 import { projects } from "./projects";
 import { versionDeclarations } from "./version-declarations";
+import { versionSessions } from "./version-sessions";
 
 export const usersRelations = relations(users, ({ many }) => ({
   projects: many(projects),
@@ -141,6 +142,14 @@ export const versionsRelations = relations(versions, ({ one, many }) => ({
   }),
   declarations: many(versionDeclarations),
   integrationInstallations: many(integrationInstallations),
+  session: one(versionSessions),
+}));
+
+export const versionSessionsRelations = relations(versionSessions, ({ one }) => ({
+  version: one(versions, {
+    fields: [versionSessions.versionId],
+    references: [versions.id],
+  }),
 }));
 
 export const versionDeclarationsRelations = relations(versionDeclarations, ({ one }) => ({

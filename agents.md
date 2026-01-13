@@ -81,7 +81,7 @@ Each app and package has its own `agents.md` file with package-specific developm
 - Use oxfmt for code formatting and oxlint for linting
 - Format code before committing: `bun format`
 - Check formatting: `bun format:check`
-- Lint code: `bun lint`
+- **ALWAYS** use `bun lint:fix` instead of `bun lint` - automatically fix linting issues when possible
 - Use `// oxlint-disable-next-line [rule-name]` for intentional rule violations (with reason)
 
 ### 4. Error Handling & Resilience
@@ -325,7 +325,7 @@ bun typecheck    # Run TypeScript type checking
 # Code Quality
 bun format       # Format code with oxfmt
 bun format:check # Check code formatting
-bun lint         # Lint code with oxlint
+bun lint:fix     # Lint and automatically fix code with oxlint (preferred over lint)
 
 # Database
 bun db:push      # Push schema changes

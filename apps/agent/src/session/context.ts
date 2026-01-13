@@ -1,5 +1,7 @@
-import type { User } from "@/lib/auth";
-import type { BranchWithVersion, ProjectWithConfig } from "@/machines/types";
+import { nanoid } from "@weldr/shared/nanoid";
+
+import type { User } from "@/core/auth";
+import type { BranchWithVersion, ProjectWithConfig } from "@/core/types";
 
 export type { User };
 
@@ -86,11 +88,15 @@ export type AgentMachineInput = {
  * Creates input for initializing a session machine.
  */
 export function createSessionInput(params: { project: Project; branch: Branch; user: User }): {
+  versionId: string;
+  traceId: string;
   project: Project;
   branch: Branch;
   user: User;
 } {
   return {
+    versionId: params.branch.headVersion.id,
+    traceId: nanoid(),
     project: params.project,
     branch: params.branch,
     user: params.user,

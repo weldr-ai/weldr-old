@@ -1,15 +1,16 @@
 import { serve } from "@hono/node-server";
+import type { Context } from "hono";
 import { cors } from "hono/cors";
 import { requestId } from "hono/request-id";
 
 import { Logger } from "@weldr/shared/logger";
 
-import { recoverEnrichingJobs } from "./ai/utils/enriching-jobs";
-import { closeRedisConnections } from "./lib/stream-utils";
-import { configureOpenAPI, createRouter } from "./lib/utils";
-import { loggerMiddleware } from "./middlewares/logger";
-import { routes } from "./routes";
-import { recoverSessions } from "./session";
+import { recoverEnrichingJobs } from "./core/project/declarations/enriching-jobs";
+import { closeRedisConnections } from "./core/stream";
+import { loggerMiddleware } from "./http/middlewares/logger";
+import { routes } from "./http/routes";
+import { configureOpenAPI, createRouter } from "./http/utils";
+import { recoverSessions, sessionRegistry } from "./session";
 
 const app = createRouter();
 
@@ -33,7 +34,7 @@ for (const route of routes) {
   app.route("/", route);
 }
 
-app.use("*", async (c) => {
+app.use("*", async (c: Context) => {
   return c.json(
     {
       message: "Not found",
@@ -42,7 +43,7 @@ app.use("*", async (c) => {
   );
 });
 
-app.onError((err, c) => {
+app.onError((err: Error, c: Context) => {
   console.error(err);
   return c.json(
     {
@@ -59,6 +60,9 @@ async function gracefulShutdown(signal: string) {
   Logger.info(`Received ${signal}, shutting down gracefully...`);
 
   try {
+    // Stop all active session actors
+    sessionRegistry.shutdown();
+
     // Close Redis connections
     await closeRedisConnections();
   } catch (error) {

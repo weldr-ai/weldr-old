@@ -3,6 +3,7 @@ import {
   type AnyPgColumn,
   boolean,
   check,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -128,6 +129,13 @@ export const versions = pgTable(
     updatedAt: timestamp("updated_at")
       .defaultNow()
       .$onUpdate(() => new Date()),
+
+    // Cost and usage tracking
+    inputTokens: integer("input_tokens").default(0).notNull(),
+    outputTokens: integer("output_tokens").default(0).notNull(),
+    totalCost: doublePrecision("total_cost").default(0).notNull(),
+    iterations: integer("iterations").default(0).notNull(),
+    durationMs: integer("duration_ms"),
   },
   (t) => [
     uniqueIndex("version_number_unique_idx").on(t.projectId, t.number),

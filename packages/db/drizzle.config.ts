@@ -21,6 +21,7 @@ export default {
     "./src/schema/tasks.ts",
     "./src/schema/themes.ts",
     "./src/schema/version-declarations.ts",
+    "./src/schema/version-sessions.ts",
     "./src/schema/versions.ts",
   ],
   out: "./src/migrations",
