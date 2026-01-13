@@ -6,7 +6,7 @@ import { requestId } from "hono/request-id";
 import { Logger } from "@weldr/shared/logger";
 
 import { recoverEnrichingJobs } from "./core/project/declarations/enriching-jobs";
-import { closeRedisConnections } from "./core/stream";
+import { closeDurableStreams, initDurableStreams } from "./core/stream";
 import { loggerMiddleware } from "./http/middlewares/logger";
 import { routes } from "./http/routes";
 import { configureOpenAPI, createRouter } from "./http/utils";
@@ -63,8 +63,8 @@ async function gracefulShutdown(signal: string) {
     // Stop all active session actors
     sessionRegistry.shutdown();
 
-    // Close Redis connections
-    await closeRedisConnections();
+    // Close Durable Streams server
+    await closeDurableStreams();
   } catch (error) {
     Logger.error("Error during graceful shutdown", {
       extra: { error: error instanceof Error ? error.message : String(error) },
@@ -84,6 +84,10 @@ serve(
   },
   async (info) => {
     Logger.info(`Server is running on http://localhost:${info.port}`);
+
+    // Initialize Durable Streams server
+    await initDurableStreams();
+
     await recoverSessions();
     await recoverEnrichingJobs();
   },

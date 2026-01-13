@@ -43,7 +43,16 @@ export function useEventStream({
   const maxReconnectAttempts = 5;
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isConnectingRef = useRef(false);
+
+  // Durable Streams offset for resumption (replaces lastEventId)
+  const streamOffsetRef = useRef<string | null>(null);
   const lastEventIdRef = useRef<string | null>(null);
+
+  // Store chatId in ref to avoid dependency issues
+  const chatIdRef = useRef(chatId);
+  useEffect(() => {
+    chatIdRef.current = chatId;
+  }, [chatId]);
 
   // Store callbacks in refs to avoid dependency issues
   const setStatusRef = useRef(setStatus);
@@ -69,10 +78,10 @@ export function useEventStream({
       reconnectTimeoutRef.current = null;
     }
 
-    // Build URL with branchId in path and Last-Event-ID as query parameter
+    // Build URL with branchId in path and offset for Durable Streams resumption
     let url = `/api/chat/${projectId}/${branchId}/stream`;
-    if (lastEventIdRef.current) {
-      url += `?lastEventId=${encodeURIComponent(lastEventIdRef.current)}`;
+    if (streamOffsetRef.current) {
+      url += `?offset=${encodeURIComponent(streamOffsetRef.current)}`;
     }
 
     const eventSource = new EventSource(url, {
@@ -150,7 +159,7 @@ export function useEventStream({
                 {
                   id: chunk.id,
                   role: "assistant",
-                  chatId,
+                  chatId: chatIdRef.current,
                   createdAt: new Date(),
                   content: [
                     {
@@ -197,7 +206,7 @@ export function useEventStream({
                   id: chunk.id,
                   role: "assistant",
                   createdAt: new Date(),
-                  chatId,
+                  chatId: chatIdRef.current,
                   content: [
                     {
                       type: "tool-call",
@@ -387,7 +396,6 @@ export function useEventStream({
     setNodes,
     updateNodeData,
     queryClient,
-    chatId,
     trpc,
   ]);
 
@@ -415,9 +423,10 @@ export function useEventStream({
   useEffect(() => {
     // Close existing connection when chatId changes
     closeEventStream();
-    // Reset last event ID since we're switching to a different chat
+    // Reset offset and last event ID since we're switching to a different chat
+    streamOffsetRef.current = null;
     lastEventIdRef.current = null;
-  }, [chatId, closeEventStream]);
+  }, [closeEventStream]);
 
   // Auto-connect to event stream on mount if workflow is active
   useEffect(() => {
@@ -429,7 +438,7 @@ export function useEventStream({
     ) {
       connectToEventStream();
     }
-  }, [branch.headVersion.status, connectToEventStream, chatId]);
+  }, [branch.headVersion.status, connectToEventStream]);
 
   // Cleanup on unmount
   useEffect(() => {

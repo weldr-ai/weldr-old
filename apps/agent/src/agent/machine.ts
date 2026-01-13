@@ -373,26 +373,34 @@ export const agentMachine = agentMachineSetup.createMachine({
                   validationError?: string;
                 };
 
-                const results = orchestratorContext.agents.map((a) => ({
-                  id: a.id,
-                  task: a.task,
-                  success: a.status === "completed",
-                  result: a.result ?? a.error ?? "No result",
-                }));
+                const isFailed = snapshot.value === "failed";
 
-                if (orchestratorContext.validationError) {
+                if (isFailed || orchestratorContext.validationError) {
                   self.send({
                     type: "_orchestrator.failed",
                     toolCallId: request.toolCallId,
-                    error: orchestratorContext.validationError,
+                    error: orchestratorContext.validationError ?? "Orchestration failed",
                   });
                 } else {
+                  const results = orchestratorContext.agents.map((a) => ({
+                    id: a.id,
+                    task: a.task,
+                    success: a.status === "completed",
+                    result: a.result ?? a.error ?? "No result",
+                  }));
+
                   self.send({
                     type: "_orchestrator.completed",
                     toolCallId: request.toolCallId,
                     results,
                   });
                 }
+              } else if (snapshot.status === "error") {
+                self.send({
+                  type: "_orchestrator.failed",
+                  toolCallId: request.toolCallId,
+                  error: "Orchestrator encountered an unhandled error",
+                });
               }
             });
 

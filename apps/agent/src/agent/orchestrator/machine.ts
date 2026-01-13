@@ -258,11 +258,11 @@ RULES:
           const dependentIds = getDependentAgents(context, failedAgentId);
 
           return context.agents.map((agent) => {
-            if (agent.actorRef) {
-              stopChild(agent.actorRef as Parameters<typeof stopChild>[0]);
-            }
-
             if (agent.id === failedAgentId) {
+              if (agent.actorRef) {
+                stopChild(agent.actorRef as Parameters<typeof stopChild>[0]);
+              }
+
               return {
                 ...agent,
                 status: "failed" as const,
@@ -272,6 +272,10 @@ RULES:
             }
 
             if (dependentIds.includes(agent.id) && agent.status === "waiting") {
+              if (agent.actorRef) {
+                stopChild(agent.actorRef as Parameters<typeof stopChild>[0]);
+              }
+
               return {
                 ...agent,
                 status: "failed" as const,

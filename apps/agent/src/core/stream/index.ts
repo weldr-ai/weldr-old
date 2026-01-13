@@ -1,10 +1,19 @@
+// Durable Streams - reliable streaming implementation
 export {
-  clearAllChatBuffers,
-  clearChatBuffer,
-  closeRedisConnections,
-  createSSEStream,
-  createStreamId,
-  getStreamIdsByChatId,
+  appendToStream,
+  buildStreamPath,
+  buildStreamUrl,
+  clearStreamHandles,
+  closeDurableStreams,
+  deleteStream,
+  getChatContext,
+  getDurableStreamsBaseUrl,
+  initDurableStreams,
+  readFromStream,
+  registerChatContext,
   stream,
-  unregisterStreamWriter,
-} from "./utils";
+  unregisterChatContext,
+} from "./durable";
+
+// Legacy Redis-based streaming (deprecated, kept for graceful shutdown only)
+export { closeRedisConnections } from "./utils";

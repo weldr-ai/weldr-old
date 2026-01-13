@@ -17,6 +17,7 @@ import { Logger } from "@weldr/shared/logger";
 
 import { createEventForwarder } from "@/core/events";
 import { sessionStorage } from "@/core/persistence";
+import { registerChatContext, unregisterChatContext } from "@/core/stream";
 import type { BranchWithVersion, ProjectWithConfig, User } from "@/core/types";
 import { sessionMachine, type SessionMachine } from "./machine";
 
@@ -89,6 +90,10 @@ class SessionRegistry {
 
     // Wire up event forwarding to SSE
     const chatId = branch.headVersion.chatId;
+
+    // Register chat context for durable streams
+    registerChatContext(chatId, project.id, branch.id);
+
     const eventForwarder = createEventForwarder(chatId);
     const subscription = actor.on("*", (event) => {
       eventForwarder({
@@ -164,6 +169,9 @@ class SessionRegistry {
       cleanup();
       this.cleanupHandles.delete(versionId);
     }
+
+    // Unregister chat context for durable streams
+    unregisterChatContext(entry.chatId);
 
     // Stop the actor if still running
     try {
