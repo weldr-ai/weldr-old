@@ -1,14 +1,9 @@
 import type { AssistantContent } from "ai";
 
-import type { branches, projects, versions } from "@weldr/db/schema";
+export type { BranchWithVersion, ProjectWithConfig } from "@/machines/types";
 
-export type ProjectWithConfig = typeof projects.$inferSelect & {
-  integrationCategories: Set<string>;
-};
-
-export type Branch = typeof branches.$inferSelect & {
-  headVersion: typeof versions.$inferSelect;
-};
+// Re-export for backward compatibility with existing imports
+export type { BranchWithVersion as Branch } from "@/machines/types";
 
 export type PendingAgentTask = {
   task: string;

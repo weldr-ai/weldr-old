@@ -2,11 +2,7 @@ import { fromPromise } from "xstate";
 
 import type { AiModel, AiModelKey, AiModelProvider } from "@weldr/db/schema";
 
-import type {
-  AssistantContentArray,
-  FinishReason,
-  LLMUsage,
-} from "@/actors/agent/agent-actor-types";
+import type { AssistantContentArray, FinishReason, LLMUsage } from "@/actors/agent/types";
 import { insertMessages } from "@/ai/utils/insert-messages";
 import { calculateModelCost } from "@/ai/utils/providers-pricing";
 

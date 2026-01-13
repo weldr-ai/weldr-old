@@ -9,7 +9,7 @@ import {
   type FinishReason,
   type LLMUsage,
   type PendingSpawnRequest,
-} from "@/actors/agent/agent-actor-types";
+} from "@/actors/agent/types";
 import { spawnAgentsInputSchema } from "@/ai/tools/spawn-agent";
 import { registry } from "@/ai/utils/registry";
 import { stream } from "@/lib/stream-utils";

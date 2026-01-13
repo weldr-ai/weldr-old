@@ -11,7 +11,7 @@ import type {
   ProjectWithConfig,
   SubAgentBatchResult,
   SubAgentResult,
-} from "@/actors/agent/agent-actor-types";
+} from "@/actors/agent/types";
 import type { User } from "@/lib/auth";
 
 type RunSubAgentInput = {

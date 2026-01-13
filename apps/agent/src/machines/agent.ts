@@ -116,8 +116,9 @@ RULES:
   });
 
   return new Promise((resolve) => {
-    subAgent.subscribe((snapshot) => {
+    const subscription = subAgent.subscribe((snapshot) => {
       if (snapshot.status === "done") {
+        subscription.unsubscribe();
         const isFailed = snapshot.value === "failed";
         const errorMessage = snapshot.context.error?.message ?? "Sub-agent failed to complete task";
 
@@ -143,6 +144,7 @@ RULES:
       }
 
       if (snapshot.status === "error") {
+        subscription.unsubscribe();
         logger.error(`Sub-agent ${subAgentId} failed with unexpected error`);
         resolve({
           task: agentTask.task,

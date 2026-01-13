@@ -14,17 +14,6 @@ export type BranchWithVersion = typeof branches.$inferSelect & {
   headVersion: typeof versions.$inferSelect;
 };
 
-export type SessionMachineContext = {
-  project: ProjectWithConfig;
-  branch: BranchWithVersion;
-  user: User;
-  message: UserMessage | null;
-  error: Error | null;
-  agentRef: AnyActorRef | null;
-  tools: ToolSet;
-  systemPrompt: string;
-};
-
 export type SessionMachineInput = {
   project: ProjectWithConfig;
   branch: BranchWithVersion;
@@ -36,3 +25,22 @@ export type SessionMachineEvents =
   | { type: "AGENT_COMPLETE" }
   | { type: "AGENT_ERROR"; error: Error }
   | { type: "CANCEL" };
+
+/**
+ * Base session machine context used by session actors.
+ * The agentRef uses AnyActorRef to avoid circular dependencies between
+ * the types file and the agent machine.
+ *
+ * For properly typed agent reference access, use the session machine's
+ * snapshot context directly or the TypedSessionMachineContext from session.ts.
+ */
+export type SessionMachineContext = {
+  project: ProjectWithConfig;
+  branch: BranchWithVersion;
+  user: User;
+  message: UserMessage | null;
+  error: Error | null;
+  agentRef: AnyActorRef | null;
+  tools: ToolSet;
+  systemPrompt: string;
+};

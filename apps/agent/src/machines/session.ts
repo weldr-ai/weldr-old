@@ -7,7 +7,7 @@ import { finalizeSessionActor } from "@/actors/session/finalize-session";
 import { initializeSessionActor } from "@/actors/session/initialize-session";
 import { markFailedSessionActor } from "@/actors/session/mark-failed-session";
 import { stream } from "@/lib/stream-utils";
-import { agentMachine } from "@/machines/agent";
+import { agentMachine, type AgentMachine } from "@/machines/agent";
 import type {
   SessionMachineContext,
   SessionMachineEvents,
@@ -21,6 +21,12 @@ export type {
   SessionMachineEvents,
   SessionMachineInput,
 } from "@/machines/types";
+
+/**
+ * Properly typed agent reference for use within the session machine.
+ * Provides full type safety for agent actor operations.
+ */
+export type AgentActorRef = ActorRefFrom<AgentMachine>;
 
 export const sessionMachine = setup({
   types: {

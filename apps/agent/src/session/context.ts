@@ -1,6 +1,5 @@
-import type { branches, projects, versions } from "@weldr/db/schema";
-
 import type { User } from "@/lib/auth";
+import type { BranchWithVersion, ProjectWithConfig } from "@/machines/types";
 
 export type { User };
 
@@ -11,16 +10,12 @@ export type { User };
 /**
  * Project with integration categories.
  */
-export type Project = typeof projects.$inferSelect & {
-  integrationCategories: Set<string>;
-};
+export type Project = ProjectWithConfig;
 
 /**
  * Branch with head version.
  */
-export type Branch = typeof branches.$inferSelect & {
-  headVersion: typeof versions.$inferSelect;
-};
+export type Branch = BranchWithVersion;
 
 // =============================================================================
 // Session Context
