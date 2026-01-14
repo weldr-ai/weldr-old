@@ -135,7 +135,7 @@ RULES:
 1. Focus ONLY on the assigned task
 2. You CANNOT spawn other agents
 3. Be efficient - complete in as few steps as possible
-4. When you have completed the task, simply stop and provide your final response`;
+4. Your FINAL message MUST contain ALL your findings and results - this is the ONLY output the parent agent will see. Do not reference previous messages or say "as mentioned above" - include everything in your final response.`;
 
             const actorRef = spawn("agentMachine", {
               id: `sub-agent-${agent.id}`,
@@ -164,10 +164,39 @@ RULES:
                     "Sub-agent failed to complete task";
                   self.send({ type: "_subagent.failed", agentId: agent.id, error: errorMessage });
                 } else {
+                  // Extract the result from the sub-agent's final message
+                  const ctx = snapshot.context as {
+                    messages?: Array<{ role: string; content: unknown }>;
+                  };
+                  let result = "Sub-agent completed task successfully";
+
+                  // Get the last message (should be the assistant's final response with all findings)
+                  const lastMessage = ctx.messages?.[ctx.messages.length - 1];
+                  if (lastMessage?.role === "assistant" && lastMessage.content) {
+                    if (typeof lastMessage.content === "string") {
+                      result = lastMessage.content;
+                    } else if (Array.isArray(lastMessage.content)) {
+                      // Extract text from content array
+                      const textParts = lastMessage.content
+                        .filter(
+                          (part): part is { type: "text"; text: string } =>
+                            typeof part === "object" &&
+                            part !== null &&
+                            "type" in part &&
+                            part.type === "text" &&
+                            "text" in part,
+                        )
+                        .map((part) => part.text);
+                      if (textParts.length > 0) {
+                        result = textParts.join("\n");
+                      }
+                    }
+                  }
+
                   self.send({
                     type: "_subagent.completed",
                     agentId: agent.id,
-                    result: "Sub-agent completed task successfully",
+                    result,
                   });
                 }
               } else if (snapshot.status === "error") {

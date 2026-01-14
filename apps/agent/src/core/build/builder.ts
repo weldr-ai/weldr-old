@@ -1,7 +1,3 @@
-import { mkdirSync, readFileSync } from "node:fs";
-import os from "node:os";
-import path from "node:path";
-
 import { put as tigrisPut } from "@tigrisdata/storage";
 
 import { Logger } from "@weldr/shared/logger";
@@ -29,8 +25,6 @@ interface BuildResult {
   artifactUrl?: string;
   error?: string;
 }
-
-const WELDR_HOME = path.join(os.homedir(), ".weldr");
 
 /**
  * Build an application and upload the artifact to Tigris.
@@ -104,16 +98,12 @@ export async function build({
       throw new Error("No build output directory found (.output/, dist/, or build/)");
     }
 
-    // Create zip artifact
+    // Create zip artifact in sandbox
     const artifactName = `build-${versionId}.zip`;
-    const buildsDir = path.join(WELDR_HOME, "builds");
-    const artifactPath = path.join(buildsDir, artifactName);
-
-    mkdirSync(buildsDir, { recursive: true });
 
     logger.info("Creating build artifact", { artifactName, buildDir });
 
-    const zipResult = await exec(`zip -r ${artifactPath} ${filesToZip.join(" ")} -q`, {
+    const zipResult = await exec(`zip -r ${artifactName} ${filesToZip.join(" ")} -q`, {
       projectId,
       branchId,
     });
@@ -123,7 +113,7 @@ export async function build({
     }
 
     logger.info("Build artifact created successfully", {
-      artifactPath,
+      artifactName,
       files: filesToZip,
     });
 
@@ -136,7 +126,8 @@ export async function build({
       objectKey,
     });
 
-    const fileBuffer = readFileSync(artifactPath);
+    // Read the artifact from the sandbox filesystem
+    const fileBuffer = await session.agent.fs.readFile(`/${artifactName}`);
 
     const uploadResult = await tigrisPut(objectKey, fileBuffer, {
       config: {
@@ -154,8 +145,8 @@ export async function build({
       objectKey,
     });
 
-    // Clean up temporary artifact
-    await exec(`rm -f ${artifactPath}`, { projectId, branchId });
+    // Clean up temporary artifact from sandbox filesystem
+    await session.agent.fs.unlink(`/${artifactName}`);
     logger.info("Cleaned up temporary artifact");
 
     return {
