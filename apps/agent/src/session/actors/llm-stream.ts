@@ -5,7 +5,7 @@
  * Uses XState's fromCallback to enable message-based control.
  *
  * Features:
- * - Cancellable via LLM.CANCEL message
+ * - Cancellable via llm.cancel message
  * - Emits public events for SSE streaming
  * - Sends internal events back to parent for state transitions
  * - Handles tool calls including spawn_agents
@@ -57,7 +57,7 @@ type LLMStreamEmittedEvent =
 /**
  * Creates a cancellable LLM streaming actor.
  *
- * Receives: LLM.CANCEL to abort the stream
+ * Receives: llm.cancel to abort the stream
  * Emits: llm.* public events for SSE
  * SendBack: _llm.completed or _llm.error for parent state transitions
  */
@@ -69,7 +69,7 @@ export const llmStreamActor = fromCallback<LLMActorCommand, LLMStreamInput, LLMS
 
     // Handle incoming control messages
     receive((event) => {
-      if (event.type === "LLM.CANCEL") {
+      if (event.type === "llm.cancel") {
         abortController.abort();
         isActive = false;
 

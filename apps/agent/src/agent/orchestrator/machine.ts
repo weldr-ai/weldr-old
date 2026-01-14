@@ -40,7 +40,7 @@ export function createSubAgentOrchestratorMachine({
       hasReadyAgents: ({ context }) => getReadyAgents(context).length > 0,
       allAgentsResolved: ({ context }) => areAllAgentsResolved(context),
       canRetry: ({ context, event }) => {
-        if (event.type !== "SUB_AGENT_FAILED") {
+        if (event.type !== "_subagent.failed") {
           return false;
         }
         return canRetryAgent(context, event.agentId);
@@ -162,24 +162,24 @@ RULES:
                   const errorMessage =
                     (snapshot.context as { error?: Error | null })?.error?.message ??
                     "Sub-agent failed to complete task";
-                  self.send({ type: "SUB_AGENT_FAILED", agentId: agent.id, error: errorMessage });
+                  self.send({ type: "_subagent.failed", agentId: agent.id, error: errorMessage });
                 } else {
                   self.send({
-                    type: "SUB_AGENT_COMPLETE",
+                    type: "_subagent.completed",
                     agentId: agent.id,
                     result: "Sub-agent completed task successfully",
                   });
                 }
               } else if (snapshot.status === "error") {
                 self.send({
-                  type: "SUB_AGENT_FAILED",
+                  type: "_subagent.failed",
                   agentId: agent.id,
                   error: "Sub-agent encountered an error",
                 });
               }
             });
 
-            actorRef.send({ type: "PROCESS" });
+            actorRef.send({ type: "agent.start" });
 
             return {
               ...agent,
@@ -192,7 +192,7 @@ RULES:
 
       markAgentCompleted: assign({
         agents: ({ context, event }) => {
-          if (event.type !== "SUB_AGENT_COMPLETE") {
+          if (event.type !== "_subagent.completed") {
             return context.agents;
           }
 
@@ -217,7 +217,7 @@ RULES:
 
       retryAgent: assign({
         agents: ({ context, event }) => {
-          if (event.type !== "SUB_AGENT_FAILED") {
+          if (event.type !== "_subagent.failed") {
             return context.agents;
           }
 
@@ -242,7 +242,7 @@ RULES:
 
       markAgentFailed: assign({
         agents: ({ context, event }) => {
-          if (event.type !== "SUB_AGENT_FAILED") {
+          if (event.type !== "_subagent.failed") {
             return context.agents;
           }
 
@@ -359,12 +359,12 @@ RULES:
           },
         ],
         on: {
-          SUB_AGENT_COMPLETE: {
+          "_subagent.completed": {
             actions: [
               "markAgentCompleted",
               {
                 type: "emitAgentCompleted",
-                params: ({ event }) => ({
+                params: ({ event }: { event: { agentId: string; result: string } }) => ({
                   agentId: event.agentId,
                   result: event.result,
                 }),
@@ -373,14 +373,20 @@ RULES:
             target: "orchestrating",
             reenter: true,
           },
-          SUB_AGENT_FAILED: [
+          "_subagent.failed": [
             {
               guard: "canRetry",
               actions: [
                 "retryAgent",
                 {
                   type: "emitAgentRetrying",
-                  params: ({ context, event }) => {
+                  params: ({
+                    context,
+                    event,
+                  }: {
+                    context: OrchestratorContext;
+                    event: { agentId: string; error: string };
+                  }) => {
                     const agent = context.agents.find((a) => a.id === event.agentId);
                     return {
                       agentId: event.agentId,
@@ -398,7 +404,7 @@ RULES:
                 "markAgentFailed",
                 {
                   type: "emitAgentFailed",
-                  params: ({ event }) => ({
+                  params: ({ event }: { event: { agentId: string; error: string } }) => ({
                     agentId: event.agentId,
                     error: event.error,
                     reason: "max_retries_exceeded" as const,

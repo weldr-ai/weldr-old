@@ -71,4 +71,7 @@ export type AgentInput = {
   task?: string;
 };
 
-export type AgentEvent = { type: "PROCESS" } | { type: "CANCEL" } | { type: "ERROR"; error: Error };
+export type AgentEvent =
+  | { type: "agent.start" }
+  | { type: "agent.cancel" }
+  | { type: "agent.error"; error: Error };

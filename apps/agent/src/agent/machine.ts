@@ -32,9 +32,9 @@ const normalizeError = (error: unknown): Error => {
 };
 
 type AgentMachineEvent =
-  | { type: "PROCESS" }
-  | { type: "CANCEL" }
-  | { type: "ERROR"; error: Error }
+  | { type: "agent.start" }
+  | { type: "agent.cancel" }
+  | { type: "agent.error"; error: Error }
   | {
       type: "_llm.completed";
       messageId: string;
@@ -286,7 +286,7 @@ export const agentMachine = agentMachineSetup.createMachine({
   states: {
     idle: {
       on: {
-        PROCESS: {
+        "agent.start": {
           target: "loading",
           actions: ["emitAgentStarted"],
         },
@@ -449,7 +449,11 @@ export const agentMachine = agentMachineSetup.createMachine({
 
     completed: {
       type: "final",
-      entry: ["recordAgentDuration", "emitAgentCompleted", sendParent({ type: "AGENT_COMPLETE" })],
+      entry: [
+        "recordAgentDuration",
+        "emitAgentCompleted",
+        sendParent({ type: "_agent.completed" }),
+      ],
     },
 
     failed: {
@@ -460,7 +464,7 @@ export const agentMachine = agentMachineSetup.createMachine({
         "recordAgentDuration",
         "emitAgentFailed",
         sendParent(({ context }) => ({
-          type: "AGENT_ERROR" as const,
+          type: "_agent.failed" as const,
           error: context.error ?? new Error("Unknown agent error"),
         })),
       ],
@@ -468,16 +472,16 @@ export const agentMachine = agentMachineSetup.createMachine({
   },
 
   on: {
-    CANCEL: {
+    "agent.cancel": {
       target: ".completed",
       actions: [
-        sendTo("llmStream", { type: "LLM.CANCEL", reason: "agent cancelled" }),
+        sendTo("llmStream", { type: "llm.cancel", reason: "agent cancelled" }),
         "stopOrchestrators",
         "clearOrchestrators",
         "emitAgentCancelled",
       ],
     },
-    ERROR: {
+    "agent.error": {
       target: ".failed",
       actions: assign({
         error: ({ event }) => normalizeError(event.error),

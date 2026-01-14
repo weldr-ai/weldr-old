@@ -56,8 +56,8 @@ export type OrchestratorInput = {
 };
 
 export type OrchestratorEvents =
-  | { type: "SUB_AGENT_COMPLETE"; agentId: string; result: string }
-  | { type: "SUB_AGENT_FAILED"; agentId: string; error: string };
+  | { type: "_subagent.completed"; agentId: string; result: string }
+  | { type: "_subagent.failed"; agentId: string; error: string };
 
 export type OrchestratorEmittedEvent =
   | { type: "orchestrator.started"; toolCallId: string; agentCount: number }

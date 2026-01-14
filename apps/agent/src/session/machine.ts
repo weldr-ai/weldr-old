@@ -421,7 +421,7 @@ export const sessionMachine = setup({
     }),
 
     // Cancel LLM stream
-    cancelLLMStream: sendTo("llmStream", { type: "LLM.CANCEL", reason: "user_cancelled" }),
+    cancelLLMStream: sendTo("llmStream", { type: "llm.cancel", reason: "user_cancelled" }),
   },
 }).createMachine({
   id: "session",

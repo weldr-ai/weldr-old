@@ -426,7 +426,7 @@ export type InternalLLMEvent =
 // ============================================================================
 
 export type LLMCancelCommand = {
-  type: "LLM.CANCEL";
+  type: "llm.cancel";
   reason?: string;
 };
 
