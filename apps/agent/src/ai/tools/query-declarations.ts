@@ -5,7 +5,7 @@ import { declarations, dependencies, versionDeclarations, versions } from "@weld
 import { Logger } from "@weldr/shared/logger";
 
 import { formatDeclarationData, formatDeclarationSpecs } from "@/core/project/declarations";
-import { createTool } from "./create-tool";
+import { createTool } from "../utils/create-tool";
 
 export const queryRelatedDeclarationsTool = createTool({
   name: "query_related_declarations",

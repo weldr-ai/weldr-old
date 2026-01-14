@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { createTool } from "./create-tool";
+import { createTool } from "../utils/create-tool";
 
 export const spawnAgentsInputSchema = z.object({
   agents: z

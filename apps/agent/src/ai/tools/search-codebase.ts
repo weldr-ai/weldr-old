@@ -7,7 +7,7 @@ import { Logger } from "@weldr/shared/logger";
 
 import { registry } from "@/ai/providers";
 import { formatDeclarationData, formatDeclarationSpecs } from "@/core/project/declarations";
-import { createTool } from "./create-tool";
+import { createTool } from "../utils/create-tool";
 
 export const searchCodebaseTool = createTool({
   name: "search_codebase",

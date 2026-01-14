@@ -4,7 +4,7 @@ import { db } from "@weldr/db";
 import { Logger } from "@weldr/shared/logger";
 import { integrationCategoryKeySchema } from "@weldr/shared/validators/integration-categories";
 
-import { createTool } from "./create-tool";
+import { createTool } from "../utils/create-tool";
 
 export const addIntegrationsTool = createTool({
   name: "add_integrations",
