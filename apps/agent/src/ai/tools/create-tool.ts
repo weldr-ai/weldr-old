@@ -25,6 +25,7 @@ export function createTool<TInput extends z.ZodSchema, TOutput extends z.ZodSche
   const aiSDKTool = (context: SessionMachineContext): Tool => ({
     description: config.description,
     inputSchema: config.inputSchema,
+    outputSchema: config.outputSchema,
     execute: config.execute
       ? async (input: z.infer<TInput>) => config.execute?.({ input, context })
       : undefined,

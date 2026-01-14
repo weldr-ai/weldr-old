@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -94,7 +94,10 @@ export async function build({
 
     // Create zip artifact
     const artifactName = `build-${versionId}.zip`;
-    const artifactPath = path.join(WELDR_HOME, "builds", artifactName);
+    const buildsDir = path.join(WELDR_HOME, "builds");
+    const artifactPath = path.join(buildsDir, artifactName);
+
+    mkdirSync(buildsDir, { recursive: true });
 
     logger.info("Creating build artifact", { artifactName, buildDir });
 
