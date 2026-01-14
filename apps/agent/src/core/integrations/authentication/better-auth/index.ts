@@ -5,7 +5,7 @@ import { environmentVariables, integrationEnvironmentVariables, secrets } from "
 import { Logger } from "@weldr/shared/logger";
 
 import { exec } from "@/core/sandbox/exec";
-import { fileExists, readFile, writeFile } from "@/core/sandbox/fs";
+import { getOrCreateSession } from "@/core/sandbox/just-bash/session";
 import type { IntegrationPackageSets } from "../../types";
 import { defineIntegration } from "../../utils/define-integration";
 
@@ -67,6 +67,12 @@ export const betterAuthIntegration = defineIntegration<"better-auth">({
     const user = context.user;
 
     try {
+      const session = await getOrCreateSession({
+        branchId: branch.id,
+        projectId: project.id,
+        versionId: "integration-install",
+      });
+
       await db.transaction(async (tx) => {
         const BETTER_AUTH_SECRET = randomBytes(32).toString("base64");
 
@@ -104,20 +110,27 @@ export const betterAuthIntegration = defineIntegration<"better-auth">({
 
       const schemaIndexPath = "/apps/server/src/db/schema/index.ts";
 
-      const existsResult = fileExists(branch.id, schemaIndexPath);
-      let fileContent = "";
-
-      if (existsResult) {
-        const readResult = readFile(branch.id, schemaIndexPath);
-        if (!readResult.success) {
-          throw new Error(`Failed to read schema index file`, {
-            cause: readResult.error,
-          });
-        }
-        fileContent = readResult.data || "";
+      let fileExists = false;
+      try {
+        const stat = await session.agent.fs.stat(schemaIndexPath);
+        fileExists = stat.isFile();
+      } catch {
+        fileExists = false;
       }
 
-      if (existsResult && fileContent.trim() === "") {
+      let fileContent = "";
+
+      if (fileExists) {
+        try {
+          fileContent = await session.agent.fs.readFile(schemaIndexPath, "utf-8");
+        } catch (error) {
+          throw new Error(`Failed to read schema index file`, {
+            cause: error,
+          });
+        }
+      }
+
+      if (fileExists && fileContent.trim() === "") {
         const dummyTableContent = `import { pgTable, serial, varchar } from "drizzle-orm/pg-core";
 
 // Dummy table - delete this when you add your actual schema
@@ -126,15 +139,16 @@ export const dummyTable = pgTable("dummy_table", {
   name: varchar("name", { length: 255 }),
 });`;
 
-        const writeResult = writeFile(branch.id, schemaIndexPath, dummyTableContent);
-        if (!writeResult.success) {
+        try {
+          await session.agent.fs.writeFile(schemaIndexPath, dummyTableContent);
+        } catch (error) {
           throw new Error(`Failed to write dummy schema`, {
-            cause: writeResult.error,
+            cause: error,
           });
         }
       }
 
-      const generateSchemaResult = exec(
+      const generateSchemaResult = await exec(
         `bun x @better-auth/cli@latest generate --config src/lib/auth.ts --output src/db/schema/auth.ts --y`,
         {
           projectId: project.id,
@@ -148,29 +162,31 @@ export const dummyTable = pgTable("dummy_table", {
         );
       }
 
-      if (existsResult && fileContent.trim() === "") {
-        const writeResult = writeFile(branch.id, schemaIndexPath, 'export * from "./auth";\n');
-        if (!writeResult.success) {
+      if (fileExists && fileContent.trim() === "") {
+        try {
+          await session.agent.fs.writeFile(schemaIndexPath, 'export * from "./auth";\n');
+        } catch (error) {
           throw new Error(`Failed to update schema index`, {
-            cause: writeResult.error,
+            cause: error,
           });
         }
       } else {
-        const currentReadResult = readFile(branch.id, schemaIndexPath);
-        if (!currentReadResult.success) {
+        let currentContent = "";
+        try {
+          currentContent = await session.agent.fs.readFile(schemaIndexPath, "utf-8");
+        } catch (error) {
           throw new Error(`Failed to read schema index file`, {
-            cause: currentReadResult.error,
+            cause: error,
           });
         }
-        const currentContent = currentReadResult.data || "";
-        const writeResult = writeFile(
-          branch.id,
-          schemaIndexPath,
-          currentContent + '\nexport * from "./auth";\n',
-        );
-        if (!writeResult.success) {
+        try {
+          await session.agent.fs.writeFile(
+            schemaIndexPath,
+            currentContent + '\nexport * from "./auth";\n',
+          );
+        } catch (error) {
           throw new Error(`Failed to update schema index`, {
-            cause: writeResult.error,
+            cause: error,
           });
         }
       }

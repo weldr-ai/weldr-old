@@ -39,7 +39,7 @@ export function defineIntegration<K extends IntegrationKey>(
         }
 
         const results = await Promise.all([
-          updatePackageJsonScripts(scripts, branch.id),
+          updatePackageJsonScripts(scripts, branch.id, project.id),
           installPackages(packages, branch.id, project.id),
           seedDeclarationTemplates({
             integration,

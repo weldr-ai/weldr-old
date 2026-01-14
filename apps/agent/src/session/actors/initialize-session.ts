@@ -16,7 +16,11 @@ import { ensureBranchSession } from "@/session/branch-state";
 import type { SessionMachineContext } from "@/session/types";
 
 const buildToolSet = async (context: SessionMachineContext): Promise<ToolSet> => {
-  const bashTools = await getOrCreateBashTool(context.project.id, context.branch.id);
+  const bashTools = await getOrCreateBashTool(
+    context.project.id,
+    context.branch.id,
+    context.versionId,
+  );
 
   return {
     ...bashTools,

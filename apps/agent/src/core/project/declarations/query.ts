@@ -401,6 +401,8 @@ export async function extractAndSaveDeclarations({
       filename: filePath,
       pathAliases,
       branchId,
+      projectId: project.id,
+      versionId: branch.headVersion.id,
     });
 
     logger.info(`Extracted ${extracted.length} declarations.`);

@@ -8,7 +8,7 @@ import { Logger } from "@weldr/shared/logger";
 import type { Integration, IntegrationCategoryKey } from "@weldr/shared/types";
 
 import { applyEdit } from "@/ai/utils/apply-edit";
-import { createDir, readFile, writeFile } from "@/core/sandbox/fs";
+import { getOrCreateSession } from "@/core/sandbox/just-bash/session";
 import type { SessionContext } from "@/session";
 import type { FileItem } from "../types";
 
@@ -37,44 +37,38 @@ export async function applyFiles({
 
   logger.info(`Generated ${files.length} files for integration ${integration.key}`);
 
+  const session = await getOrCreateSession({
+    branchId,
+    projectId: integration.projectId,
+    versionId: "apply-files",
+  });
+
   for (const file of files) {
     logger.info(`Processing file: ${file.sourcePath} -> ${file.targetPath}`);
-    const targetDir = path.dirname(file.targetPath);
-
-    const mkdirResult = createDir(branchId, targetDir);
-    if (!mkdirResult.success) {
-      throw new Error(`Failed to create directories for ${file.targetPath}: ${mkdirResult.error}`);
-    }
 
     try {
       switch (file.type) {
         case "copy": {
           const content = file.content.trim().length === 0 ? "" : file.content;
-          const writeResult = writeFile(branchId, file.targetPath, content);
-          if (!writeResult.success) {
-            throw new Error(`Failed to write content: ${writeResult.error}`);
-          }
+          await session.agent.fs.writeFile(file.targetPath, content);
           break;
         }
         case "llm_instruction": {
-          const readResult = readFile(branchId, file.targetPath);
-          if (!readResult.success) {
+          let originalContent = "";
+          try {
+            originalContent = await session.agent.fs.readFile(file.targetPath, "utf-8");
+          } catch {
             logger.error("Failed to read target file", {
               extra: { targetPath: file.targetPath },
             });
-            throw new Error(`Failed to read target file: ${readResult.error}`);
           }
 
-          const originalContent = readResult.data ?? "";
           const updatedContent = await applyEdit({
             originalCode: originalContent,
             editInstructions: file.content,
           });
 
-          const writeResult = writeFile(branchId, file.targetPath, updatedContent);
-          if (!writeResult.success) {
-            throw new Error(`Failed to write updated content: ${writeResult.error}`);
-          }
+          await session.agent.fs.writeFile(file.targetPath, updatedContent);
           break;
         }
         case "handlebars": {
@@ -90,10 +84,7 @@ export async function applyFiles({
 
           const compiledContent = template(integrationVariables);
 
-          const writeResult = writeFile(branchId, file.targetPath, compiledContent);
-          if (!writeResult.success) {
-            throw new Error(`Failed to write processed handlebars content: ${writeResult.error}`);
-          }
+          await session.agent.fs.writeFile(file.targetPath, compiledContent);
           break;
         }
       }

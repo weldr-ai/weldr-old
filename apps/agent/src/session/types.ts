@@ -21,7 +21,7 @@ import type {
   SubAgentResult,
 } from "@/core/events";
 import type { MetricsCollector } from "@/core/metrics";
-import type { SessionSnapshot } from "@/core/persistence";
+import type { AgentFSSessionStorage, SessionSnapshot } from "@/core/persistence";
 import type { BranchWithVersion, ProjectWithConfig, User } from "@/core/types";
 
 // =============================================================================
@@ -46,6 +46,7 @@ export type SessionMachineInput = {
   project: ProjectWithConfig;
   branch: BranchWithVersion;
   user: User;
+  storage: AgentFSSessionStorage;
   agentConfig?: AgentConfig;
   restoredSnapshot?: SessionSnapshot | null;
 };
@@ -63,6 +64,7 @@ export type SessionMachineContext = {
   project: ProjectWithConfig;
   branch: BranchWithVersion;
   user: User;
+  storage: AgentFSSessionStorage;
 
   // Session state
   sessionState: SessionState;

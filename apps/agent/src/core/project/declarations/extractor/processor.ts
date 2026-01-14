@@ -31,6 +31,8 @@ export async function processSourceFile({
   filename,
   pathAliases,
   branchId,
+  projectId,
+  versionId,
   declarations,
   importedIdentifiers,
 }: {
@@ -40,6 +42,8 @@ export async function processSourceFile({
   filename: string;
   pathAliases?: Record<string, string>;
   branchId?: string;
+  projectId?: string;
+  versionId?: string;
   declarations: DeclarationCodeMetadata[];
   importedIdentifiers: Map<string, { source: string; isExternal: boolean }>;
 }): Promise<void> {
@@ -53,6 +57,8 @@ export async function processSourceFile({
       filename,
       pathAliases,
       branchId,
+      projectId,
+      versionId,
       declarations,
       importedIdentifiers,
       isExported: false,
@@ -68,6 +74,8 @@ async function processStatement({
   filename,
   pathAliases,
   branchId,
+  projectId,
+  versionId,
   declarations,
   importedIdentifiers,
   isExported,
@@ -79,6 +87,8 @@ async function processStatement({
   filename: string;
   pathAliases?: Record<string, string>;
   branchId?: string;
+  projectId?: string;
+  versionId?: string;
   declarations: DeclarationCodeMetadata[];
   importedIdentifiers: Map<string, { source: string; isExternal: boolean }>;
   isExported: boolean;
@@ -91,6 +101,8 @@ async function processStatement({
       filename,
       pathAliases,
       branchId,
+      projectId,
+      versionId,
     });
     return;
   }
@@ -206,12 +218,16 @@ async function processImportDeclaration({
   filename,
   pathAliases,
   branchId,
+  projectId,
+  versionId,
 }: {
   importDecl: ts.ImportDeclaration;
   importedIdentifiers: Map<string, { source: string; isExternal: boolean }>;
   filename: string;
   pathAliases?: Record<string, string>;
   branchId?: string;
+  projectId?: string;
+  versionId?: string;
 }): Promise<void> {
   const moduleSpecifier = importDecl.moduleSpecifier;
   if (!ts.isStringLiteral(moduleSpecifier)) return;
@@ -225,6 +241,8 @@ async function processImportDeclaration({
         currentFilePath: filename,
         pathAliases,
         branchId,
+        projectId,
+        versionId,
       });
 
   if (importDecl.importClause) {

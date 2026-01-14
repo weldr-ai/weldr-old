@@ -1,11 +1,37 @@
-import type {
-  AgentCheckpoint,
-  AwaitingUserKind,
-  PendingSpawnRequest,
-  SessionState,
-} from "@weldr/db/schema";
+/**
+ * Session state types
+ * Previously stored in PostgreSQL, now stored in SQLite via AgentFS
+ */
 
-export type { AgentCheckpoint, AwaitingUserKind, PendingSpawnRequest, SessionState };
+export type SessionState =
+  | "idle"
+  | "initializing"
+  | "processing"
+  | "awaitingUser"
+  | "paused"
+  | "finalizing"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type AwaitingUserKind = "message" | "confirmation" | "selection";
+
+export type PendingSpawnRequest = {
+  toolCallId: string;
+  agents: Array<{
+    id: string;
+    task: string;
+    context?: string;
+    depends?: string[];
+  }>;
+};
+
+export type AgentCheckpoint = {
+  iterationCount: number;
+  messageId: string;
+  pendingSpawnRequests: PendingSpawnRequest[];
+  assistantContentBuffer: string | null;
+};
 
 /**
  * Session state persisted in the database.

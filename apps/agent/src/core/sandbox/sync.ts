@@ -1,19 +1,13 @@
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
+
+import { AgentFS } from "agentfs-sdk";
 
 import { Logger } from "@weldr/shared/logger";
 
 import { CloudStorageBackend, type CloudStorageConfig } from "./cloud-storage";
+import { getSessionDbPath } from "./exec";
 import type { StorageBackend } from "./types";
-
-/**
- * Get the path to the AgentFS database for a session.
- * AgentFS CLI stores databases in ~/.agentfs/{branchId}.db
- */
-export function getSessionDbPath(branchId: string): string {
-  return path.join(os.homedir(), ".agentfs", `${branchId}.db`);
-}
 
 /**
  * Get cloud storage configuration from environment variables
@@ -35,8 +29,37 @@ export function createStorageBackend(projectId: string): StorageBackend {
 }
 
 /**
+ * Checkpoint the WAL to merge all pending writes into the main database file.
+ * This ensures the .db file contains all data before syncing to cloud storage.
+ *
+ * SQLite's WAL (Write-Ahead Log) stores recent writes in a separate file.
+ * Running PRAGMA wal_checkpoint(TRUNCATE) merges the WAL into the main db
+ * and truncates the WAL file to zero bytes.
+ */
+async function checkpointWal(branchId: string): Promise<void> {
+  const logger = Logger.get({ branchId, component: "sync" });
+  const dbPath = getSessionDbPath(branchId);
+
+  try {
+    const agent = await AgentFS.open({ path: dbPath });
+    const db = agent.getDatabase();
+
+    // TRUNCATE mode: checkpoint and truncate WAL to zero bytes
+    const result = await db.pragma("wal_checkpoint(TRUNCATE)", {});
+    logger.info("WAL checkpoint completed", { extra: { result } });
+
+    await agent.close();
+  } catch (error) {
+    logger.warn("WAL checkpoint failed, continuing with sync", {
+      extra: { error: error instanceof Error ? error.message : String(error) },
+    });
+  }
+}
+
+/**
  * Sync session state to cloud storage.
- * Uploads the AgentFS database file (~/.agentfs/{branchId}.db) to Tigris/S3.
+ * Checkpoints the WAL first to ensure all writes are in the main .db file,
+ * then uploads the AgentFS database file (~/.weldr/db/{branchId}.db) to Tigris/S3.
  */
 export async function syncToCloud(
   branchId: string,
@@ -56,12 +79,17 @@ export async function syncToCloud(
       return { success: true };
     }
 
+    // Checkpoint WAL to merge all writes into the main database file
+    await checkpointWal(branchId);
+
     const agentfsData = await fs.readFile(agentfsPath);
 
     const backend = createStorageBackend(projectId);
     await backend.write(`branches/${branchId}.db`, agentfsData);
 
-    logger.info("Session synced to cloud successfully");
+    logger.info("Session synced to cloud successfully", {
+      extra: { dbSize: agentfsData.length },
+    });
     return { success: true };
   } catch (error) {
     logger.error("Failed to sync session to cloud", {
@@ -73,10 +101,7 @@ export async function syncToCloud(
 
 /**
  * Sync session state from cloud storage.
- * Downloads the AgentFS database file from Tigris/S3 to ~/.agentfs/{branchId}.db.
- *
- * When running with `agentfs run`, files are accessed through FUSE overlay
- * directly from the database, so no additional disk sync is needed.
+ * Downloads the AgentFS database file from Tigris/S3 to ~/.weldr/db/{branchId}.db.
  */
 export async function syncFromCloud(
   branchId: string,
@@ -90,7 +115,7 @@ export async function syncFromCloud(
     const agentfsPath = getSessionDbPath(branchId);
     const agentfsDir = path.dirname(agentfsPath);
 
-    // Ensure ~/.agentfs directory exists
+    // Ensure ~/.weldr/db directory exists
     await fs.mkdir(agentfsDir, { recursive: true });
 
     const backend = createStorageBackend(projectId);

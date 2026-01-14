@@ -1,4 +1,4 @@
-import { statFile } from "@/core/sandbox/fs";
+import { getOrCreateSession } from "@/core/sandbox/just-bash/session";
 
 function resolveRelativePath(currentFilePath: string, importPath: string): string {
   // Pure string-based path resolution without filesystem dependencies
@@ -52,16 +52,26 @@ function resolveRelativePath(currentFilePath: string, importPath: string): strin
   return importPath;
 }
 
-export function resolveFilePath(branchId: string, basePath: string): string | null {
+export async function resolveFilePath(
+  branchId: string,
+  projectId: string,
+  versionId: string,
+  basePath: string,
+): Promise<string | null> {
+  const session = await getOrCreateSession({ branchId, projectId, versionId });
   const hasExtension = /\.[^/.]+$/.test(basePath);
 
   // Ensure path starts with / for agentfs
   const normalizedBasePath = basePath.startsWith("/") ? basePath : `/${basePath}`;
 
   if (hasExtension) {
-    const result = statFile(branchId, normalizedBasePath);
-    if (result.success && result.isFile) {
-      return basePath;
+    try {
+      const stat = await session.agent.fs.stat(normalizedBasePath);
+      if (stat.isFile()) {
+        return basePath;
+      }
+    } catch {
+      // File doesn't exist, continue checking other paths
     }
   }
 
@@ -86,9 +96,13 @@ export function resolveFilePath(branchId: string, basePath: string): string | nu
 
     // Ensure path starts with / for agentfs
     const normalizedPath = potentialPath.startsWith("/") ? potentialPath : `/${potentialPath}`;
-    const result = statFile(branchId, normalizedPath);
-    if (result.success && result.isFile) {
-      return potentialPath;
+    try {
+      const stat = await session.agent.fs.stat(normalizedPath);
+      if (stat.isFile()) {
+        return potentialPath;
+      }
+    } catch {
+      // File doesn't exist, continue checking other paths
     }
   }
 
@@ -168,17 +182,20 @@ export function isExternalPackage({
   return true;
 }
 
-export function resolveInternalPathAsync({
-  branchId,
-  importPath,
-  currentFilePath,
-  pathAliases,
-}: {
+interface ResolveInternalPathOptions {
   branchId?: string;
+  projectId?: string;
+  versionId?: string;
   importPath: string;
   currentFilePath: string;
   pathAliases?: Record<string, string>;
-}): string {
+}
+
+export async function resolveInternalPathAsync(
+  options: ResolveInternalPathOptions,
+): Promise<string> {
+  const { branchId, projectId, versionId, importPath, currentFilePath, pathAliases } = options;
+
   // First try to resolve using path aliases
   const aliasResolved = resolvePathAlias({ importPath, pathAliases });
 
@@ -194,12 +211,12 @@ export function resolveInternalPathAsync({
 
   // If no branchId provided, skip agentfs file resolution
   // (used for internal template processing)
-  if (!branchId) {
+  if (!branchId || !projectId || !versionId) {
     return pathToCheck;
   }
 
   // Now, try to find the actual file with extension via agentfs
-  const finalPath = resolveFilePath(branchId, pathToCheck);
+  const finalPath = await resolveFilePath(branchId, projectId, versionId, pathToCheck);
 
   if (!finalPath) {
     return pathToCheck;

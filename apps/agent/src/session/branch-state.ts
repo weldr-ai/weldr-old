@@ -10,10 +10,8 @@ import { initSession, sessionExists } from "@/core/sandbox/exec";
  * Ensure agentfs session exists for the branch.
  * Always syncs with cloud storage to ensure latest state.
  *
- * With the agentfs CLI architecture:
- * - Files are stored in the AgentFS SQLite database (~/.agentfs/{branchId}.db)
- * - All commands access files through FUSE overlay when executed via agentfs run
- * - No real directories are created - everything is virtual
+ * - Files are stored in the AgentFS SQLite database (~/.weldr/db/{branchId}.db)
+ * - All commands run through just-bash with the AgentFS virtual filesystem
  */
 export async function ensureBranchSession(
   branchId: string,
@@ -73,9 +71,12 @@ export async function ensureBranchSession(
       logger.warn("Failed to sync from cloud, initializing empty session");
     }
     // Initialize a new agentfs session
-    const initResult = initSession(branchId);
-    if (initResult.exitCode !== 0) {
-      logger.error("Failed to initialize agentfs session", { error: initResult.stderr });
+    try {
+      await initSession(branchId);
+    } catch (error) {
+      logger.error("Failed to initialize agentfs session", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -92,10 +93,10 @@ export async function ensureBranchSession(
  * Create a branch from a version fork point.
  * Uses sandbox snapshot to restore files from the forked version.
  *
- * With the agentfs CLI architecture:
+ * With the AgentFS SDK architecture:
  * - The snapshot is copied in cloud storage
- * - The database is downloaded locally to ~/.agentfs/{branchId}.db
- * - Files are accessed through FUSE overlay when commands run via agentfs run
+ * - The database is downloaded locally to ~/.weldr/db/{branchId}.db
+ * - Files are accessed through the AgentFS SDK virtual filesystem
  */
 async function createBranchFromFork(
   projectId: string,
@@ -143,16 +144,22 @@ async function createBranchFromFork(
       });
 
       // Initialize a new agentfs session as fallback
-      const initResult = initSession(branchId);
-      if (initResult.exitCode !== 0) {
-        logger.error("Failed to initialize agentfs session", { error: initResult.stderr });
+      try {
+        await initSession(branchId);
+      } catch (initError) {
+        logger.error("Failed to initialize agentfs session", {
+          error: initError instanceof Error ? initError.message : String(initError),
+        });
       }
     }
   } else {
     logger.info("No snapshot available, initializing empty session");
-    const initResult = initSession(branchId);
-    if (initResult.exitCode !== 0) {
-      logger.error("Failed to initialize agentfs session", { error: initResult.stderr });
+    try {
+      await initSession(branchId);
+    } catch (error) {
+      logger.error("Failed to initialize agentfs session", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 

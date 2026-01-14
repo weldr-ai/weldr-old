@@ -7,7 +7,16 @@ import { put as tigrisPut } from "@tigrisdata/storage";
 import { Logger } from "@weldr/shared/logger";
 
 import { exec } from "@/core/sandbox";
-import { dirExists } from "@/core/sandbox/fs";
+import { getOrCreateSession, type SandboxSession } from "@/core/sandbox/just-bash/session";
+
+async function checkDirExists(session: SandboxSession, dirPath: string): Promise<boolean> {
+  try {
+    const stat = await session.agent.fs.stat(dirPath);
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
 
 interface BuildOptions {
   projectId: string;
@@ -36,6 +45,9 @@ export async function build({
 
   try {
     logger.info("Starting build process");
+
+    // Get or create sandbox session
+    const session = await getOrCreateSession({ branchId, projectId, versionId });
 
     // Install dependencies
     logger.info("Installing dependencies");
@@ -73,17 +85,17 @@ export async function build({
     let buildDir: string;
     let filesToZip: string[];
 
-    if (dirExists(branchId, "/.output")) {
+    if (await checkDirExists(session, "/.output")) {
       // TanStack Start / Nitro output
       buildDir = ".output";
       filesToZip = [".output/", "node_modules/", "package.json"];
       logger.info("Detected TanStack Start build (.output)");
-    } else if (dirExists(branchId, "/dist")) {
+    } else if (await checkDirExists(session, "/dist")) {
       // Vite/esbuild/tsdown output
       buildDir = "dist";
       filesToZip = ["dist/", "node_modules/", "package.json"];
       logger.info("Detected dist build");
-    } else if (dirExists(branchId, "/build")) {
+    } else if (await checkDirExists(session, "/build")) {
       // CRA/other build output
       buildDir = "build";
       filesToZip = ["build/", "node_modules/", "package.json"];

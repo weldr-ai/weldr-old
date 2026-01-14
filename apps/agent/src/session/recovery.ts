@@ -1,3 +1,7 @@
+import os from "node:os";
+import path from "node:path";
+
+import { AgentFS } from "agentfs-sdk";
 import { createActor } from "xstate";
 
 import { and, db, eq, inArray } from "@weldr/db";
@@ -5,21 +9,9 @@ import { projects, users, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
 import { getInstalledCategories } from "@/core/integrations/utils/get-installed-categories";
-import { sessionStorage, type SessionSnapshot } from "@/core/persistence";
+import { createAgentFSStorage } from "@/core/persistence";
 import { createSessionInput } from "./context";
 import { sessionMachine } from "./machine";
-
-/**
- * Try to load a session snapshot for a version.
- * Returns the snapshot if found, null otherwise.
- */
-async function loadSnapshot(versionId: string): Promise<SessionSnapshot | null> {
-  try {
-    return await sessionStorage.loadSessionState(versionId);
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Recover in-progress sessions on startup.
@@ -86,7 +78,15 @@ export async function recoverSessions(): Promise<void> {
 
     for (const version of versionsList) {
       try {
-        const snapshot = await loadSnapshot(version.id);
+        // Open AgentFS SQLite database
+        const dbPath = path.join(os.homedir(), ".weldr", "db", `${version.branch.id}.db`);
+        const agent = await AgentFS.open({ path: dbPath });
+
+        // Create storage interface
+        const storage = createAgentFSStorage(agent, version.id);
+
+        // Load workflow state from SQLite
+        const snapshot = await storage.loadSessionState(version.id);
 
         const sessionInput = createSessionInput({
           project: {
@@ -109,6 +109,7 @@ export async function recoverSessions(): Promise<void> {
           const sessionActor = createActor(sessionMachine, {
             input: {
               ...sessionInput,
+              storage,
               restoredSnapshot: snapshot,
             },
           });
@@ -122,7 +123,12 @@ export async function recoverSessions(): Promise<void> {
             },
           });
         } else {
-          const sessionActor = createActor(sessionMachine, { input: sessionInput });
+          const sessionActor = createActor(sessionMachine, {
+            input: {
+              ...sessionInput,
+              storage,
+            },
+          });
           sessionActor.start();
           sessionActor.send({ type: "START" });
 

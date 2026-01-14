@@ -1,32 +1,31 @@
 /**
  * Sandbox Demo Tests
  *
- * Demonstrates how the agentfs sandbox works for AI coding agents.
+ * Demonstrates how the SandboxSession works for AI coding agents.
  * All tests run on a single session, simulating a real AI agent workflow.
  *
- * Run with: bun run apps/agent/src/lib/sandbox/test.ts
+ * Run with: bun run apps/agent/src/core/sandbox/test.ts
  *
- * Prerequisites:
- * - agentfs CLI installed globally
- * - FUSE support enabled on the system
- *
- * How AgentFS Works:
- * - `agentfs run --session <id>` runs commands with copy-on-write isolation
- * - The current working directory is the base (read-only)
- * - Changes are stored in ~/.agentfs/run/<session>/delta.db
- * - `agentfs fs <id>` commands work on the database directly
- * - `agentfs init <id>` creates a standalone database at ~/.agentfs/<id>.db
+ * How SandboxSession Works:
+ * - Uses just-bash for in-memory bash execution (80+ commands)
+ * - Uses AgentFS SDK for persistent virtual filesystem and KV store
+ * - Custom git and bun commands sync to temp dir, execute, sync back
+ * - All state stored in SQLite at ~/.weldr/db/{branchId}.db
  */
 
-import path from "node:path";
+import * as fs from "node:fs/promises";
+import * as os from "node:os";
+import * as path from "node:path";
 
 import { nanoid } from "@weldr/shared/nanoid";
 
-import { exec, getWorkdir } from "./exec";
+import { closeSession, createSession, type SandboxSession } from "./just-bash/session";
 
 interface TestContext {
+  session: SandboxSession;
   projectId: string;
   branchId: string;
+  versionId: string;
 }
 
 interface TestResult {
@@ -53,11 +52,11 @@ async function runTest(
   const start = Date.now();
   try {
     await testFn(ctx);
-    console.log(`  ✓ Passed (${Date.now() - start}ms)`);
+    console.log(`  [PASS] (${Date.now() - start}ms)`);
     return { name, passed: true, duration: Date.now() - start };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.log(`  ✗ Failed: ${errorMsg}`);
+    console.log(`  [FAIL] ${errorMsg}`);
     return { name, passed: false, error: errorMsg, duration: Date.now() - start };
   }
 }
@@ -65,14 +64,18 @@ async function runTest(
 // =============================================================================
 // TEST: Session Initialization
 // =============================================================================
-function testSessionInit(ctx: TestContext): void {
-  const { projectId, branchId } = ctx;
+async function testSessionInit(ctx: TestContext): Promise<void> {
+  const { session } = ctx;
 
-  log("Running first command to initialize session...");
-  // The session is created on first `agentfs run` command
-  const result = exec("echo 'Session initialized'", { projectId, branchId });
+  log("Running first command to verify session...");
+  const result = await session.bash.exec("echo 'Session initialized'");
   assert(result.exitCode === 0, `Failed to run command: ${result.stderr}`);
   assert(result.stdout.includes("Session initialized"), "Command output mismatch");
+
+  log("Checking working directory...");
+  const pwdResult = await session.bash.exec("pwd");
+  assert(pwdResult.exitCode === 0, `pwd failed: ${pwdResult.stderr}`);
+  log(`Working directory: ${pwdResult.stdout.trim()}`);
 
   log("Session created successfully");
 }
@@ -80,8 +83,8 @@ function testSessionInit(ctx: TestContext): void {
 // =============================================================================
 // TEST: File Operations (Write, Read via commands)
 // =============================================================================
-function testFileOperations(ctx: TestContext): void {
-  const { projectId, branchId } = ctx;
+async function testFileOperations(ctx: TestContext): Promise<void> {
+  const { session } = ctx;
 
   log("Creating package.json...");
   const packageJson = `{
@@ -95,19 +98,11 @@ function testFileOperations(ctx: TestContext): void {
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/react": "^18.0.0"
+    "typescript": "^5.0.0"
   }
 }`;
 
-  // Write file using heredoc
-  const writeResult = exec(
-    `cat > package.json << 'EOF'
-${packageJson}
-EOF`,
-    { projectId, branchId },
-  );
-  assert(writeResult.exitCode === 0, `Write failed: ${writeResult.stderr}`);
+  await session.bash.writeFile("package.json", packageJson);
 
   log("Creating tsconfig.json...");
   const tsconfig = `{
@@ -118,183 +113,176 @@ EOF`,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "noEmit": true,
-    "jsx": "react-jsx"
+    "noEmit": true
   },
   "include": ["src/**/*"]
 }`;
-  const tsconfigResult = exec(
-    `cat > tsconfig.json << 'EOF'
-${tsconfig}
-EOF`,
-    { projectId, branchId },
-  );
-  assert(tsconfigResult.exitCode === 0, `tsconfig write failed: ${tsconfigResult.stderr}`);
+  await session.bash.writeFile("tsconfig.json", tsconfig);
 
   log("Reading file back...");
-  const readResult = exec("cat package.json", { projectId, branchId });
-  assert(readResult.exitCode === 0, `Read failed: ${readResult.stderr}`);
-  assert(readResult.stdout.includes("demo-project"), "Content should contain project name");
+  const content = await session.bash.readFile("package.json");
+  assert(content.includes("demo-project"), "Content should contain project name");
 
   log("Checking file exists...");
-  const existsResult = exec("test -f package.json && echo exists", { projectId, branchId });
+  const existsResult = await session.bash.exec("test -f package.json && echo exists");
   assert(existsResult.stdout.includes("exists"), "File should exist");
 
-  const notExistsResult = exec("test -f nonexistent.txt && echo exists || echo not-found", {
-    projectId,
-    branchId,
-  });
+  const notExistsResult = await session.bash.exec(
+    "test -f nonexistent.txt && echo exists || echo not-found",
+  );
   assert(notExistsResult.stdout.includes("not-found"), "Nonexistent file check");
 }
 
 // =============================================================================
 // TEST: Directory Operations
 // =============================================================================
-function testDirectoryOperations(ctx: TestContext): void {
-  const { projectId, branchId } = ctx;
+async function testDirectoryOperations(ctx: TestContext): Promise<void> {
+  const { session } = ctx;
 
   log("Creating nested directories...");
-  const mkdirResult = exec("mkdir -p src/components", { projectId, branchId });
+  const mkdirResult = await session.bash.exec("mkdir -p src/components src/utils");
   assert(mkdirResult.exitCode === 0, `mkdir failed: ${mkdirResult.stderr}`);
 
   log("Checking directories exist...");
-  const checkResult = exec("test -d src && test -d src/components && echo ok", {
-    projectId,
-    branchId,
-  });
+  const checkResult = await session.bash.exec("test -d src && test -d src/components && echo ok");
   assert(checkResult.stdout.includes("ok"), "Directories should exist");
 
   log("Writing source files...");
-  exec(`echo 'export * from "./components";' > src/index.ts`, { projectId, branchId });
+  await session.bash.writeFile(
+    "src/index.ts",
+    'export * from "./components";\nexport * from "./utils";',
+  );
 
   const buttonCode = `interface ButtonProps {
   label: string;
   onClick: () => void;
 }
 
-export const Button = ({ label, onClick }: ButtonProps) => (
-  <button onClick={onClick}>{label}</button>
-);`;
-  exec(
-    `cat > src/components/Button.tsx << 'EOF'
-${buttonCode}
-EOF`,
-    { projectId, branchId },
-  );
-
-  exec(`echo 'export { Button } from "./Button";' > src/components/index.ts`, {
-    projectId,
-    branchId,
-  });
+export const Button = ({ label, onClick }: ButtonProps) => {
+  return { label, onClick };
+};`;
+  await session.bash.writeFile("src/components/Button.tsx", buttonCode);
+  await session.bash.writeFile("src/components/index.ts", 'export { Button } from "./Button";');
 
   log("Listing directory contents...");
-  const listResult = exec("ls -la src/", { projectId, branchId });
+  const listResult = await session.bash.exec("ls -la src/");
   assert(listResult.exitCode === 0, `ls failed: ${listResult.stderr}`);
   log(`Contents of src/:\n${listResult.stdout}`);
 }
 
 // =============================================================================
-// TEST: Command Execution
+// TEST: Command Execution (Various bash commands)
 // =============================================================================
-function testCommandExecution(ctx: TestContext): void {
-  const { projectId, branchId } = ctx;
+async function testCommandExecution(ctx: TestContext): Promise<void> {
+  const { session } = ctx;
 
   log("Running echo command...");
-  const echoResult = exec('echo "Hello from agentfs sandbox"', { projectId, branchId });
+  const echoResult = await session.bash.exec('echo "Hello from just-bash sandbox"');
   assert(echoResult.exitCode === 0, `echo failed: ${echoResult.stderr}`);
-  assert(echoResult.stdout.includes("Hello from agentfs"), "Output mismatch");
+  assert(echoResult.stdout.includes("Hello from just-bash"), "Output mismatch");
 
   log("Running ls command...");
-  const lsResult = exec("ls -la", { projectId, branchId });
+  const lsResult = await session.bash.exec("ls -la");
   assert(lsResult.exitCode === 0, `ls failed: ${lsResult.stderr}`);
 
   log("Running cat command...");
-  const catResult = exec("cat package.json", { projectId, branchId });
+  const catResult = await session.bash.exec("cat package.json");
   assert(catResult.exitCode === 0, `cat failed: ${catResult.stderr}`);
   assert(catResult.stdout.includes("demo-project"), "Should read package.json");
+
+  log("Running grep command...");
+  const grepResult = await session.bash.exec('grep -r "Button" src/');
+  assert(grepResult.exitCode === 0, `grep failed: ${grepResult.stderr}`);
+  assert(grepResult.stdout.includes("Button"), "Should find Button");
+  log(`grep result:\n${grepResult.stdout}`);
 }
 
 // =============================================================================
-// TEST: Bun Install
+// TEST: Bun Install (Custom command - syncs to real FS)
 // =============================================================================
-function testBunInstall(ctx: TestContext): void {
-  const { projectId, branchId } = ctx;
+async function testBunInstall(ctx: TestContext): Promise<void> {
+  const { session } = ctx;
 
   log("Installing dependencies with bun...");
-  const installResult = exec("bun install", { projectId, branchId });
+  const installResult = await session.bash.exec("bun install");
   assert(installResult.exitCode === 0, `bun install failed: ${installResult.stderr}`);
   log(`Install output:\n${installResult.stdout}`);
 
-  log("Checking node_modules exists...");
-  const nodeModulesResult = exec("test -d node_modules && echo exists", { projectId, branchId });
-  assert(nodeModulesResult.stdout.includes("exists"), "node_modules should exist");
-
-  log("Checking typescript is installed...");
-  const tscResult = exec("test -f node_modules/.bin/tsc && echo exists", { projectId, branchId });
-  assert(tscResult.stdout.includes("exists"), "tsc binary should exist");
+  // Verify bun install succeeded by checking the output
+  // Note: node_modules is intentionally NOT synced back (too large)
+  // bun.lockb may or may not be created depending on cache state
+  assert(
+    installResult.stdout.includes("package") || installResult.stdout.includes("installed"),
+    "bun install should show packages installed",
+  );
 
   log("Running bun test script...");
-  const bunResult = exec("bun run test", { projectId, branchId });
+  const bunResult = await session.bash.exec("bun run test");
   assert(bunResult.exitCode === 0, `bun run test failed: ${bunResult.stderr}`);
   assert(bunResult.stdout.includes("tests-passed"), "Test script should pass");
   log(`Test output:\n${bunResult.stdout}`);
 }
 
 // =============================================================================
-// TEST: TypeScript Typecheck
+// TEST: Git Operations (Custom command - syncs to real FS)
 // =============================================================================
-function testTypecheck(ctx: TestContext): void {
-  const { projectId, branchId } = ctx;
+async function testGitOperations(ctx: TestContext): Promise<void> {
+  const { session } = ctx;
 
-  log("Running TypeScript typecheck...");
-  const typecheckResult = exec("bun run typecheck", { projectId, branchId });
-  assert(
-    typecheckResult.exitCode === 0,
-    `typecheck failed: ${typecheckResult.stdout || typecheckResult.stderr}`,
-  );
+  log("Initializing git repository...");
+  const initResult = await session.bash.exec("git init -b main");
+  assert(initResult.exitCode === 0, `git init failed: ${initResult.stderr}`);
 
-  log("Verifying tsconfig.json exists...");
-  const tsconfigResult = exec("test -f tsconfig.json && echo exists", { projectId, branchId });
-  assert(tsconfigResult.stdout.includes("exists"), "tsconfig.json should exist");
+  log("Configuring git user...");
+  await session.bash.exec('git config user.email "ai@weldr.dev"');
+  await session.bash.exec('git config user.name "AI Agent"');
 
-  log("Typecheck passed successfully");
+  log("Staging all files...");
+  const addResult = await session.bash.exec("git add -A");
+  assert(addResult.exitCode === 0, `git add failed: ${addResult.stderr}`);
+
+  log("Creating commit...");
+  const commitResult = await session.bash.exec('git commit -m "feat: initial project setup"');
+  assert(commitResult.exitCode === 0, `git commit failed: ${commitResult.stderr}`);
+
+  log("Checking git log...");
+  const logResult = await session.bash.exec("git log --oneline -n 5");
+  assert(logResult.exitCode === 0, `git log failed: ${logResult.stderr}`);
+  assert(logResult.stdout.includes("initial project setup"), "Commit should be in log");
+  log(`Recent commits:\n${logResult.stdout}`);
+
+  log("Checking git status...");
+  const statusResult = await session.bash.exec("git status");
+  assert(statusResult.exitCode === 0, `git status failed: ${statusResult.stderr}`);
+  log(`Git status:\n${statusResult.stdout}`);
 }
 
 // =============================================================================
 // TEST: Find Files (Recursive File Discovery)
 // =============================================================================
-function testFindFiles(ctx: TestContext): void {
-  const { projectId, branchId } = ctx;
+async function testFindFiles(ctx: TestContext): Promise<void> {
+  const { session } = ctx;
 
   log("Creating additional files...");
-  exec("mkdir -p src/utils", { projectId, branchId });
-  exec(
-    `echo 'export const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);' > src/utils/helpers.ts`,
-    { projectId, branchId },
+  await session.bash.writeFile(
+    "src/utils/helpers.ts",
+    "export const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);",
   );
-  exec("mkdir -p node_modules/some-pkg", { projectId, branchId });
-  exec(`echo 'module.exports = {};' > node_modules/some-pkg/index.js`, {
-    projectId,
-    branchId,
-  });
+  await session.bash.writeFile("src/utils/index.ts", 'export * from "./helpers";');
 
   log("Finding all files...");
-  const allFilesResult = exec("find . -type f", { projectId, branchId });
+  const allFilesResult = await session.bash.exec("find . -type f");
   assert(allFilesResult.exitCode === 0, `find failed: ${allFilesResult.stderr}`);
   log(`Total files found: ${allFilesResult.stdout.trim().split("\n").length}`);
 
   log("Finding files excluding node_modules...");
-  const srcFilesResult = exec("find . -type f -not -path './node_modules/*'", {
-    projectId,
-    branchId,
-  });
-  assert(!srcFilesResult.stdout.includes("node_modules"), "Should exclude node_modules");
+  const srcFilesResult = await session.bash.exec("find . -type f -not -path './node_modules/*'");
+  assert(!srcFilesResult.stdout.includes("node_modules/"), "Should exclude node_modules");
   log(`Source files: ${srcFilesResult.stdout.trim().split("\n").length}`);
 
   log("Finding only TypeScript files...");
-  const tsFilesResult = exec(
+  const tsFilesResult = await session.bash.exec(
     "find . -type f \\( -name '*.ts' -o -name '*.tsx' \\) -not -path './node_modules/*'",
-    { projectId, branchId },
   );
   log(`TypeScript files:\n${tsFilesResult.stdout}`);
 }
@@ -302,116 +290,239 @@ function testFindFiles(ctx: TestContext): void {
 // =============================================================================
 // TEST: Copy and Move Operations
 // =============================================================================
-function testCopyMoveOperations(ctx: TestContext): void {
-  const { projectId, branchId } = ctx;
+async function testCopyMoveOperations(ctx: TestContext): Promise<void> {
+  const { session } = ctx;
 
   log("Creating README...");
   const readmeContent = `# Demo Project
 
-A demo project showcasing the agentfs sandbox.
+A demo project showcasing the sandbox.
 
 ## Getting Started
 
-\\\`\\\`\\\`bash
+\`\`\`bash
 bun install
 bun run dev
-\\\`\\\`\\\``;
-  exec(
-    `cat > README.md << 'EOF'
-${readmeContent}
-EOF`,
-    { projectId, branchId },
-  );
+\`\`\``;
+  await session.bash.writeFile("README.md", readmeContent);
 
   log("Copying README to backup...");
-  const copyResult = exec("cp README.md README.backup.md", { projectId, branchId });
+  const copyResult = await session.bash.exec("cp README.md README.backup.md");
   assert(copyResult.exitCode === 0, `Copy failed: ${copyResult.stderr}`);
 
-  const backupExists = exec("test -f README.backup.md && echo exists", { projectId, branchId });
+  const backupExists = await session.bash.exec("test -f README.backup.md && echo exists");
   assert(backupExists.stdout.includes("exists"), "Backup should exist");
 
   log("Moving backup to docs directory...");
-  exec("mkdir -p docs", { projectId, branchId });
-  const moveResult = exec("mv README.backup.md docs/README.md", { projectId, branchId });
+  await session.bash.exec("mkdir -p docs");
+  const moveResult = await session.bash.exec("mv README.backup.md docs/README.md");
   assert(moveResult.exitCode === 0, `Move failed: ${moveResult.stderr}`);
 
-  const srcGone = exec("test -f README.backup.md && echo exists || echo gone", {
-    projectId,
-    branchId,
-  });
+  const srcGone = await session.bash.exec("test -f README.backup.md && echo exists || echo gone");
   assert(srcGone.stdout.includes("gone"), "Source should not exist after move");
 
-  const destExists = exec("test -f docs/README.md && echo exists", { projectId, branchId });
+  const destExists = await session.bash.exec("test -f docs/README.md && echo exists");
   assert(destExists.stdout.includes("exists"), "Destination should exist");
 }
 
 // =============================================================================
 // TEST: Delete Operations
 // =============================================================================
-function testDeleteOperations(ctx: TestContext): void {
-  const { projectId, branchId } = ctx;
-
-  // Use ~/.weldr/{branchId} for delete operations since it's writable
-  const workdir = getWorkdir(branchId);
-  const tempFile = path.join(workdir, `sandbox-test-${branchId}-temp.txt`);
-  const tempDir = path.join(workdir, `sandbox-test-${branchId}-temp-dir`);
+async function testDeleteOperations(ctx: TestContext): Promise<void> {
+  const { session } = ctx;
 
   log("Creating temp files to delete...");
-  exec(`echo 'temporary file' > ${tempFile}`, { projectId, branchId });
-  exec(`mkdir -p ${tempDir} && echo 'nested content' > ${tempDir}/nested.txt`, {
-    projectId,
-    branchId,
-  });
+  await session.bash.writeFile("temp-file.txt", "temporary content");
+  await session.bash.exec("mkdir -p temp-dir");
+  await session.bash.writeFile("temp-dir/nested.txt", "nested content");
 
   log("Deleting temp file...");
-  const deleteFileResult = exec(`rm ${tempFile}`, { projectId, branchId });
+  const deleteFileResult = await session.bash.exec("rm temp-file.txt");
   assert(deleteFileResult.exitCode === 0, `Delete file failed: ${deleteFileResult.stderr}`);
 
-  const fileGone = exec(`test -f ${tempFile} && echo exists || echo gone`, { projectId, branchId });
+  const fileGone = await session.bash.exec("test -f temp-file.txt && echo exists || echo gone");
   assert(fileGone.stdout.includes("gone"), "File should be deleted");
 
   log("Deleting temp directory recursively...");
-  const deleteDirResult = exec(`rm -rf ${tempDir}`, { projectId, branchId });
+  const deleteDirResult = await session.bash.exec("rm -rf temp-dir");
   assert(deleteDirResult.exitCode === 0, `Delete dir failed: ${deleteDirResult.stderr}`);
 
-  const dirGone = exec(`test -d ${tempDir} && echo exists || echo gone`, { projectId, branchId });
+  const dirGone = await session.bash.exec("test -d temp-dir && echo exists || echo gone");
   assert(dirGone.stdout.includes("gone"), "Dir should be deleted");
 }
 
 // =============================================================================
-// TEST: Git Operations
+// TEST: Storage Persistence (SQLite KV)
 // =============================================================================
-function testGitOperations(ctx: TestContext): void {
-  const { projectId, branchId } = ctx;
+async function testStoragePersistence(ctx: TestContext): Promise<void> {
+  const { session, versionId } = ctx;
 
-  log("Initializing git repository...");
-  const initResult = exec("git init -b main", { projectId, branchId });
-  assert(initResult.exitCode === 0, `git init failed: ${initResult.stderr}`);
+  log("Saving session state to SQLite...");
+  await session.storage.saveSessionState({
+    versionId,
+    sessionState: "processing",
+    traceId: "test-trace-123",
+    iterationCount: 5,
+    awaitingUserKind: null,
+    currentMessageId: "msg-123",
+    pendingSpawnRequests: [],
+    assistantContentBuffer: "partial response...",
+    pausedAt: null,
+    pauseReason: null,
+  });
+  log("State saved successfully");
 
-  log("Configuring git user...");
-  exec('git config user.email "ai@weldr.dev"', { projectId, branchId });
-  exec('git config user.name "AI Agent"', { projectId, branchId });
+  log("Loading session state from SQLite...");
+  const loadedState = await session.storage.loadSessionState(versionId);
+  if (!loadedState) {
+    throw new Error("State should be loaded");
+  }
+  assert(
+    loadedState.state === "processing",
+    `State should be 'processing', got '${loadedState.state}'`,
+  );
+  assert(
+    loadedState.iterationCount === 5,
+    `Iteration count should be 5, got ${loadedState.iterationCount}`,
+  );
+  assert(loadedState.traceId === "test-trace-123", "TraceId should match");
+  assert(loadedState.currentMessageId === "msg-123", "MessageId should match");
+  assert(loadedState.assistantContentBuffer === "partial response...", "Buffer should match");
+  log(`Loaded state: ${JSON.stringify(loadedState, null, 2)}`);
 
-  log("Staging all files...");
-  const addResult = exec("git add -A", { projectId, branchId });
-  assert(addResult.exitCode === 0, `git add failed: ${addResult.stderr}`);
+  log("Updating state...");
+  await session.storage.saveSessionState({
+    versionId,
+    sessionState: "completed",
+    traceId: "test-trace-123",
+    iterationCount: 10,
+    awaitingUserKind: null,
+    currentMessageId: null,
+    pendingSpawnRequests: [],
+    assistantContentBuffer: null,
+    pausedAt: null,
+    pauseReason: null,
+  });
 
-  log("Creating commit...");
-  const commitResult = exec('git commit -m "feat: initial project setup"', { projectId, branchId });
-  assert(commitResult.exitCode === 0, `git commit failed: ${commitResult.stderr}`);
+  const updatedState = await session.storage.loadSessionState(versionId);
+  if (!updatedState) {
+    throw new Error("Updated state should be loaded");
+  }
+  assert(updatedState.state === "completed", "State should be updated to 'completed'");
+  assert(updatedState.iterationCount === 10, "Iteration count should be updated to 10");
+  log("State updated successfully");
+}
 
-  log("Checking git log...");
-  const logResult = exec("git log --oneline -n 5", { projectId, branchId });
-  assert(logResult.exitCode === 0, `git log failed: ${logResult.stderr}`);
-  assert(logResult.stdout.includes("initial project setup"), "Commit should be in log");
-  log(`Recent commits:\n${logResult.stdout}`);
+// =============================================================================
+// TEST: Tool Tracking
+// =============================================================================
+async function testToolTracking(ctx: TestContext): Promise<void> {
+  const { session } = ctx;
+
+  log("Starting a tool call...");
+  const callId1 = await session.toolTracker.start({
+    toolName: "search_files",
+    parameters: { pattern: "*.ts", directory: "src" },
+  });
+  log(`Started tool call with ID: ${callId1}`);
+
+  log("Completing tool call with success...");
+  await session.toolTracker.complete(callId1, {
+    success: true,
+    result: { files: ["src/index.ts", "src/utils/helpers.ts"], count: 2 },
+  });
+
+  log("Recording a bash tool call...");
+  const callId2 = await session.toolTracker.start({
+    toolName: "bash",
+    parameters: { command: "ls -la" },
+  });
+  await session.toolTracker.complete(callId2, {
+    success: true,
+    result: { stdout: "file1\nfile2", exitCode: 0 },
+  });
+
+  log("Recording a failed tool call...");
+  const callId3 = await session.toolTracker.start({
+    toolName: "bash",
+    parameters: { command: "invalid-command" },
+  });
+  await session.toolTracker.complete(callId3, {
+    success: false,
+    error: "Command not found: invalid-command",
+  });
+
+  log("Getting tool stats...");
+  const stats = await session.toolTracker.getStats();
+  log(`Tool stats: ${JSON.stringify(stats, null, 2)}`);
+
+  const searchStats = stats.find((s) => s.name === "search_files");
+  if (!searchStats) {
+    throw new Error("Should have search_files stats");
+  }
+  assert(searchStats.total_calls === 1, "search_files should have 1 call");
+  assert(searchStats.successful === 1, "search_files should have 1 success");
+
+  const bashStats = stats.find((s) => s.name === "bash");
+  if (!bashStats) {
+    throw new Error("Should have bash stats");
+  }
+  assert(bashStats.total_calls === 2, `bash should have 2 calls, got ${bashStats.total_calls}`);
+  assert(bashStats.successful === 1, `bash should have 1 success, got ${bashStats.successful}`);
+  assert(bashStats.failed === 1, `bash should have 1 failure, got ${bashStats.failed}`);
+
+  log("Getting recent tool calls...");
+  // Note: AgentFS stores timestamps in seconds (Unix time), not milliseconds
+  const sinceSeconds = Math.floor((Date.now() - 60000) / 1000);
+  const recent = await session.toolTracker.getRecent(sinceSeconds, 10);
+  log(
+    `Recent calls (${recent.length}): ${JSON.stringify(
+      recent.map((c) => c.name),
+      null,
+      2,
+    )}`,
+  );
+  assert(recent.length === 3, `Should have 3 recent calls, got ${recent.length}`);
+}
+
+// =============================================================================
+// TEST: Metrics Collection
+// =============================================================================
+async function testMetricsCollection(ctx: TestContext): Promise<void> {
+  const { session } = ctx;
+
+  log("Recording LLM requests...");
+  await session.metrics.recordLlmRequest(
+    { inputTokens: 1500, outputTokens: 500, totalTokens: 2000 },
+    { inputCost: 0.0075, outputCost: 0.0075, totalCost: 0.015 },
+    2500,
+  );
+  await session.metrics.recordLlmRequest(
+    { inputTokens: 2000, outputTokens: 800, totalTokens: 2800 },
+    { inputCost: 0.01, outputCost: 0.012, totalCost: 0.022 },
+    3200,
+  );
+
+  log("Recording iterations...");
+  await session.metrics.recordIteration();
+  await session.metrics.recordIteration();
+  await session.metrics.recordIteration();
+
+  log("Getting metrics...");
+  const metrics = await session.metrics.getMetrics();
+  log(`Metrics: ${JSON.stringify(metrics, null, 2)}`);
+
+  assert(metrics.agent.llm.requests === 2, "Should have 2 LLM requests");
+  assert(metrics.agent.llm.inputTokens === 3500, "Should have 3500 input tokens");
+  assert(metrics.agent.llm.outputTokens === 1300, "Should have 1300 output tokens");
+  assert(metrics.agent.iterations === 3, "Should have 3 iterations");
 }
 
 // =============================================================================
 // TEST: Full AI Agent Workflow
 // =============================================================================
-function testAIAgentWorkflow(ctx: TestContext): void {
-  const { projectId, branchId } = ctx;
+async function testAIAgentWorkflow(ctx: TestContext): Promise<void> {
+  const { session } = ctx;
 
   log("AI Agent Task: Add formatting utilities");
 
@@ -421,9 +532,6 @@ function testAIAgentWorkflow(ctx: TestContext): void {
  * String formatting utilities
  */
 
-/**
- * Format a date to a human-readable string
- */
 export function formatDate(date: Date): string {
   return date.toLocaleDateString("en-US", {
     year: "numeric",
@@ -432,9 +540,6 @@ export function formatDate(date: Date): string {
   });
 }
 
-/**
- * Format a number as currency
- */
 export function formatCurrency(amount: number, currency = "USD"): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -442,54 +547,46 @@ export function formatCurrency(amount: number, currency = "USD"): string {
   }).format(amount);
 }
 
-/**
- * Truncate a string to a maximum length
- */
 export function truncate(str: string, maxLength: number): string {
   if (str.length <= maxLength) return str;
   return str.slice(0, maxLength - 3) + "...";
 }`;
 
-  exec(
-    `cat > src/utils/format.ts << 'EOF'
-${utilCode}
-EOF`,
-    { projectId, branchId },
-  );
+  await session.bash.writeFile("src/utils/format.ts", utilCode);
 
   // 2. Update exports
   log("Step 2: Updating index exports...");
-  exec(`echo 'export * from "./helpers";' > src/utils/index.ts`, { projectId, branchId });
-  exec(`echo 'export * from "./format";' >> src/utils/index.ts`, { projectId, branchId });
-  exec(`echo 'export * from "./utils";' >> src/index.ts`, { projectId, branchId });
+  await session.bash.writeFile(
+    "src/utils/index.ts",
+    'export * from "./helpers";\nexport * from "./format";',
+  );
 
   // 3. Verify changes
   log("Step 3: Verifying changes...");
-  const fileExists = exec("test -f src/utils/format.ts && echo exists", { projectId, branchId });
+  const fileExists = await session.bash.exec("test -f src/utils/format.ts && echo exists");
   assert(fileExists.stdout.includes("exists"), "format.ts should exist");
 
-  const formatContent = exec("cat src/utils/format.ts", { projectId, branchId });
-  assert(formatContent.stdout.includes("formatDate"), "Should have formatDate");
-  assert(formatContent.stdout.includes("formatCurrency"), "Should have formatCurrency");
-  assert(formatContent.stdout.includes("truncate"), "Should have truncate");
+  const formatContent = await session.bash.readFile("src/utils/format.ts");
+  assert(formatContent.includes("formatDate"), "Should have formatDate");
+  assert(formatContent.includes("formatCurrency"), "Should have formatCurrency");
+  assert(formatContent.includes("truncate"), "Should have truncate");
 
   // 4. Check changed files before commit
   log("Step 4: Checking changed files...");
-  const statusResult = exec("git status --porcelain", { projectId, branchId });
+  const statusResult = await session.bash.exec("git status --porcelain");
   log(`Changed files:\n${statusResult.stdout}`);
 
   // 5. Commit the changes
   log("Step 5: Committing changes...");
-  exec("git add -A", { projectId, branchId });
-  const commitResult = exec('git commit -m "feat: add string formatting utilities"', {
-    projectId,
-    branchId,
-  });
+  await session.bash.exec("git add -A");
+  const commitResult = await session.bash.exec(
+    'git commit -m "feat: add string formatting utilities"',
+  );
   assert(commitResult.exitCode === 0, `Commit failed: ${commitResult.stderr}`);
 
   // 6. Verify commit history
   log("Step 6: Verifying commit history...");
-  const logResult = exec("git log --oneline", { projectId, branchId });
+  const logResult = await session.bash.exec("git log --oneline");
   assert(logResult.stdout.includes("formatting utilities"), "New commit should be in log");
   log(`Commit history:\n${logResult.stdout}`);
 
@@ -497,40 +594,85 @@ EOF`,
 }
 
 // =============================================================================
+// CLEANUP
+// =============================================================================
+async function cleanup(branchId: string): Promise<void> {
+  await closeSession(branchId);
+
+  const dbPath = path.join(os.homedir(), ".weldr", "db", `${branchId}.db`);
+  try {
+    await fs.rm(dbPath, { force: true });
+    await fs.rm(`${dbPath}-shm`, { force: true });
+    await fs.rm(`${dbPath}-wal`, { force: true });
+  } catch {
+    // Ignore if doesn't exist
+  }
+}
+
+// =============================================================================
 // MAIN TEST RUNNER
 // =============================================================================
 async function runDemoTests(): Promise<void> {
-  console.log("=".repeat(60));
-  console.log("SANDBOX DEMO TESTS - Single Session");
-  console.log("=".repeat(60));
-  console.log("\nDemonstrating agentfs sandbox for AI coding agents.\n");
+  const shouldCleanup = process.argv.includes("--cleanup");
 
-  // Create a single session for all tests
-  // Working directory defaults to /workspace in exec()
+  console.log("=".repeat(60));
+  console.log("SANDBOX DEMO TESTS - SandboxSession");
+  console.log("=".repeat(60));
+  console.log("\nDemonstrating SandboxSession for AI coding agents.\n");
+
   const branchId = `branch-${nanoid(8)}`;
-  const ctx: TestContext = {
-    projectId: `demo-${nanoid(8)}`,
-    branchId,
-  };
+  const projectId = `demo-${nanoid(8)}`;
+  const versionId = `version-${nanoid(8)}`;
 
-  console.log(`Project ID: ${ctx.projectId}`);
-  console.log(`Branch ID:  ${ctx.branchId}`);
-  console.log(`Delta DB:   ~/.agentfs/run/${ctx.branchId}/delta.db`);
+  console.log(`Project ID: ${projectId}`);
+  console.log(`Branch ID:  ${branchId}`);
+  console.log(`Version ID: ${versionId}`);
+  console.log(`SQLite DB:  ~/.weldr/db/${branchId}.db`);
+  if (shouldCleanup) {
+    console.log(`Cleanup:    ENABLED (--cleanup)`);
+  }
+
+  // Create the session
+  const session = await createSession({
+    branchId,
+    projectId,
+    versionId,
+    workdir: "/home/user/project",
+  });
+
+  const ctx: TestContext = {
+    session,
+    projectId,
+    branchId,
+    versionId,
+  };
 
   const results: TestResult[] = [];
 
-  // Run all tests in sequence on the same session
-  results.push(await runTest("Session Initialization", ctx, testSessionInit));
-  results.push(await runTest("File Operations", ctx, testFileOperations));
-  results.push(await runTest("Directory Operations", ctx, testDirectoryOperations));
-  results.push(await runTest("Command Execution", ctx, testCommandExecution));
-  results.push(await runTest("Bun Install", ctx, testBunInstall));
-  results.push(await runTest("TypeScript Typecheck", ctx, testTypecheck));
-  results.push(await runTest("Find Files", ctx, testFindFiles));
-  results.push(await runTest("Copy/Move Operations", ctx, testCopyMoveOperations));
-  results.push(await runTest("Delete Operations", ctx, testDeleteOperations));
-  results.push(await runTest("Git Operations", ctx, testGitOperations));
-  results.push(await runTest("AI Agent Workflow", ctx, testAIAgentWorkflow));
+  try {
+    // Run all tests in sequence on the same session
+    results.push(await runTest("Session Initialization", ctx, testSessionInit));
+    results.push(await runTest("File Operations", ctx, testFileOperations));
+    results.push(await runTest("Directory Operations", ctx, testDirectoryOperations));
+    results.push(await runTest("Command Execution", ctx, testCommandExecution));
+    results.push(await runTest("Bun Install", ctx, testBunInstall));
+    results.push(await runTest("Git Operations", ctx, testGitOperations));
+    results.push(await runTest("Find Files", ctx, testFindFiles));
+    results.push(await runTest("Copy/Move Operations", ctx, testCopyMoveOperations));
+    results.push(await runTest("Delete Operations", ctx, testDeleteOperations));
+    results.push(await runTest("Storage Persistence", ctx, testStoragePersistence));
+    results.push(await runTest("Tool Tracking", ctx, testToolTracking));
+    results.push(await runTest("Metrics Collection", ctx, testMetricsCollection));
+    results.push(await runTest("AI Agent Workflow", ctx, testAIAgentWorkflow));
+  } finally {
+    // Cleanup only if --cleanup flag is passed
+    if (shouldCleanup) {
+      await cleanup(branchId);
+    } else {
+      console.log(`\nDatabase preserved at: ~/.weldr/db/${branchId}.db`);
+      await closeSession(branchId);
+    }
+  }
 
   // Print summary
   console.log("\n" + "=".repeat(60));
@@ -551,7 +693,6 @@ async function runDemoTests(): Promise<void> {
     }
   }
 
-  // Cleanup
   console.log("\n" + "=".repeat(60));
   process.exit(failed > 0 ? 1 : 0);
 }

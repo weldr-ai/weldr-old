@@ -9,7 +9,7 @@ import type { DeclarationCodeMetadata } from "@weldr/shared/types/declarations";
 import { embedDeclaration } from "@/core/project/declarations/embed";
 import { enrichDeclaration } from "@/core/project/declarations/enrich";
 import { findNodePosition, type NODE_DIMENSIONS } from "@/core/project/node-placement";
-import { readFile } from "@/core/sandbox/fs";
+import { getOrCreateSession } from "@/core/sandbox/just-bash/session";
 import { type ExtractedSpecs, extractSpecsFromCode, type SpecType } from "./extract-specs";
 
 export interface EnrichingJobData {
@@ -133,30 +133,37 @@ export async function recoverEnrichingJobs(): Promise<void> {
             continue;
           }
 
-          let sourceCodeContent: string;
           const branchId = version.branch.id;
-          const result = readFile(branchId, declaration.path);
 
-          if (!result.success || !result.data) {
+          try {
+            const session = await getOrCreateSession({
+              branchId,
+              projectId: project.id,
+              versionId: version.id,
+            });
+
+            const agentfsPath = declaration.path.startsWith("/")
+              ? declaration.path
+              : `/${declaration.path}`;
+            const sourceCodeContent = await session.agent.fs.readFile(agentfsPath, "utf-8");
+
+            if (codeMetadata && declaration.path) {
+              jobQueue.push({
+                declarationId: declaration.id,
+                codeMetadata,
+                filePath: declaration.path,
+                sourceCode: sourceCodeContent,
+                projectId: project.id,
+              });
+            }
+          } catch (error) {
             logger.error("Failed to read source code", {
               extra: {
                 declarationId: declaration.id,
-                error: result.error ?? "Unknown error",
+                error: error instanceof Error ? error.message : String(error),
               },
             });
             continue;
-          }
-
-          sourceCodeContent = result.data;
-
-          if (codeMetadata && declaration.path) {
-            jobQueue.push({
-              declarationId: declaration.id,
-              codeMetadata,
-              filePath: declaration.path,
-              sourceCode: sourceCodeContent,
-              projectId: project.id,
-            });
           }
         }
 

@@ -15,5 +15,4 @@ export * from "./relations";
 export * from "./themes";
 export * from "./vault";
 export * from "./version-declarations";
-export * from "./version-sessions";
 export * from "./versions";

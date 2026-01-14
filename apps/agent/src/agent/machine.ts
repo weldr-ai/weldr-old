@@ -1,4 +1,4 @@
-import { assign, emit, sendParent, setup, type AnyActorRef } from "xstate";
+import { assign, emit, sendParent, sendTo, setup, type AnyActorRef } from "xstate";
 
 import { nanoid } from "@weldr/shared/nanoid";
 
@@ -16,7 +16,13 @@ import type {
   AssistantContentArray,
   SubAgentResult,
 } from "@/agent/types";
-import type { AgentEmittedEvent } from "@/core/events";
+import type {
+  AgentEmittedEvent,
+  AssistantContentPart,
+  FinishReason,
+  LLMUsage,
+  PendingSpawnRequest,
+} from "@/core/events";
 import { MetricsCollector } from "@/core/metrics";
 
 const DEFAULT_MAX_SUB_AGENTS = 10;
@@ -29,6 +35,17 @@ type AgentMachineEvent =
   | { type: "PROCESS" }
   | { type: "CANCEL" }
   | { type: "ERROR"; error: Error }
+  | {
+      type: "_llm.completed";
+      messageId: string;
+      content: AssistantContentPart[];
+      usage: LLMUsage;
+      finishReason: FinishReason;
+      pendingSpawnRequests: PendingSpawnRequest[];
+      durationMs: number;
+    }
+  | { type: "_llm.cancelled"; messageId: string }
+  | { type: "_llm.error"; error: Error }
   | { type: "_orchestrator.completed"; toolCallId: string; results: OrchestratorSubAgentResult[] }
   | { type: "_orchestrator.failed"; toolCallId: string; error: string };
 
@@ -318,17 +335,20 @@ export const agentMachine = agentMachineSetup.createMachine({
           messageId: context.messageId,
           maxSubAgents: context.maxSubAgents,
         }),
-        onDone: [
+      },
+      on: {
+        "_llm.completed": [
           {
             target: "runningSubAgents",
-            guard: ({ event }) => event.output.pendingSpawnRequests.length > 0,
+            guard: ({ event }) => event.pendingSpawnRequests.length > 0,
             actions: [
               assign({
-                shouldContinue: ({ event }) => event.output.shouldContinue,
-                assistantContent: ({ event }) => event.output.assistantContent,
-                lastUsage: ({ event }) => event.output.usage,
-                lastFinishReason: ({ event }) => event.output.finishReason,
-                pendingSpawnRequests: ({ event }) => event.output.pendingSpawnRequests,
+                shouldContinue: ({ event }) =>
+                  event.finishReason === "tool-calls" || event.finishReason === "length",
+                assistantContent: ({ event }) => event.content as AssistantContentArray,
+                lastUsage: ({ event }) => event.usage,
+                lastFinishReason: ({ event }) => event.finishReason,
+                pendingSpawnRequests: ({ event }) => event.pendingSpawnRequests,
               }),
               "emitIterationCompleted",
             ],
@@ -337,20 +357,25 @@ export const agentMachine = agentMachineSetup.createMachine({
             target: "savingMessages",
             actions: [
               assign({
-                shouldContinue: ({ event }) => event.output.shouldContinue,
-                assistantContent: ({ event }) => event.output.assistantContent,
-                lastUsage: ({ event }) => event.output.usage,
-                lastFinishReason: ({ event }) => event.output.finishReason,
+                shouldContinue: ({ event }) =>
+                  event.finishReason === "tool-calls" || event.finishReason === "length",
+                assistantContent: ({ event }) => event.content as AssistantContentArray,
+                lastUsage: ({ event }) => event.usage,
+                lastFinishReason: ({ event }) => event.finishReason,
                 pendingSpawnRequests: () => [],
               }),
               "emitIterationCompleted",
             ],
           },
         ],
-        onError: {
+        "_llm.cancelled": {
+          target: "completed",
+          actions: ["emitAgentCancelled"],
+        },
+        "_llm.error": {
           target: "failed",
           actions: assign({
-            error: ({ event }) => normalizeError(event.error),
+            error: ({ event }) => event.error,
           }),
         },
       },
@@ -445,7 +470,12 @@ export const agentMachine = agentMachineSetup.createMachine({
   on: {
     CANCEL: {
       target: ".completed",
-      actions: ["stopOrchestrators", "clearOrchestrators", "emitAgentCancelled"],
+      actions: [
+        sendTo("llmStream", { type: "LLM.CANCEL", reason: "agent cancelled" }),
+        "stopOrchestrators",
+        "clearOrchestrators",
+        "emitAgentCancelled",
+      ],
     },
     ERROR: {
       target: ".failed",

@@ -1,9 +1,11 @@
 import * as path from "node:path";
 
+import type { AgentFS } from "agentfs-sdk";
+
 import { db, eq } from "@weldr/db";
 import { Logger } from "@weldr/shared/logger";
 
-import { readFile, walkDir } from "@/core/sandbox/fs";
+import { getOrCreateSession } from "@/core/sandbox/just-bash/session";
 import type { SessionContext } from "@/session";
 import { extractAndSaveDeclarations } from "./query";
 
@@ -41,10 +43,56 @@ export interface ChangedFile {
 }
 
 /**
+ * Recursively walk directory and collect files matching criteria
+ */
+async function walkDirRecursive(
+  agent: AgentFS,
+  dirPath: string,
+  options: { excludeDirs: Set<string>; extensions: Set<string> },
+): Promise<string[]> {
+  const results: string[] = [];
+
+  try {
+    const entries = await agent.fs.readdir(dirPath);
+
+    for (const entry of entries) {
+      const fullPath = dirPath === "/" ? `/${entry}` : `${dirPath}/${entry}`;
+
+      try {
+        const stat = await agent.fs.stat(fullPath);
+
+        if (stat.isDirectory()) {
+          if (!options.excludeDirs.has(entry)) {
+            const subFiles = await walkDirRecursive(agent, fullPath, options);
+            results.push(...subFiles);
+          }
+        } else if (stat.isFile()) {
+          const ext = path.extname(entry);
+          if (options.extensions.has(ext)) {
+            results.push(fullPath);
+          }
+        }
+      } catch {
+        // Skip entries that can't be stat'd
+      }
+    }
+  } catch {
+    // Directory doesn't exist or can't be read
+  }
+
+  return results;
+}
+
+/**
  * Scan workspace for code files using agentfs
  */
-function scanWorkspace(branchId: string): string[] {
-  const files = walkDir(branchId, "/", {
+async function scanWorkspace(
+  branchId: string,
+  projectId: string,
+  versionId: string,
+): Promise<string[]> {
+  const session = await getOrCreateSession({ branchId, projectId, versionId });
+  const files = await walkDirRecursive(session.agent, "/", {
     excludeDirs: EXCLUDED_DIRS,
     extensions: CODE_EXTENSIONS,
   });
@@ -94,7 +142,7 @@ export async function extractDeclarationsFromProject({
         .map((f) => f.path);
     } else {
       logger.info("Scanning project for code files...");
-      filesToProcess = scanWorkspace(branchId);
+      filesToProcess = await scanWorkspace(branchId, project.id, branch.headVersion.id);
     }
 
     logger.info(
@@ -113,20 +161,18 @@ export async function extractDeclarationsFromProject({
       }
     }
 
+    // Get session for reading files
+    const session = await getOrCreateSession({
+      branchId,
+      projectId: project.id,
+      versionId: branch.headVersion.id,
+    });
+
     // Process added/modified files
     for (const filePath of filesToProcess) {
       try {
         const agentfsPath = filePath.startsWith("/") ? filePath : `/${filePath}`;
-        const result = readFile(branchId, agentfsPath);
-
-        if (!result.success) {
-          const errorMsg = `Failed to read ${filePath}: ${result.error}`;
-          logger.warn(errorMsg);
-          errors.push(errorMsg);
-          continue;
-        }
-
-        const sourceCode = result.data ?? "";
+        const sourceCode = await session.agent.fs.readFile(agentfsPath, "utf-8");
 
         await extractAndSaveDeclarations({
           context,

@@ -1,5 +1,5 @@
 import { exec, type ExecOptions } from "@/core/sandbox/exec";
-import { readFile, writeFile } from "@/core/sandbox/fs";
+import { getOrCreateSession } from "@/core/sandbox/just-bash/session";
 import type {
   IntegrationCallbackResult,
   IntegrationPackageSets,
@@ -34,7 +34,7 @@ export async function installPackages(
     };
 
     if (runtimeInstallCommand.length > 0) {
-      const runtimeResult = exec(
+      const runtimeResult = await exec(
         `bun add ${runtimeInstallCommand.join(" ")} --cwd apps/${target}`,
         execOptions,
       );
@@ -50,7 +50,7 @@ export async function installPackages(
     }
 
     if (developmentInstallCommand.length > 0) {
-      const developmentResult = exec(
+      const developmentResult = await exec(
         `bun add -D ${developmentInstallCommand.join(" ")} --cwd apps/${target}`,
         execOptions,
       );
@@ -72,8 +72,15 @@ export async function installPackages(
 export async function updatePackageJsonScripts(
   scriptSets: IntegrationScriptSets,
   sessionId: string,
+  projectId: string,
 ): Promise<IntegrationCallbackResult> {
   try {
+    const session = await getOrCreateSession({
+      branchId: sessionId,
+      projectId,
+      versionId: "packages",
+    });
+
     const results: IntegrationCallbackResult[] = [];
 
     for (const scriptSet of scriptSets) {
@@ -86,17 +93,19 @@ export async function updatePackageJsonScripts(
         devDependencies?: Record<string, string>;
       } = {};
 
-      const readResult = readFile(sessionId, packageJsonPath);
-      if (!readResult.success || readResult.data === undefined) {
+      let fileContent: string;
+      try {
+        fileContent = await session.agent.fs.readFile(packageJsonPath, "utf-8");
+      } catch (error) {
         return {
           success: false,
-          message: `Failed to read package.json: ${readResult.error ?? "Unknown error"}`,
-          errors: [readResult.error ?? "Unknown error"],
+          message: `Failed to read package.json: ${error instanceof Error ? error.message : String(error)}`,
+          errors: [error instanceof Error ? error.message : String(error)],
         };
       }
 
       try {
-        packageJsonContent = JSON.parse(readResult.data);
+        packageJsonContent = JSON.parse(fileContent);
       } catch (error) {
         return {
           success: false,
@@ -112,16 +121,16 @@ export async function updatePackageJsonScripts(
         };
       }
 
-      const writeResult = writeFile(
-        sessionId,
-        packageJsonPath,
-        JSON.stringify(packageJsonContent, null, 2),
-      );
-      if (!writeResult.success) {
+      try {
+        await session.agent.fs.writeFile(
+          packageJsonPath,
+          JSON.stringify(packageJsonContent, null, 2),
+        );
+      } catch (error) {
         return {
           success: false,
-          message: `Failed to write package.json: ${writeResult.error ?? "Unknown error"}`,
-          errors: [writeResult.error ?? "Unknown error"],
+          message: `Failed to write package.json: ${error instanceof Error ? error.message : String(error)}`,
+          errors: [error instanceof Error ? error.message : String(error)],
         };
       }
 
@@ -146,7 +155,7 @@ export async function runBunScript(
   sessionId: string,
   projectId: string,
 ): Promise<IntegrationCallbackResult> {
-  const result = exec(`bun run ${script}`, {
+  const result = await exec(`bun run ${script}`, {
     branchId: sessionId,
     projectId,
   });

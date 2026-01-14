@@ -11,12 +11,16 @@
  * - Clean up actors when they complete/fail
  */
 
+import os from "node:os";
+import path from "node:path";
+
+import { AgentFS } from "agentfs-sdk";
 import { createActor, type AnyActorRef, type ActorRefFrom } from "xstate";
 
 import { Logger } from "@weldr/shared/logger";
 
 import { createEventForwarder } from "@/core/events";
-import { sessionStorage } from "@/core/persistence";
+import { createAgentFSStorage } from "@/core/persistence";
 import { registerChatContext, unregisterChatContext } from "@/core/stream";
 import type { BranchWithVersion, ProjectWithConfig, User } from "@/core/types";
 import { sessionMachine, type SessionMachine } from "./machine";
@@ -25,6 +29,7 @@ type SessionActorRef = ActorRefFrom<SessionMachine>;
 
 export type SessionRegistryEntry = {
   actor: SessionActorRef;
+  agent: AgentFS;
   createdAt: number;
   versionId: string;
   chatId: string;
@@ -47,7 +52,7 @@ class SessionRegistry {
   /**
    * Get an existing session or create a new one.
    * If a session exists and is still active, returns it.
-   * Otherwise, loads state from database and creates a new actor.
+   * Otherwise, opens AgentFS, loads state from SQLite, and creates actor.
    */
   async getOrCreate(options: GetOrCreateOptions): Promise<SessionActorRef> {
     const { versionId, traceId, project, branch, user } = options;
@@ -64,8 +69,15 @@ class SessionRegistry {
       this.cleanupSession(versionId);
     }
 
-    // Load state from database
-    const snapshot = await sessionStorage.loadSessionState(versionId);
+    // Open AgentFS SQLite database
+    const dbPath = path.join(os.homedir(), ".weldr", "db", `${branch.id}.db`);
+    const agent = await AgentFS.open({ path: dbPath });
+
+    // Create storage interface for this version
+    const storage = createAgentFSStorage(agent, versionId);
+
+    // Load workflow state from SQLite
+    const snapshot = await storage.loadSessionState(versionId);
 
     logger.info("Creating new session actor", {
       extra: {
@@ -76,7 +88,7 @@ class SessionRegistry {
       },
     });
 
-    // Create the actor
+    // Create the actor with AgentFS storage
     const actor = createActor(sessionMachine, {
       input: {
         versionId,
@@ -85,6 +97,7 @@ class SessionRegistry {
         branch,
         user,
         restoredSnapshot: snapshot,
+        storage,
       },
     });
 
@@ -123,6 +136,7 @@ class SessionRegistry {
     // Register the session
     this.sessions.set(versionId, {
       actor,
+      agent,
       createdAt: Date.now(),
       versionId,
       chatId,

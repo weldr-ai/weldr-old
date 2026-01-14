@@ -530,7 +530,7 @@ const messages = context.get("messages");
 All file operations and command execution happen inside an **agentfs session**. The agentfs CLI provides:
 
 - **Virtual `/workspace` directory**: All commands see files at `/workspace`, which is a FUSE-mounted overlay
-- **Copy-on-write isolation**: Each branch has its own SQLite database (`~/.agentfs/{branchId}.db`) storing file changes
+- **Copy-on-write isolation**: Each branch has its own SQLite database (`~/.weldr/db/{branchId}.db`) storing file changes
 - **Cloud sync**: Session databases are synced to cloud storage for persistence
 
 ### Command Execution

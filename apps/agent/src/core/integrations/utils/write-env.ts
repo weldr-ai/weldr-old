@@ -11,14 +11,12 @@
  * on the Fly.io machine directly.
  */
 
-import path from "node:path";
-
 import { db, eq } from "@weldr/db";
 import { secrets } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 import type { Integration } from "@weldr/shared/types";
 
-import { createDir, readFile, writeFile } from "@/core/sandbox/fs";
+import { getOrCreateSession } from "@/core/sandbox/just-bash/session";
 import type { SessionContext } from "@/session";
 
 /**
@@ -50,28 +48,36 @@ function parseEnvFile(content: string): Map<string, string> {
 /**
  * Write environment variables to .env file for a specific target (server or web)
  */
-function writeEnvToTarget({
+async function writeEnvToTarget({
   branchId,
+  projectId,
   target,
   envVars,
 }: {
   branchId: string;
+  projectId: string;
   target: "server" | "web";
   envVars: Array<{ key: string; value: string }>;
-}): void {
+}): Promise<void> {
   const envFilePath = `/apps/${target}/.env`;
 
   Logger.info(`Writing ${envVars.length} environment variables to ${target}/.env`);
+
+  // Get or create session for filesystem operations
+  const session = await getOrCreateSession({
+    branchId,
+    projectId,
+    versionId: "env-write",
+  });
 
   let existingContent = "";
   let existingEnvMap = new Map<string, string>();
 
   // Read existing .env file if it exists
-  const readResult = readFile(branchId, envFilePath);
-  if (readResult.success && readResult.data) {
-    existingContent = readResult.data;
+  try {
+    existingContent = await session.agent.fs.readFile(envFilePath, "utf-8");
     existingEnvMap = parseEnvFile(existingContent);
-  } else {
+  } catch {
     Logger.info(`.env file doesn't exist at ${envFilePath}, will create new one`);
   }
 
@@ -106,18 +112,8 @@ function writeEnvToTarget({
 
     finalContent += newLines.join("\n") + "\n";
 
-    // Ensure the directory exists
-    const dirPath = path.dirname(envFilePath);
-    const mkdirResult = createDir(branchId, dirPath);
-    if (!mkdirResult.success) {
-      throw new Error(`Failed to create directory ${dirPath}: ${mkdirResult.error}`);
-    }
-
-    // Write the updated content
-    const writeResult = writeFile(branchId, envFilePath, finalContent);
-    if (!writeResult.success) {
-      throw new Error(`Failed to write ${envFilePath}: ${writeResult.error}`);
-    }
+    // Write the updated content (AgentFS creates parent directories automatically)
+    await session.agent.fs.writeFile(envFilePath, finalContent);
 
     Logger.info(
       `Added ${addedCount} environment variables to ${target}/.env (${skippedCount} skipped)`,
@@ -223,8 +219,9 @@ export async function writeEnvironmentVariables({
   // Write environment variables to each target
   for (const target of targets) {
     try {
-      writeEnvToTarget({
+      await writeEnvToTarget({
         branchId: branch.id,
+        projectId: project.id,
         target,
         envVars: envVarValues,
       });

@@ -42,7 +42,6 @@ import type {
   SessionState,
 } from "@/core/events";
 import { MetricsCollector } from "@/core/metrics";
-import { sessionStorage } from "@/core/persistence";
 import { finalizeSessionActor } from "./actors/finalize-session";
 import { initializeSessionActor } from "./actors/initialize-session";
 import { llmStreamActor } from "./actors/llm-stream";
@@ -176,7 +175,8 @@ const persistStateActor = fromPromise<void, { context: SessionMachineContext }>(
   async ({ input }) => {
     const { context } = input;
 
-    await sessionStorage.saveSessionState({
+    // Use SQLite-backed AgentFS storage
+    await context.storage.saveSessionState({
       versionId: context.versionId,
       sessionState: context.sessionState,
       awaitingUserKind: context.awaitingUserKind,
@@ -184,14 +184,14 @@ const persistStateActor = fromPromise<void, { context: SessionMachineContext }>(
       currentMessageId: context.currentMessageId,
       iterationCount: context.iterationCount,
       pendingSpawnRequests: context.pendingSpawnRequests,
-      assistantContentBuffer: null, // TODO: Serialize if needed
+      assistantContentBuffer: null,
       pausedAt: context.pausedAt ? new Date(context.pausedAt) : null,
       pauseReason: context.pauseReason,
     });
 
-    // Also update version metrics
+    // Also update version metrics in SQLite
     const metrics = context.metrics.getMetrics();
-    await sessionStorage.updateVersionMetrics(context.versionId, {
+    await context.storage.updateVersionMetrics(context.versionId, {
       inputTokens: metrics.agent.llm.inputTokens,
       outputTokens: metrics.agent.llm.outputTokens,
       totalCost: metrics.agent.llm.totalCost,
@@ -436,6 +436,7 @@ export const sessionMachine = setup({
     project: input.project,
     branch: input.branch,
     user: input.user,
+    storage: input.storage,
 
     // Session state (restored or default)
     sessionState: input.restoredSnapshot?.state ?? "idle",
