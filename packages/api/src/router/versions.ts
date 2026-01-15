@@ -294,14 +294,6 @@ export const versionRouter = {
         });
       }
 
-      // Require snapshotPath for revert (same for both local and cloud modes)
-      if (!version.snapshotPath) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Version does not have a snapshot. Cannot revert.",
-        });
-      }
-
       const revertedVersion = await db.transaction(async (tx) => {
         const [revertedVersionChat] = await tx
           .insert(chats)
@@ -338,7 +330,6 @@ export const versionRouter = {
             sequenceNumber: version.sequenceNumber + 1,
             projectId: input.projectId,
             userId: ctx.session.user.id,
-            snapshotPath: version.snapshotPath,
             kind: "revert",
             revertedVersionId: version.id,
             message: `revert: revert to #${version.sequenceNumber} ${version.message}`,
@@ -386,17 +377,17 @@ export const versionRouter = {
         return revertedVersion;
       });
 
-      // Call agent to perform the actual revert (restore snapshot + git commit)
+      // Call agent to perform the actual revert (copy version DB + git commit)
       let commitHash: string | undefined;
       try {
         const result = await callAgentProxy<{
           commitHash: string;
-          snapshotPath: string;
         }>(
           "/revert",
           {
             projectId: input.projectId,
-            versionId: input.versionId,
+            sourceVersionId: input.versionId,
+            targetVersionId: revertedVersion.id,
             branchId: version.branch.id,
           },
           ctx.headers,

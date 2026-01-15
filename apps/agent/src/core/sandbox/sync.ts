@@ -21,10 +21,10 @@ function getCloudStorageConfig(): CloudStorageConfig {
 }
 
 /**
- * Create a storage backend for a project
+ * Create a storage backend
  */
-export function createStorageBackend(projectId: string): StorageBackend {
-  const bucket = `project-${projectId}`;
+export function createStorageBackend(): StorageBackend {
+  const bucket = process.env.S3_BUCKET || "weldr-sandbox";
   return new CloudStorageBackend(bucket, getCloudStorageConfig());
 }
 
@@ -36,9 +36,9 @@ export function createStorageBackend(projectId: string): StorageBackend {
  * Running PRAGMA wal_checkpoint(TRUNCATE) merges the WAL into the main db
  * and truncates the WAL file to zero bytes.
  */
-async function checkpointWal(branchId: string): Promise<void> {
-  const logger = Logger.get({ branchId, component: "sync" });
-  const dbPath = getSessionDbPath(branchId);
+async function checkpointWal(versionId: string): Promise<void> {
+  const logger = Logger.get({ versionId, component: "sync" });
+  const dbPath = getSessionDbPath(versionId);
 
   try {
     const agent = await AgentFS.open({ path: dbPath });
@@ -59,18 +59,19 @@ async function checkpointWal(branchId: string): Promise<void> {
 /**
  * Sync session state to cloud storage.
  * Checkpoints the WAL first to ensure all writes are in the main .db file,
- * then uploads the AgentFS database file (~/.weldr/db/{branchId}.db) to Tigris/S3.
+ * then uploads the AgentFS database file (~/.weldr/db/{versionId}.db) to Tigris/S3.
+ * Each version has its own isolated DB file at versions/{versionId}.db.
  */
 export async function syncToCloud(
-  branchId: string,
+  versionId: string,
   projectId: string,
 ): Promise<{ success: boolean }> {
-  const logger = Logger.get({ branchId, projectId });
+  const logger = Logger.get({ versionId, projectId });
 
   logger.info("Syncing session to cloud storage");
 
   try {
-    const agentfsPath = getSessionDbPath(branchId);
+    const agentfsPath = getSessionDbPath(versionId);
 
     try {
       await fs.access(agentfsPath);
@@ -80,12 +81,12 @@ export async function syncToCloud(
     }
 
     // Checkpoint WAL to merge all writes into the main database file
-    await checkpointWal(branchId);
+    await checkpointWal(versionId);
 
     const agentfsData = await fs.readFile(agentfsPath);
 
-    const backend = createStorageBackend(projectId);
-    await backend.write(`branches/${branchId}.db`, agentfsData);
+    const backend = createStorageBackend();
+    await backend.write(`project-${projectId}/version-${versionId}.db`, agentfsData);
 
     logger.info("Session synced to cloud successfully", {
       extra: { dbSize: agentfsData.length },
@@ -101,29 +102,30 @@ export async function syncToCloud(
 
 /**
  * Sync session state from cloud storage.
- * Downloads the AgentFS database file from Tigris/S3 to ~/.weldr/db/{branchId}.db.
+ * Downloads the AgentFS database file from Tigris/S3 to ~/.weldr/db/{versionId}.db.
+ * Each version has its own isolated DB file at versions/{versionId}.db.
  */
 export async function syncFromCloud(
-  branchId: string,
+  versionId: string,
   projectId: string,
 ): Promise<{ success: boolean; skipped: boolean }> {
-  const logger = Logger.get({ branchId, projectId });
+  const logger = Logger.get({ versionId, projectId });
 
   logger.info("Syncing session from cloud storage");
 
   try {
-    const agentfsPath = getSessionDbPath(branchId);
+    const agentfsPath = getSessionDbPath(versionId);
     const agentfsDir = path.dirname(agentfsPath);
 
     // Ensure ~/.weldr/db directory exists
     await fs.mkdir(agentfsDir, { recursive: true });
 
-    const backend = createStorageBackend(projectId);
-    const cloudPath = `branches/${branchId}.db`;
+    const backend = createStorageBackend();
+    const cloudPath = `project-${projectId}/version-${versionId}.db`;
 
     const exists = await backend.exists(cloudPath);
     if (!exists) {
-      logger.info("No data found in cloud storage for branch");
+      logger.info("No data found in cloud storage for version");
       return { success: true, skipped: true };
     }
 

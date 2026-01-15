@@ -5,7 +5,6 @@ export interface VersionSnapshot {
   versionId: string;
   branchId: string;
   projectId: string;
-  snapshotPath: string;
   commitHash: string | null;
   message: string | null;
   description: string | null;

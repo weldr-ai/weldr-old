@@ -81,7 +81,6 @@ export const versions = pgTable(
   "versions",
   {
     id: text("id").primaryKey().$defaultFn(nanoid),
-
     projectId: text("project_id")
       .references(() => projects.id, { onDelete: "cascade" })
       .notNull(),

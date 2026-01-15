@@ -8,14 +8,13 @@ import { build } from "@/core/build";
 import { Git } from "@/core/git";
 import { persistSessionMetrics } from "@/core/metrics";
 import { extractDeclarationsFromProject } from "@/core/project/declarations";
-import { createSnapshotService, syncToCloud } from "@/core/sandbox";
+import { syncToCloud } from "@/core/sandbox";
 import { stream } from "@/core/stream";
 import { isCloudMode } from "@/core/utils";
 import type { SessionMachineContext } from "@/session/types";
 
 type FinalizeResult = {
   commitHash: string | null;
-  snapshotPath: string | null;
 };
 
 export const finalizeSessionActor = fromPromise<FinalizeResult, { context: SessionMachineContext }>(
@@ -95,15 +94,10 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
         });
     }
 
-    logger.info("Syncing sandbox to cloud storage");
-    await syncToCloud(branch.id, project.id);
+    logger.info("Syncing version to cloud storage");
+    await syncToCloud(branch.headVersion.id, project.id);
 
-    logger.info("Creating sandbox snapshot");
-
-    const snapshotService = createSnapshotService(project.id);
-    const snapshotPath = await snapshotService.createSnapshot(branch.id, branch.headVersion.id);
-
-    logger.info("Snapshot created", { extra: { snapshotPath } });
+    logger.info("Version synced to cloud");
 
     if (isCloudMode()) {
       logger.info("Building version artifact", {
@@ -148,7 +142,6 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
       .set({
         status: "completed",
         commitHash,
-        snapshotPath,
       })
       .where(eq(versions.id, branch.headVersion.id));
 
@@ -158,7 +151,6 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
       ...branch.headVersion,
       status: "completed" as const,
       commitHash,
-      snapshotPath,
     };
 
     await stream(branch.headVersion.chatId, {
@@ -171,6 +163,6 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
 
     logger.info("Finalization completed successfully");
 
-    return { commitHash, snapshotPath };
+    return { commitHash };
   },
 );

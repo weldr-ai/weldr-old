@@ -3,127 +3,103 @@ import { Logger } from "@weldr/shared/logger";
 import type { StorageBackend } from "./types";
 
 /**
- * Service for managing sandbox snapshots (versions/commits)
+ * Service for managing sandbox snapshots (versions)
  *
- * Snapshots are immutable point-in-time copies of a branch's AgentFS database.
- * They are stored in cloud storage and used for:
- * - Version control (each commit creates a snapshot)
- * - Forking branches from historical versions
- * - Reverting to previous versions
+ * Each version has its own isolated AgentFS database file stored in cloud storage.
+ * The path is deterministic: project-{projectId}/version-{versionId}.db
+ *
+ * Used for:
+ * - Forking: copy from source version's DB to target version's DB
+ * - Reverting: copy from a historical version's DB to a new version's DB
+ * - Checking if a version's snapshot exists
  */
 export class SnapshotService {
   private logger = Logger.get({ service: "snapshot" });
 
   constructor(
-    projectId: string,
+    private projectId: string,
     private backend: StorageBackend,
   ) {
     this.logger = Logger.get({ service: "snapshot", projectId });
   }
 
   /**
-   * Get the storage path for a branch's AgentFS database
+   * Get the cloud storage path for a version's DB file.
+   * Each version has its own isolated DB.
+   * Path format: project-{projectId}/version-{versionId}.db
    */
-  getBranchDbPath(branchId: string): string {
-    return `branches/${branchId}.db`;
+  getVersionDbPath(versionId: string): string {
+    return `project-${this.projectId}/version-${versionId}.db`;
   }
 
   /**
-   * Get snapshot path for a version
+   * Fork from a version - creates a new version's DB from an existing version's DB
    */
-  getSnapshotPath(versionId: string): string {
-    return `snapshots/${versionId}.db`;
-  }
-
-  /**
-   * Create a snapshot of the current branch state
-   * This copies the AgentFS database to the snapshots directory
-   */
-  async createSnapshot(branchId: string, versionId: string): Promise<string> {
-    const branchDbPath = this.getBranchDbPath(branchId);
-    const snapshotPath = this.getSnapshotPath(versionId);
-
-    this.logger.info("Creating snapshot", {
-      extra: { branchId, versionId, snapshotPath },
-    });
-
-    await this.backend.copy(branchDbPath, snapshotPath);
-
-    this.logger.info("Snapshot created", {
-      extra: { branchId, versionId, snapshotPath },
-    });
-
-    return snapshotPath;
-  }
-
-  /**
-   * Fork from a version - creates a new branch from a historical snapshot
-   */
-  async forkFromVersion(sourceVersionId: string, targetBranchId: string): Promise<string> {
-    const snapshotPath = this.getSnapshotPath(sourceVersionId);
-    const targetBranchDbPath = this.getBranchDbPath(targetBranchId);
+  async forkFromVersion(sourceVersionId: string, targetVersionId: string): Promise<string> {
+    const sourcePath = this.getVersionDbPath(sourceVersionId);
+    const targetPath = this.getVersionDbPath(targetVersionId);
 
     this.logger.info("Forking from version", {
-      extra: { sourceVersionId, targetBranchId },
+      extra: { sourceVersionId, targetVersionId },
     });
 
-    const exists = await this.backend.exists(snapshotPath);
+    const exists = await this.backend.exists(sourcePath);
     if (!exists) {
-      throw new Error(`Snapshot not found for version: ${sourceVersionId}`);
+      throw new Error(`Version DB not found: ${sourceVersionId}`);
     }
 
-    await this.backend.copy(snapshotPath, targetBranchDbPath);
+    await this.backend.copy(sourcePath, targetPath);
 
     this.logger.info("Fork completed", {
-      extra: { sourceVersionId, targetBranchId },
+      extra: { sourceVersionId, targetVersionId },
     });
 
-    return targetBranchDbPath;
+    return targetPath;
   }
 
   /**
-   * Restore a branch to a previous version's snapshot
+   * Copy a version's DB to another version (used for revert operations)
    */
-  async restoreSnapshot(versionId: string, branchId: string): Promise<void> {
-    const snapshotPath = this.getSnapshotPath(versionId);
-    const branchDbPath = this.getBranchDbPath(branchId);
+  async copyVersion(sourceVersionId: string, targetVersionId: string): Promise<void> {
+    const sourcePath = this.getVersionDbPath(sourceVersionId);
+    const targetPath = this.getVersionDbPath(targetVersionId);
 
-    this.logger.info("Restoring snapshot", {
-      extra: { versionId, branchId },
+    this.logger.info("Copying version", {
+      extra: { sourceVersionId, targetVersionId },
     });
 
-    const exists = await this.backend.exists(snapshotPath);
+    const exists = await this.backend.exists(sourcePath);
     if (!exists) {
-      throw new Error(`Snapshot not found for version: ${versionId}`);
+      throw new Error(`Version DB not found: ${sourceVersionId}`);
     }
 
-    await this.backend.copy(snapshotPath, branchDbPath);
+    await this.backend.copy(sourcePath, targetPath);
 
-    this.logger.info("Snapshot restored", {
-      extra: { versionId, branchId },
+    this.logger.info("Version copied", {
+      extra: { sourceVersionId, targetVersionId },
     });
   }
 
   /**
-   * List all snapshots for a project
+   * List all version DBs for a project
    */
-  async listSnapshots(): Promise<string[]> {
-    return this.backend.list("snapshots/");
+  async listVersions(): Promise<string[]> {
+    return this.backend.list(`project-${this.projectId}/version-`);
   }
 
   /**
-   * Delete a snapshot
+   * Delete a version's DB
    */
-  async deleteSnapshot(versionId: string): Promise<void> {
-    const snapshotPath = this.getSnapshotPath(versionId);
-    await this.backend.delete(snapshotPath);
+  async deleteVersion(versionId: string): Promise<void> {
+    const versionPath = this.getVersionDbPath(versionId);
+    await this.backend.delete(versionPath);
   }
 
   /**
-   * Check if a snapshot exists
+   * Check if a version's DB exists in cloud storage
    */
-  async snapshotExists(versionId: string): Promise<boolean> {
-    const snapshotPath = this.getSnapshotPath(versionId);
-    return this.backend.exists(snapshotPath);
+  async versionExists(versionId: string): Promise<boolean> {
+    const versionPath = this.getVersionDbPath(versionId);
+    return this.backend.exists(versionPath);
   }
 }

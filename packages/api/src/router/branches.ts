@@ -44,14 +44,6 @@ export const branchRouter = {
         });
       }
 
-      // Require snapshotPath for forking (same for both local and cloud modes)
-      if (!forkedVersion.snapshotPath) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Source version does not have a snapshot",
-        });
-      }
-
       const existingBranch = await ctx.db.query.branches.findFirst({
         where: and(eq(branches.projectId, input.projectId), eq(branches.name, input.name)),
       });

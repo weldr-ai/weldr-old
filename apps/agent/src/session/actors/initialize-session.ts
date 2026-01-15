@@ -12,7 +12,7 @@ import {
   spawnAgentsTool,
 } from "@/ai/tools";
 import { stream } from "@/core/stream";
-import { ensureBranchSession } from "@/session/branch-state";
+import { ensureVersionSession } from "@/session/branch-state";
 import type { SessionMachineContext } from "@/session/types";
 
 const buildToolSet = async (context: SessionMachineContext): Promise<ToolSet> => {
@@ -52,7 +52,12 @@ export const initializeSessionActor = fromPromise<
 
   logger.info("Initializing session - ensuring agentfs session exists");
 
-  const result = await ensureBranchSession(branch.id, project.id);
+  const result = await ensureVersionSession(
+    branch.headVersion.id,
+    project.id,
+    branch.id,
+    branch.headVersion.parentVersionId,
+  );
 
   logger.info("AgentFS session ready", { extra: { status: result.status } });
 

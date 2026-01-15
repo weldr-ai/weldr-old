@@ -12,7 +12,7 @@ import { routes } from "./http/routes";
 import { configureOpenAPI, createRouter } from "./http/utils";
 import { recoverSessions, sessionRegistry } from "./session";
 
-const app = createRouter();
+export const app = createRouter();
 
 app
   .use(requestId())
@@ -77,18 +77,21 @@ async function gracefulShutdown(signal: string) {
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 
-serve(
-  {
-    fetch: app.fetch,
-    port,
-  },
-  async (info) => {
-    Logger.info(`Server is running on http://localhost:${info.port}`);
+// Only start server when run directly (not when imported by tests)
+if (import.meta.main) {
+  serve(
+    {
+      fetch: app.fetch,
+      port,
+    },
+    async (info) => {
+      Logger.info(`Server is running on http://localhost:${info.port}`);
 
-    // Initialize Durable Streams server
-    await initDurableStreams();
+      // Initialize Durable Streams server
+      await initDurableStreams();
 
-    await recoverSessions();
-    await recoverEnrichingJobs();
-  },
-);
+      await recoverSessions();
+      await recoverEnrichingJobs();
+    },
+  );
+}

@@ -2,7 +2,7 @@
  * AgentFS Session Management & Command Execution
  *
  * Session initialization, existence checks, and command execution using AgentFS SDK + just-bash.
- * Databases are stored in ~/.weldr/db/{branchId}.db
+ * Databases are stored in ~/.weldr/db/{versionId}.db - each version has its own isolated DB.
  */
 
 import { existsSync, mkdirSync } from "node:fs";
@@ -29,18 +29,19 @@ export interface ExecOptions {
 }
 
 /**
- * Get the path to the AgentFS database for a branch.
+ * Get the path to the AgentFS database for a version.
+ * Each version has its own isolated DB file.
  */
-export function getSessionDbPath(branchId: string): string {
-  return path.join(WELDR_DB_DIR, `${branchId}.db`);
+export function getSessionDbPath(versionId: string): string {
+  return path.join(WELDR_DB_DIR, `${versionId}.db`);
 }
 
 /**
- * Initialize an AgentFS session for a branch.
- * Creates the ~/.weldr/db/{branchId}.db database if it doesn't exist.
+ * Initialize an AgentFS session for a version.
+ * Creates the ~/.weldr/db/{versionId}.db database if it doesn't exist.
  */
-export async function initSession(branchId: string): Promise<void> {
-  const logger = Logger.get({ component: "sandbox", branchId });
+export async function initSession(versionId: string): Promise<void> {
+  const logger = Logger.get({ component: "sandbox", versionId });
 
   logger.info("Initializing AgentFS session");
 
@@ -49,7 +50,7 @@ export async function initSession(branchId: string): Promise<void> {
     mkdirSync(WELDR_DB_DIR, { recursive: true });
   }
 
-  const dbPath = getSessionDbPath(branchId);
+  const dbPath = getSessionDbPath(versionId);
 
   // Open (creates if doesn't exist) and close to initialize the database
   const agent = await AgentFS.open({ path: dbPath });
@@ -59,10 +60,10 @@ export async function initSession(branchId: string): Promise<void> {
 }
 
 /**
- * Check if an AgentFS session exists for a branch.
+ * Check if an AgentFS session exists for a version.
  */
-export function sessionExists(branchId: string): boolean {
-  return existsSync(getSessionDbPath(branchId));
+export function sessionExists(versionId: string): boolean {
+  return existsSync(getSessionDbPath(versionId));
 }
 
 /**

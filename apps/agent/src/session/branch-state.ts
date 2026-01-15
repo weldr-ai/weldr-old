@@ -1,5 +1,3 @@
-import { db, eq } from "@weldr/db";
-import { branches, versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
 import { Git } from "@/core/git";
@@ -7,64 +5,53 @@ import { createSnapshotService, syncFromCloud } from "@/core/sandbox";
 import { initSession, sessionExists } from "@/core/sandbox/exec";
 
 /**
- * Ensure agentfs session exists for the branch.
- * Always syncs with cloud storage to ensure latest state.
+ * Ensure agentfs session exists for a version.
+ * Each version has its own isolated DB file.
  *
- * - Files are stored in the AgentFS SQLite database (~/.weldr/db/{branchId}.db)
+ * - Files are stored in the AgentFS SQLite database (~/.weldr/db/{versionId}.db)
  * - All commands run through just-bash with the AgentFS virtual filesystem
  */
-export async function ensureBranchSession(
-  branchId: string,
+export async function ensureVersionSession(
+  versionId: string,
   projectId: string,
+  branchId: string,
+  parentVersionId?: string | null,
 ): Promise<{
   status: "created" | "reused" | "forked";
 }> {
-  const logger = Logger.get({ branchId, projectId });
+  const logger = Logger.get({ versionId, projectId, branchId });
 
-  logger.info("Ensuring agentfs session exists");
+  logger.info("Ensuring agentfs session exists for version");
 
-  const branch = await db.query.branches.findFirst({
-    where: eq(branches.id, branchId),
-    columns: {
-      id: true,
-      name: true,
-      isMain: true,
-      forkedFromVersionId: true,
-    },
-  });
-
-  if (!branch) {
-    throw new Error(`Branch not found: ${branchId}`);
-  }
-
-  // Check if agentfs session already exists
-  const hasSession = sessionExists(branchId);
+  // Check if agentfs session already exists locally
+  const hasSession = sessionExists(versionId);
 
   if (hasSession) {
-    logger.info("AgentFS session already exists", { extra: { branchId } });
+    logger.info("AgentFS session already exists", { extra: { versionId } });
 
     // Sync from cloud to get latest state
-    const syncResult = await syncFromCloud(branchId, projectId);
+    const syncResult = await syncFromCloud(versionId, projectId);
 
     if (!syncResult.success) {
-      logger.warn("Failed to sync existing branch from cloud, using local copy");
+      logger.warn("Failed to sync existing version from cloud, using local copy");
     }
 
     return { status: "reused" };
   }
 
-  if (branch.forkedFromVersionId && !branch.isMain) {
-    logger.info("Creating branch from fork point", {
-      extra: { forkedFromVersionId: branch.forkedFromVersionId },
+  // If we have a parent version, fork from it
+  if (parentVersionId) {
+    logger.info("Creating version from parent", {
+      extra: { parentVersionId },
     });
 
-    return await createBranchFromFork(projectId, branchId, branch.forkedFromVersionId);
+    return await createVersionFromParent(projectId, branchId, versionId, parentVersionId);
   }
 
-  logger.info("Initializing branch session");
+  logger.info("Initializing new version session");
 
-  // Try to sync from cloud first
-  const syncResult = await syncFromCloud(branchId, projectId);
+  // Try to sync from cloud first (in case session exists in cloud but not locally)
+  const syncResult = await syncFromCloud(versionId, projectId);
 
   if (syncResult.skipped || !syncResult.success) {
     if (!syncResult.success) {
@@ -72,7 +59,7 @@ export async function ensureBranchSession(
     }
     // Initialize a new agentfs session
     try {
-      await initSession(branchId);
+      await initSession(versionId);
     } catch (error) {
       logger.error("Failed to initialize agentfs session", {
         error: error instanceof Error ? error.message : String(error),
@@ -90,75 +77,61 @@ export async function ensureBranchSession(
 }
 
 /**
- * Create a branch from a version fork point.
- * Uses sandbox snapshot to restore files from the forked version.
+ * Create a new version from a parent version.
+ * Copies the parent version's DB to the new version's DB.
  *
  * With the AgentFS SDK architecture:
- * - The snapshot is copied in cloud storage
- * - The database is downloaded locally to ~/.weldr/db/{branchId}.db
+ * - The parent version's DB is copied to the new version's path in cloud storage
+ * - The database is downloaded locally to ~/.weldr/db/{versionId}.db
  * - Files are accessed through the AgentFS SDK virtual filesystem
  */
-async function createBranchFromFork(
+async function createVersionFromParent(
   projectId: string,
   branchId: string,
-  forkedFromVersionId: string,
+  versionId: string,
+  parentVersionId: string,
 ): Promise<{
   status: "forked";
 }> {
-  const logger = Logger.get({ branchId, forkedFromVersionId });
+  const logger = Logger.get({ versionId, parentVersionId });
 
-  const forkedVersion = await db.query.versions.findFirst({
-    where: eq(versions.id, forkedFromVersionId),
-    columns: {
-      commitHash: true,
-      snapshotPath: true,
-    },
-  });
+  const snapshotService = createSnapshotService(projectId);
 
-  if (!forkedVersion) {
-    throw new Error(`Forked version not found: ${forkedFromVersionId}`);
-  }
+  try {
+    // Check if parent version exists in cloud storage
+    const parentExists = await snapshotService.versionExists(parentVersionId);
 
-  if (forkedVersion.snapshotPath) {
-    logger.info("Restoring from sandbox snapshot", {
-      extra: { snapshotPath: forkedVersion.snapshotPath },
-    });
-
-    const snapshotService = createSnapshotService(projectId);
-
-    try {
-      await snapshotService.forkFromVersion(forkedFromVersionId, branchId);
-
-      const syncResult = await syncFromCloud(branchId, projectId);
-
-      if (!syncResult.success) {
-        throw new Error("Failed to sync forked branch from cloud");
-      }
-
-      logger.info("Branch forked from snapshot successfully");
-    } catch (error) {
-      logger.warn("Failed to restore from snapshot, initializing empty session", {
-        extra: {
-          error: error instanceof Error ? error.message : String(error),
-        },
+    if (parentExists) {
+      logger.info("Copying from parent version", {
+        extra: { parentVersionId },
       });
 
-      // Initialize a new agentfs session as fallback
-      try {
-        await initSession(branchId);
-      } catch (initError) {
-        logger.error("Failed to initialize agentfs session", {
-          error: initError instanceof Error ? initError.message : String(initError),
-        });
+      await snapshotService.forkFromVersion(parentVersionId, versionId);
+
+      const syncResult = await syncFromCloud(versionId, projectId);
+
+      if (!syncResult.success) {
+        throw new Error("Failed to sync new version from cloud");
       }
+
+      logger.info("Version created from parent successfully");
+    } else {
+      logger.info("Parent version not found in cloud, initializing empty session");
+      await initSession(versionId);
     }
-  } else {
-    logger.info("No snapshot available, initializing empty session");
-    try {
-      await initSession(branchId);
-    } catch (error) {
-      logger.error("Failed to initialize agentfs session", {
+  } catch (error) {
+    logger.warn("Failed to copy from parent version, initializing empty session", {
+      extra: {
         error: error instanceof Error ? error.message : String(error),
+      },
+    });
+
+    // Initialize a new agentfs session as fallback
+    try {
+      await initSession(versionId);
+    } catch (initError) {
+      logger.error("Failed to initialize agentfs session", {
+        error: initError instanceof Error ? initError.message : String(initError),
       });
     }
   }
@@ -169,7 +142,7 @@ async function createBranchFromFork(
     await Git.initRepository(projectId, branchId);
   }
 
-  logger.info("Branch forked successfully", { extra: { forkedFromVersionId } });
+  logger.info("Version forked successfully", { extra: { parentVersionId } });
 
   return { status: "forked" };
 }
