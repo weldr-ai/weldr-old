@@ -6,7 +6,6 @@ import { Logger } from "@weldr/shared/logger";
 
 import { build } from "@/core/build";
 import { Git } from "@/core/git";
-import { persistSessionMetrics } from "@/core/metrics";
 import { extractDeclarationsFromProject } from "@/core/project/declarations";
 import { stream } from "@/core/stream";
 import { isCloudMode } from "@/core/utils";
@@ -131,33 +130,27 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
       }
     }
 
-    // Persist session metrics (cost, tokens, iterations, duration)
+    // Persist session metrics and commit hash in a single atomic update
     const metrics = input.context.metrics.getMetrics();
-    await persistSessionMetrics({
-      snapshotId,
-      metrics,
-    });
+    await db
+      .update(snapshots)
+      .set({
+        inputTokens: metrics.agent.llm.inputTokens,
+        outputTokens: metrics.agent.llm.outputTokens,
+        totalCost: metrics.agent.llm.totalCost,
+        ...(commitHash ? { commitSha: commitHash } : {}),
+      })
+      .where(eq(snapshots.id, snapshotId));
 
-    logger.info("Session metrics persisted", {
+    logger.info("Snapshot updated with metrics and commit hash", {
       extra: {
         totalCost: metrics.agent.llm.totalCost,
         inputTokens: metrics.agent.llm.inputTokens,
         outputTokens: metrics.agent.llm.outputTokens,
         iterations: metrics.agent.iterations,
+        commitHash,
       },
     });
-
-    // Update snapshot with commit hash
-    if (commitHash) {
-      await db
-        .update(snapshots)
-        .set({
-          commitSha: commitHash,
-        })
-        .where(eq(snapshots.id, snapshotId));
-    }
-
-    logger.info("Snapshot updated");
 
     await stream(chatId, {
       type: "update_branch",

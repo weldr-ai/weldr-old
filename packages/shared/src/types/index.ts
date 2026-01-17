@@ -131,6 +131,7 @@ export type IntegrationStreamableValue = {
 export type SSEConnectionEvent = {
   type: "connected";
   streamId: string;
+  offset?: string;
 };
 
 export type SSEErrorEvent = {
@@ -160,12 +161,19 @@ export type SSEEvent = SSEValue & {
   id: string;
 };
 
-// Trigger API response type
+// Trigger API response type (legacy - kept for backwards compatibility)
 export type TriggerWorkflowResponse = {
   success: boolean;
   streamId: string;
   runId: string;
   message?: string;
+};
+
+// Session API response type
+export type SessionResponse = {
+  success: boolean;
+  chatId?: string;
+  error?: string;
 };
 
 export type IntegrationCategory = z.infer<typeof integrationCategorySchema>;

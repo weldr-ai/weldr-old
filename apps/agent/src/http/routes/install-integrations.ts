@@ -121,7 +121,7 @@ router.openapi(route, async (c) => {
       logger.error("No active snapshot found", {
         extra: { projectId },
       });
-      return c.json({ success: false }, 500);
+      return c.json({ success: false, error: "No active snapshot found for branch" }, 500);
     }
 
     const installedCategories = await getInstalledCategories(branch.snapshot.id);
@@ -186,7 +186,7 @@ router.openapi(route, async (c) => {
       extra: { error: errorMessage },
     });
 
-    return c.json({ success: false }, 500);
+    return c.json({ success: false, error: errorMessage }, 500);
   }
 });
 

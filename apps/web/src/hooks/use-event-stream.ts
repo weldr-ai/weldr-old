@@ -94,7 +94,13 @@ export function useEventStream({
         if (chunk.type === "connected") {
           reconnectAttempts.current = 0;
           isConnectingRef.current = false;
-          console.log(`[SSE] Connected to stream for project ${projectId}`);
+          // Track the stream offset for resumption
+          if (chunk.offset) {
+            streamOffsetRef.current = chunk.offset;
+          }
+          console.log(
+            `[SSE] Connected to stream for project ${projectId}, offset: ${chunk.offset}`,
+          );
           return;
         }
 

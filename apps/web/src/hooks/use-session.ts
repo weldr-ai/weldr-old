@@ -1,6 +1,6 @@
 import { useCallback, useRef } from "react";
 
-import type { TriggerWorkflowResponse, TStatus, UserMessage } from "@weldr/shared/types";
+import type { SessionResponse, TStatus, UserMessage } from "@weldr/shared/types";
 
 interface UseSessionOptions {
   projectId: string;
@@ -48,7 +48,7 @@ export function useSession({
           throw new Error("Failed to start session");
         }
 
-        const result: TriggerWorkflowResponse = await response.json();
+        const result: SessionResponse = await response.json();
         return result;
       } catch (error) {
         console.error("Failed to start session:", error);

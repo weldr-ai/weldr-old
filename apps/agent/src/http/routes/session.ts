@@ -3,6 +3,7 @@ import type { UserContent } from "ai";
 
 import { and, db, desc, eq } from "@weldr/db";
 import { branches, chats, projects } from "@weldr/db/schema";
+import { Logger } from "@weldr/shared/logger";
 import { nanoid } from "@weldr/shared/nanoid";
 
 import { insertMessages } from "@/ai/messages";
@@ -73,6 +74,16 @@ const route = createRoute({
     404: {
       description: "Not found",
     },
+    500: {
+      description: "Internal server error",
+      content: {
+        "application/json": {
+          schema: z.object({
+            error: z.string(),
+          }),
+        },
+      },
+    },
   },
 });
 
@@ -80,6 +91,7 @@ const router = createRouter();
 
 router.openapi(route, async (c) => {
   const { projectId, branchId, chatId: providedChatId, message } = c.req.valid("json");
+  const logger = Logger.get({ projectId, branchId });
 
   const session = await auth.api.getSession({
     headers: c.req.raw.headers,
@@ -171,19 +183,26 @@ router.openapi(route, async (c) => {
 
   // Insert the user message
   if (message && activeChat) {
-    await insertMessages({
-      input: {
-        chatId: activeChat.id,
-        userId: session.user.id,
-        messages: [
-          {
-            role: "user" as const,
-            content: message.content,
-            attachmentIds: message.attachmentIds,
-          },
-        ],
-      },
-    });
+    try {
+      await insertMessages({
+        input: {
+          chatId: activeChat.id,
+          userId: session.user.id,
+          messages: [
+            {
+              role: "user" as const,
+              content: message.content,
+              attachmentIds: message.attachmentIds,
+            },
+          ],
+        },
+      });
+    } catch (error) {
+      logger.error("Failed to insert user message", {
+        extra: { chatId: activeChat.id, error: error instanceof Error ? error.message : error },
+      });
+      return c.json({ error: "Failed to save message" }, 500);
+    }
   }
 
   // Get or create session actor using the registry

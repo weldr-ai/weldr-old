@@ -37,6 +37,10 @@ export async function GET(
       return NextResponse.json({ error: "Branch not found" }, { status: 404 });
     }
 
+    if (!branch.snapshotId) {
+      return NextResponse.json({ error: "Branch has no active snapshot" }, { status: 404 });
+    }
+
     if (!isLocalMode()) {
       const appName = `project-development-${projectId}`;
 
@@ -68,7 +72,7 @@ export async function GET(
     // Build the stream URL with offset parameter for Durable Streams resumption
     const { searchParams } = new URL(request.url);
     const offset = searchParams.get("offset");
-    const streamUrl = new URL(`${url}/stream/${projectId}/${branchId}`);
+    const streamUrl = new URL(`${url}/stream/${projectId}/${branch.snapshotId}`);
     if (offset) {
       streamUrl.searchParams.set("offset", offset);
     }

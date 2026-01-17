@@ -211,12 +211,13 @@ router.openapi(route, async (c) => {
     const bodyStream = result.bodyStream();
     const sseStream = bodyStream.pipeThrough(createSSETransformStream());
 
-    // Send initial connection event
+    // Send initial connection event with offset for resumption
     const encoder = new TextEncoder();
     const connectedEvent = `data: ${JSON.stringify({
       id: nanoid(),
       type: "connected",
       streamId,
+      offset: result.offset,
     })}\n\n`;
 
     // Create a stream that sends the connected event first, then pipes the durable stream

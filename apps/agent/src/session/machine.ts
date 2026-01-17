@@ -310,11 +310,12 @@ export const sessionMachine = setup({
       iterationStartedAt: () => Date.now(),
     }),
 
+    recordIterationMetric: ({ context }) => {
+      context.metrics.recordIteration();
+    },
+
     incrementIteration: assign({
-      iterationCount: ({ context }) => {
-        context.metrics.recordIteration();
-        return context.iterationCount + 1;
-      },
+      iterationCount: ({ context }) => context.iterationCount + 1,
     }),
 
     recordLLMUsage: assign({
@@ -490,6 +491,12 @@ export const sessionMachine = setup({
           guard: "isRestoredToAwaitingUser",
         },
         {
+          // If session was processing, restore to awaitingUser to let user re-trigger
+          // This is safer than resuming mid-processing with potentially inconsistent state
+          target: "awaitingUser",
+          guard: "isRestoredToProcessing",
+        },
+        {
           target: "idle",
         },
       ],
@@ -576,6 +583,7 @@ export const sessionMachine = setup({
                 assign({
                   messages: ({ event }) => event.output,
                 }),
+                "recordIterationMetric",
                 "incrementIteration",
                 "emitIterationStarted",
               ],
@@ -802,11 +810,32 @@ export const sessionMachine = setup({
                 target: "#session.finalizing",
               },
             ],
-            onError: {
-              // Non-fatal, continue anyway
-              target: "cooldown",
-              guard: "shouldContinueLoop",
-            },
+            onError: [
+              {
+                // Non-fatal if continuing loop
+                target: "cooldown",
+                guard: "shouldContinueLoop",
+              },
+              {
+                // If needs user input, go there despite persist error
+                target: "#session.awaitingUser",
+                guard: "needsUserInput",
+                actions: [
+                  {
+                    type: "setSessionState",
+                    params: { state: "awaitingUser" as const },
+                  },
+                  {
+                    type: "setAwaitingUserKind",
+                    params: { kind: "message" as const },
+                  },
+                ],
+              },
+              {
+                // Fallback: finalize session
+                target: "#session.finalizing",
+              },
+            ],
           },
         },
 
@@ -825,11 +854,21 @@ export const sessionMachine = setup({
 
     // Waiting for user input
     awaitingUser: {
-      entry: [
-        "emitSessionAwaitingUser",
-        // Persist state so we can resume later
-        // This is fire-and-forget
-      ],
+      initial: "persisting",
+      states: {
+        persisting: {
+          invoke: {
+            src: "persistState",
+            input: ({ context }) => ({ context }),
+            onDone: { target: "waiting" },
+            onError: { target: "waiting" }, // Non-fatal, continue to waiting
+          },
+        },
+        waiting: {
+          entry: ["emitSessionAwaitingUser"],
+        },
+      },
+      // Handle user events at parent level so they work even while persisting
       on: {
         "_user.message": {
           target: "processing",

@@ -22,7 +22,7 @@ export const branches = pgTable(
     name: text("name").notNull(),
 
     // Current snapshot this branch points to
-    snapshotId: text("snapshot_id").references(() => snapshots.id),
+    snapshotId: text("snapshot_id").references(() => snapshots.id, { onDelete: "set null" }),
 
     // Audit
     createdBy: text("created_by").references(() => users.id),
