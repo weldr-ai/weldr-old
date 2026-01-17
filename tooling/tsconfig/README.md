@@ -1,6 +1,6 @@
-# @sada/tsconfig
+# @weldr/tsconfig
 
-Shared TypeScript configuration presets for the Sada monorepo.
+Shared TypeScript configuration presets for the Weldr monorepo.
 
 ## 🎯 Purpose
 
@@ -14,7 +14,7 @@ Base TypeScript configuration with strict settings. Suitable for most packages.
 
 ```json
 {
-  "extends": "@sada/tsconfig/base.json"
+  "extends": "@weldr/tsconfig/base.json"
 }
 ```
 
@@ -32,7 +32,7 @@ Configuration optimized for Bun runtime applications.
 
 ```json
 {
-  "extends": "@sada/tsconfig/bun.json"
+  "extends": "@weldr/tsconfig/bun.json"
 }
 ```
 
@@ -49,7 +49,7 @@ Configuration for React library packages.
 
 ```json
 {
-  "extends": "@sada/tsconfig/react-library.json"
+  "extends": "@weldr/tsconfig/react-library.json"
 }
 ```
 
@@ -65,7 +65,7 @@ Configuration for TanStack Start applications.
 
 ```json
 {
-  "extends": "@sada/tsconfig/tanstack-start.json"
+  "extends": "@weldr/tsconfig/tanstack-start.json"
 }
 ```
 
@@ -82,7 +82,7 @@ Configuration for TanStack Start applications.
 ```json
 {
   "devDependencies": {
-    "@sada/tsconfig": "workspace:*"
+    "@weldr/tsconfig": "workspace:*"
   }
 }
 ```
@@ -91,7 +91,7 @@ Configuration for TanStack Start applications.
 
 ```json
 {
-  "extends": "@sada/tsconfig/base.json",
+  "extends": "@weldr/tsconfig/base.json",
   "compilerOptions": {
     // Override or add options as needed
   },

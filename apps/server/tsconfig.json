@@ -1,0 +1,17 @@
+{
+  "extends": "@weldr/tsconfig/bun.json",
+  "compilerOptions": {
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../../packages/api_v2"
+    }
+  ]
+}
