@@ -13,6 +13,7 @@ import { getOrCreateWorkspace } from "@/core/workspace/just-bash/session";
 import { type ExtractedSpecs, extractSpecsFromCode, type SpecType } from "./extract-specs";
 
 export interface EnrichingJobData {
+  userId: string;
   declarationId: string;
   codeMetadata: DeclarationCodeMetadata;
   filePath: string;
@@ -149,6 +150,7 @@ export async function recoverEnrichingJobs(): Promise<void> {
 
             if (codeMetadata && declaration.path) {
               jobQueue.push({
+                userId: project.userId,
                 declarationId: declaration.id,
                 codeMetadata,
                 filePath: declaration.path,
@@ -191,6 +193,7 @@ export async function recoverEnrichingJobs(): Promise<void> {
  */
 async function createCanvasNodeForDeclaration(
   projectId: string,
+  userId: string,
   declarationId: string,
   specType: SpecType,
   logger: ReturnType<typeof Logger.get>,
@@ -209,6 +212,7 @@ async function createCanvasNodeForDeclaration(
         .insert(nodes)
         .values({
           projectId,
+          userId,
           position,
         })
         .returning();
@@ -312,6 +316,7 @@ async function enrichDeclarationJob(jobData: EnrichingJobData): Promise<void> {
       const specType = specs.type as SpecType;
       const node = await createCanvasNodeForDeclaration(
         jobData.projectId,
+        jobData.userId,
         jobData.declarationId,
         specType,
         logger,

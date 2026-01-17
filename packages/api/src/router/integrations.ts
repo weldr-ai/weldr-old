@@ -2,7 +2,6 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { db } from "@weldr/db";
 import {
   branches,
   environmentVariables,
@@ -10,6 +9,7 @@ import {
   integrationInstallations,
   integrations,
   integrationTemplates,
+  projects,
 } from "@weldr/db/schema";
 import {
   createBatchIntegrationsSchema,
@@ -32,7 +32,7 @@ export const integrationsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await db.transaction(async (tx) => {
+      await ctx.db.transaction(async (tx) => {
         const snapshot = await tx.query.snapshots.findFirst({
           where: (snapshots, { eq }) =>
             and(eq(snapshots.id, input.snapshotId), eq(snapshots.createdBy, ctx.session.user.id)),
@@ -101,8 +101,20 @@ export const integrationsRouter = createTRPCRouter({
       return { success: true };
     }),
   create: protectedProcedure.input(createIntegrationSchema).mutation(async ({ ctx, input }) => {
-    await db.transaction(async (tx) => {
+    await ctx.db.transaction(async (tx) => {
       const { name, projectId, integrationTemplateId, environmentVariableMappings } = input;
+
+      const project = await tx.query.projects.findFirst({
+        where: and(eq(projects.id, projectId), eq(projects.userId, ctx.session.user.id)),
+        columns: { id: true },
+      });
+
+      if (!project) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Project not found",
+        });
+      }
 
       const doesIntegrationExist = await tx.query.integrations.findFirst({
         where: and(
@@ -232,7 +244,7 @@ export const integrationsRouter = createTRPCRouter({
     }
   }),
   byId: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
-    const integration = await db.query.integrations.findFirst({
+    const integration = await ctx.db.query.integrations.findFirst({
       where: and(eq(integrations.id, input.id), eq(integrations.userId, ctx.session.user.id)),
       columns: {
         id: true,
@@ -274,11 +286,9 @@ export const integrationsRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const { projectId } = input;
-
-      const items = await db.query.integrations.findMany({
+      const items = await ctx.db.query.integrations.findMany({
         where: and(
-          eq(integrations.projectId, projectId),
+          eq(integrations.projectId, input.projectId),
           eq(integrations.userId, ctx.session.user.id),
         ),
         columns: {
@@ -309,7 +319,7 @@ export const integrationsRouter = createTRPCRouter({
       return items;
     }),
   update: protectedProcedure.input(updateIntegrationSchema).mutation(async ({ ctx, input }) => {
-    await db.transaction(async (tx) => {
+    await ctx.db.transaction(async (tx) => {
       const existingIntegration = await tx.query.integrations.findFirst({
         where: and(
           eq(integrations.id, input.where.id),
@@ -381,10 +391,21 @@ export const integrationsRouter = createTRPCRouter({
   createBatch: protectedProcedure
     .input(createBatchIntegrationsSchema)
     .mutation(async ({ ctx, input }) => {
-      const createdIntegrations = await db.transaction(async (tx) => {
+      const createdIntegrations = await ctx.db.transaction(async (tx) => {
         const results = [];
 
-        // Get branch and snapshot once if branchId is provided
+        const project = await tx.query.projects.findFirst({
+          where: and(eq(projects.id, input.projectId), eq(projects.userId, ctx.session.user.id)),
+          columns: { id: true },
+        });
+
+        if (!project) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Project not found",
+          });
+        }
+
         let snapshotId: string | null = null;
         if (input.branchId) {
           const branch = await tx.query.branches.findFirst({
@@ -447,7 +468,6 @@ export const integrationsRouter = createTRPCRouter({
             });
           }
 
-          // Create environment variable mappings
           const integrationVariables = (integrationTemplate.variables ?? []).map((v) => v.name);
 
           for (const mapping of environmentVariableMappings) {

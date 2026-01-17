@@ -112,6 +112,18 @@ export const chatsRouter = {
     .input(updateMessageItemSchema)
     .mutation(async ({ ctx, input }) => {
       try {
+        // Verify chat ownership
+        const chat = await ctx.db.query.chats.findFirst({
+          where: and(eq(chats.id, input.chatId), eq(chats.userId, ctx.session.user.id)),
+        });
+
+        if (!chat) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Chat not found",
+          });
+        }
+
         const [message] = await ctx.db
           .update(chatMessages)
           .set({

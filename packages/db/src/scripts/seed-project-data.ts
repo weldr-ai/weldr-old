@@ -84,6 +84,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         .insert(branches)
         .values({
           name: "main",
+          userId,
           projectId: project.id,
           createdBy: userId,
         })
@@ -207,6 +208,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         .insert(snapshots)
         .values({
           projectId: project.id,
+          userId,
           createdBy: userId,
           title: "feat: initialize task management app with core integrations",
           description:
@@ -279,6 +281,7 @@ export async function seedProjectData(userId: string): Promise<void> {
           .insert(nodes)
           .values({
             projectId: project.id,
+            userId,
             position,
           })
           .returning();
@@ -333,6 +336,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         .insert(snapshots)
         .values({
           projectId: project.id,
+          userId,
           createdBy: userId,
           title: "feat: add filtering and sorting to tasks endpoint",
           description:
@@ -385,6 +389,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         .insert(snapshots)
         .values({
           projectId: project.id,
+          userId,
           createdBy: userId,
           title: "feat: add search functionality to tasks endpoint",
           description:
@@ -417,6 +422,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         .values({
           name: "feature/task-comments",
           projectId: project.id,
+          userId,
           createdBy: userId,
         })
         .returning();
@@ -451,6 +457,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         .insert(snapshots)
         .values({
           projectId: project.id,
+          userId,
           createdBy: userId,
           title: "feat: add comments to tasks",
           description:
@@ -501,6 +508,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         .insert(snapshots)
         .values({
           projectId: project.id,
+          userId,
           createdBy: userId,
           title: "feat: add edit and delete functionality for comments",
           description: "Adds API endpoints to update and delete task comments.",
@@ -544,6 +552,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         .insert(snapshots)
         .values({
           projectId: project.id,
+          userId,
           createdBy: userId,
           title: "feat: integrate task comments from stream branch",
           description:
@@ -576,6 +585,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         .values({
           name: "variant/alternative-ui",
           projectId: project.id,
+          userId,
           createdBy: userId,
         })
         .returning();
@@ -589,6 +599,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         .values({
           name: "variant/card-based-ui",
           projectId: project.id,
+          userId,
           createdBy: userId,
         })
         .returning();
@@ -625,6 +636,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         .insert(snapshots)
         .values({
           projectId: project.id,
+          userId,
           createdBy: userId,
           title: "feat: implement table-based UI for tasks list",
           description:
@@ -677,6 +689,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         .insert(snapshots)
         .values({
           projectId: project.id,
+          userId,
           createdBy: userId,
           title: "feat: add bulk actions to table-based tasks view",
           description:
@@ -729,6 +742,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         .insert(snapshots)
         .values({
           projectId: project.id,
+          userId,
           createdBy: userId,
           title: "feat: implement card-based UI for tasks",
           description:
@@ -781,6 +795,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         .insert(snapshots)
         .values({
           projectId: project.id,
+          userId,
           createdBy: userId,
           title: "feat: add kanban board columns to card-based tasks view",
           description:

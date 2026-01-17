@@ -17,6 +17,9 @@ export const branches = pgTable(
     projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
 
     // Name - human-readable identifier (e.g., "main", "auth", "search")
     name: text("name").notNull(),

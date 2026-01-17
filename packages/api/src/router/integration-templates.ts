@@ -1,13 +1,14 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { db } from "@weldr/db";
+import { eq } from "@weldr/db";
+import { integrationTemplates } from "@weldr/db/schema";
 
-import { createTRPCRouter, publicProcedure } from "../init";
+import { createTRPCRouter, protectedProcedure } from "../init";
 
 export const integrationTemplatesRouter = createTRPCRouter({
-  list: publicProcedure.query(async () => {
-    return await db.query.integrationTemplates.findMany({
+  list: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.db.query.integrationTemplates.findMany({
       columns: {
         id: true,
         name: true,
@@ -34,9 +35,9 @@ export const integrationTemplatesRouter = createTRPCRouter({
       orderBy: (templates, { asc }) => [asc(templates.key)],
     });
   }),
-  byId: publicProcedure.input(z.object({ id: z.string() })).query(async ({ input }) => {
-    const integrationTemplate = await db.query.integrationTemplates.findFirst({
-      where: (templates, { eq }) => eq(templates.id, input.id),
+  byId: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ input, ctx }) => {
+    const integrationTemplate = await ctx.db.query.integrationTemplates.findFirst({
+      where: eq(integrationTemplates.id, input.id),
       columns: {
         id: true,
         name: true,

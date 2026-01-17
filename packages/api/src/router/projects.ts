@@ -111,6 +111,7 @@ export const projectsRouter = {
             id: mainBranchId,
             name: "main",
             projectId,
+            userId: ctx.session.user.id,
             createdBy: ctx.session.user.id,
           })
           .returning();
@@ -126,6 +127,7 @@ export const projectsRouter = {
           .insert(snapshots)
           .values({
             projectId,
+            userId: ctx.session.user.id,
             createdBy: ctx.session.user.id,
             title: "Initial snapshot",
           })

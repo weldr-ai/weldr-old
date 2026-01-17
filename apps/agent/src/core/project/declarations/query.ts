@@ -519,7 +519,10 @@ export async function extractAndSaveDeclarations({
       logger.info(`Successfully inserted ${extracted.length} declarations and linked to snapshot.`);
 
       for (const job of enrichingJobs) {
-        await queueEnrichingJob(job);
+        await queueEnrichingJob({
+          ...job,
+          userId: project.userId,
+        });
       }
     }
   } catch (error) {

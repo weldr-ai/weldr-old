@@ -117,13 +117,14 @@ protectedProcedure.query(async ({ ctx }) => {
 ### Basic Queries with Relations
 
 ```typescript
+// For projects table - direct userId check
 const project = await ctx.db.query.projects.findFirst({
   where: and(
     eq(projects.id, input.id),
-    eq(projects.userId, ctx.session.user.id), // Always scope by user
+    eq(projects.userId, ctx.session.user.id), // REQUIRED: ownership check
   ),
   with: {
-    versions: true,
+    branches: true,
     integrations: {
       with: {
         integrationTemplate: true,
@@ -136,6 +137,21 @@ if (!project) {
   throw new TRPCError({
     code: "NOT_FOUND",
     message: "Project not found",
+  });
+}
+
+// For tables with direct userId column - check userId directly
+const branch = await ctx.db.query.branches.findFirst({
+  where: and(
+    eq(branches.id, input.branchId),
+    eq(branches.userId, ctx.session.user.id), // REQUIRED: direct ownership check
+  ),
+});
+
+if (!branch) {
+  throw new TRPCError({
+    code: "NOT_FOUND",
+    message: "Branch not found",
   });
 }
 ```
@@ -171,9 +187,20 @@ const result = await ctx.db.transaction(async (tx) => {
     throw new Error("Failed to create project");
   }
 
-  await tx.insert(versions).values({
+  // Create initial snapshot and main branch
+  const [snapshot] = await tx
+    .insert(snapshots)
+    .values({
+      projectId: project.id,
+      userId: project.userId, // REQUIRED: set userId
+    })
+    .returning();
+
+  await tx.insert(branches).values({
     projectId: project.id,
-    number: 1,
+    userId: project.userId, // REQUIRED: set userId
+    name: "main",
+    snapshotId: snapshot.id,
   });
 
   return project;
@@ -308,21 +335,21 @@ if (!isLocalMode()) {
 
 ```
 src/
-├── index.ts           # Main exports
-├── init.ts            # tRPC initialization, context, procedures
-├── utils.ts           # Utility functions (agent proxy)
+├── index.ts                      # Main exports
+├── init.ts                       # tRPC initialization, context, procedures
+├── utils.ts                      # Utility functions (agent proxy, mode helpers)
 └── router/
-    ├── index.ts       # Router aggregation
-    ├── projects.ts    # Project CRUD
-    ├── chats.ts       # Chat/messages
-    ├── branches.ts    # Branch management
-    ├── versions.ts    # Version control
-    ├── integrations.ts
-    ├── integration-templates.ts
-    ├── environment-variables.ts
-    ├── declarations.ts
-    ├── nodes.ts
-    └── themes.ts
+    ├── index.ts                  # Router aggregation
+    ├── branches.ts               # Branch management (create, move, advance, merge, delete)
+    ├── chats.ts                  # Chat messages (add, update, list)
+    ├── declarations.ts           # Declaration queries
+    ├── environment-variables.ts  # Env var management
+    ├── integration-templates.ts  # Integration template queries
+    ├── integrations.ts           # Integration CRUD and batch operations
+    ├── nodes.ts                  # Canvas node positions
+    ├── projects.ts               # Project CRUD
+    ├── snapshots.ts              # Snapshot queries (history, compare, DAG traversal)
+    └── themes.ts                 # Theme management
 ```
 
 ### Router Aggregation
@@ -334,7 +361,7 @@ export const appRouter = createTRPCRouter({
   chats: chatsRouter,
   environmentVariables: environmentVariablesRouter,
   declarations: declarationsRouter,
-  versions: versionRouter,
+  snapshots: snapshotsRouter, // Handles versioning/history
   integrations: integrationsRouter,
   integrationTemplates: integrationTemplatesRouter,
   themes: themesRouter,
@@ -342,6 +369,23 @@ export const appRouter = createTRPCRouter({
   branches: branchRouter,
 });
 ```
+
+### Protected Procedures with Ownership Validation
+
+**Protected Procedures (ALL require userId ownership validation):**
+
+- `branches.*` - All branch operations (validate via `branch.userId`)
+- `snapshots.*` - All snapshot operations (validate via `snapshot.userId`)
+- `chats.*` - All chat operations (validate via `chat.userId`)
+- `declarations.*` - Declaration queries (validate via `declarations.userId`)
+- `integrations.*` - Integration operations (validate via `integration.userId`)
+- `environmentVariables.*` - Env var operations (validate `via environmentVariables.userId`)
+- `nodes.*` - Node operations (validate via `node.userId`)
+- `projects.*` - Project operations (validate via `project.userId`)
+
+**Protected Procedures (DOES NOT require ownership):**
+
+- `integrationTemplates.list`, `integrationTemplates.byId` - These are global templates, not user-specific
 
 ## Type Exports
 
@@ -369,30 +413,62 @@ type ProjectListOutput = RouterOutputs["projects"]["list"];
 
 ### External Dependencies
 
-- `@trpc/server` - tRPC server implementation
+- `@trpc/server` (11.x) - tRPC server implementation
 - `superjson` - Data transformer for complex types
-- `zod` - Runtime validation schemas
+- `zod` (4.x) - Runtime validation schemas
+- `redis` - Redis client for caching operations
+
+## Snapshots Router
+
+The snapshots router handles git-like versioning with DAG support:
+
+```typescript
+// Recursive CTE for snapshot ancestry
+const snapshotsRouter = {
+  getHistory: publicProcedure
+    .input(z.object({ snapshotId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      // Uses recursive CTE to traverse snapshotParents DAG
+      const history = await ctx.db.execute(sql`
+        WITH RECURSIVE ancestry AS (
+          SELECT s.* FROM snapshots s WHERE s.id = ${input.snapshotId}
+          UNION ALL
+          SELECT s.* FROM snapshots s
+          JOIN snapshot_parents sp ON s.id = sp.parent_id
+          JOIN ancestry a ON sp.snapshot_id = a.id
+        )
+        SELECT * FROM ancestry
+      `);
+      return history;
+    }),
+} satisfies TRPCRouterRecord;
+```
 
 ## Do's and Don'ts
 
 ### Do's
 
-- Use `protectedProcedure` for authenticated routes
-- Always scope queries by user ID
-- Use transactions for multi-step operations
-- Validate inputs with Zod schemas from @weldr/shared
-- Handle errors explicitly with proper TRPCError codes
-- Use `satisfies TRPCRouterRecord` for type safety
-- Export router types for client consumption
-- Use SuperJSON transformer for complex types (Date, Map, etc.)
+✅ Use `protectedProcedure` for ALL user-owned data operations
+✅ **ALWAYS validate userId ownership** - check `userId` directly in WHERE clauses for tables with `userId` columns
+✅ Always scope queries by user ID
+✅ Use transactions for multi-step operations
+✅ Validate inputs with Zod schemas from @weldr/shared
+✅ Handle errors explicitly with proper TRPCError codes
+✅ Use `satisfies TRPCRouterRecord` for type safety
+✅ Export router types for client consumption
+✅ Use SuperJSON transformer for complex types (Date, Map, etc.)
+✅ Return NOT_FOUND (not FORBIDDEN) when ownership check fails (prevents enumeration)
 
 ### Don'ts
 
-- Use `any` type
-- Skip user ownership checks in queries
-- Ignore TypeScript errors
-- Expose internal error details to clients
-- Use publicProcedure for sensitive operations
-- Skip input validation
-- Return raw database errors
-- Forget to handle null/undefined cases
+❌ **Query user data without ownership validation** (critical security issue!)
+❌ Use `any` type
+❌ Skip user ownership checks in queries
+❌ Ignore TypeScript errors
+❌ Expose internal error details to clients
+❌ Use publicProcedure for user-owned data (only for global templates)
+❌ Skip input validation
+❌ Return raw database errors
+❌ Forget to handle null/undefined cases
+❌ Assume ownership is checked elsewhere - validate in every procedure
+❌ Join through project relation when tables have direct `userId` columns - check `userId` directly instead

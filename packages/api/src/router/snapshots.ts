@@ -1,11 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { type db as dbType, desc, eq, sql } from "@weldr/db";
-import { snapshotParents, snapshots } from "@weldr/db/schema";
+import { and, type db as dbType, desc, eq, sql } from "@weldr/db";
+import { projects, snapshotParents, snapshots } from "@weldr/db/schema";
 import { nanoid } from "@weldr/shared/nanoid";
 
-import { protectedProcedure, publicProcedure } from "../init";
+import { protectedProcedure } from "../init";
 
 /**
  * Get snapshot ancestors using a recursive CTE
@@ -41,21 +41,16 @@ export const snapshotsRouter = {
   /**
    * Get a single snapshot by ID
    */
-  get: publicProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+  get: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
     const snapshot = await ctx.db.query.snapshots.findFirst({
-      where: eq(snapshots.id, input.id),
+      where: and(eq(snapshots.id, input.id), eq(snapshots.userId, ctx.session.user.id)),
       with: {
         parentEdges: {
           with: {
             parent: true,
           },
         },
-        project: {
-          columns: {
-            id: true,
-            title: true,
-          },
-        },
+        project: true,
         creator: {
           columns: {
             id: true,
@@ -78,7 +73,7 @@ export const snapshotsRouter = {
   /**
    * Get snapshot history (ancestors)
    */
-  getHistory: publicProcedure
+  getHistory: protectedProcedure
     .input(
       z.object({
         snapshotId: z.string(),
@@ -86,6 +81,17 @@ export const snapshotsRouter = {
       }),
     )
     .query(async ({ ctx, input }) => {
+      const snapshot = await ctx.db.query.snapshots.findFirst({
+        where: and(eq(snapshots.id, input.snapshotId), eq(snapshots.userId, ctx.session.user.id)),
+      });
+
+      if (!snapshot) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Snapshot not found",
+        });
+      }
+
       return getSnapshotAncestors(ctx.db, input.snapshotId, input.limit);
     }),
 
@@ -110,6 +116,18 @@ export const snapshotsRouter = {
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const project = await ctx.db.query.projects.findFirst({
+        where: and(eq(projects.id, input.projectId), eq(projects.userId, ctx.session.user.id)),
+        columns: { id: true },
+      });
+
+      if (!project) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Project not found",
+        });
+      }
+
       const snapshotId = nanoid();
 
       await ctx.db.transaction(async (tx) => {
@@ -117,6 +135,7 @@ export const snapshotsRouter = {
         await tx.insert(snapshots).values({
           id: snapshotId,
           projectId: input.projectId,
+          userId: ctx.session.user.id,
           commitSha: input.commitSha,
           title: input.title,
           description: input.description,
@@ -143,7 +162,7 @@ export const snapshotsRouter = {
   /**
    * Compare two snapshots (for diff view)
    */
-  compare: publicProcedure
+  compare: protectedProcedure
     .input(
       z.object({
         fromSnapshotId: z.string(),
@@ -153,14 +172,28 @@ export const snapshotsRouter = {
     .query(async ({ ctx, input }) => {
       const [fromSnapshot, toSnapshot] = await Promise.all([
         ctx.db.query.snapshots.findFirst({
-          where: eq(snapshots.id, input.fromSnapshotId),
+          where: and(
+            eq(snapshots.id, input.fromSnapshotId),
+            eq(snapshots.userId, ctx.session.user.id),
+          ),
+          with: { project: true },
         }),
         ctx.db.query.snapshots.findFirst({
-          where: eq(snapshots.id, input.toSnapshotId),
+          where: and(
+            eq(snapshots.id, input.toSnapshotId),
+            eq(snapshots.userId, ctx.session.user.id),
+          ),
+          with: { project: true },
         }),
       ]);
 
-      if (!fromSnapshot || !toSnapshot) {
+      // Verify ownership for both snapshots
+      if (
+        !fromSnapshot ||
+        !toSnapshot ||
+        fromSnapshot.project.userId !== ctx.session.user.id ||
+        toSnapshot.project.userId !== ctx.session.user.id
+      ) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "One or both snapshots not found",
@@ -185,7 +218,7 @@ export const snapshotsRouter = {
   /**
    * List snapshots for a project
    */
-  list: publicProcedure
+  list: protectedProcedure
     .input(
       z.object({
         projectId: z.string(),
@@ -195,7 +228,10 @@ export const snapshotsRouter = {
     )
     .query(async ({ ctx, input }) => {
       return ctx.db.query.snapshots.findMany({
-        where: eq(snapshots.projectId, input.projectId),
+        where: and(
+          eq(snapshots.projectId, input.projectId),
+          eq(snapshots.userId, ctx.session.user.id),
+        ),
         orderBy: [desc(snapshots.createdAt)],
         limit: input.limit,
         offset: input.offset,

@@ -2,39 +2,38 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { and, desc, eq, inArray } from "@weldr/db";
-import { branches, snapshotParents, snapshots } from "@weldr/db/schema";
+import { branches, projects, snapshotParents, snapshots } from "@weldr/db/schema";
 import { nanoid } from "@weldr/shared/nanoid";
 
-import { protectedProcedure, publicProcedure } from "../init";
+import { protectedProcedure } from "../init";
 
 export const branchRouter = {
   /**
    * List branches for a project
    */
-  list: publicProcedure.input(z.object({ projectId: z.string() })).query(async ({ ctx, input }) => {
-    return ctx.db.query.branches.findMany({
-      where: eq(branches.projectId, input.projectId),
-      with: {
-        snapshot: true,
-      },
-      orderBy: [desc(branches.updatedAt)],
-    });
-  }),
+  list: protectedProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.query.branches.findMany({
+        where: and(
+          eq(branches.projectId, input.projectId),
+          eq(branches.userId, ctx.session.user.id),
+        ),
+        with: {
+          snapshot: true,
+        },
+        orderBy: [desc(branches.updatedAt)],
+      });
+    }),
 
   /**
    * Get a branch by ID
    */
-  get: publicProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+  get: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
     const branch = await ctx.db.query.branches.findFirst({
-      where: eq(branches.id, input.id),
+      where: and(eq(branches.id, input.id), eq(branches.userId, ctx.session.user.id)),
       with: {
         snapshot: true,
-        project: {
-          columns: {
-            id: true,
-            title: true,
-          },
-        },
       },
     });
 
@@ -52,7 +51,7 @@ export const branchRouter = {
    * Get a branch by ID or fall back to main branch
    * This is used by the frontend to get branch data with full snapshot history
    */
-  byIdOrMain: publicProcedure
+  byIdOrMain: protectedProcedure
     .input(
       z.object({
         id: z.string().optional(),
@@ -66,7 +65,11 @@ export const branchRouter = {
       if (input.id) {
         // Get by ID
         branch = await ctx.db.query.branches.findFirst({
-          where: and(eq(branches.id, input.id), eq(branches.projectId, input.projectId)),
+          where: and(
+            eq(branches.id, input.id),
+            eq(branches.projectId, input.projectId),
+            eq(branches.userId, ctx.session.user.id),
+          ),
           with: {
             snapshot: {
               with: {
@@ -99,7 +102,11 @@ export const branchRouter = {
       } else {
         // Fall back to main branch
         branch = await ctx.db.query.branches.findFirst({
-          where: and(eq(branches.projectId, input.projectId), eq(branches.name, "main")),
+          where: and(
+            eq(branches.projectId, input.projectId),
+            eq(branches.name, "main"),
+            eq(branches.userId, ctx.session.user.id),
+          ),
           with: {
             snapshot: {
               with: {
@@ -180,7 +187,7 @@ export const branchRouter = {
   /**
    * Get a branch by name within a project
    */
-  getByName: publicProcedure
+  getByName: protectedProcedure
     .input(
       z.object({
         projectId: z.string(),
@@ -189,7 +196,11 @@ export const branchRouter = {
     )
     .query(async ({ ctx, input }) => {
       const branch = await ctx.db.query.branches.findFirst({
-        where: and(eq(branches.projectId, input.projectId), eq(branches.name, input.name)),
+        where: and(
+          eq(branches.projectId, input.projectId),
+          eq(branches.name, input.name),
+          eq(branches.userId, ctx.session.user.id),
+        ),
         with: {
           snapshot: true,
         },
@@ -208,11 +219,15 @@ export const branchRouter = {
   /**
    * Get the main branch for a project
    */
-  getMain: publicProcedure
+  getMain: protectedProcedure
     .input(z.object({ projectId: z.string() }))
     .query(async ({ ctx, input }) => {
       const branch = await ctx.db.query.branches.findFirst({
-        where: and(eq(branches.projectId, input.projectId), eq(branches.name, "main")),
+        where: and(
+          eq(branches.projectId, input.projectId),
+          eq(branches.name, "main"),
+          eq(branches.userId, ctx.session.user.id),
+        ),
         with: {
           snapshot: true,
           chats: {
@@ -258,9 +273,21 @@ export const branchRouter = {
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const project = await ctx.db.query.projects.findFirst({
+        where: and(eq(projects.id, input.projectId), eq(projects.userId, ctx.session.user.id)),
+        columns: { id: true },
+      });
+
+      if (!project) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Project not found",
+        });
+      }
+
       // Check if branch name already exists
       const existingBranch = await ctx.db.query.branches.findFirst({
-        where: and(eq(branches.projectId, input.projectId), eq(branches.name, input.name)),
+        where: and(eq(branches.projectId, project.id), eq(branches.name, input.name)),
       });
 
       if (existingBranch) {
@@ -297,6 +324,7 @@ export const branchRouter = {
         .values({
           id: branchId,
           projectId: input.projectId,
+          userId: ctx.session.user.id,
           name: input.name,
           snapshotId: snapshotId ?? null,
           createdBy: ctx.session.user.id,
@@ -324,9 +352,20 @@ export const branchRouter = {
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Verify the snapshot exists
+      const branch = await ctx.db.query.branches.findFirst({
+        where: and(eq(branches.id, input.branchId), eq(branches.userId, ctx.session.user.id)),
+      });
+
+      if (!branch) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Branch not found",
+        });
+      }
+
+      // Verify the snapshot exists and belongs to the same project
       const snapshot = await ctx.db.query.snapshots.findFirst({
-        where: eq(snapshots.id, input.snapshotId),
+        where: and(eq(snapshots.id, input.snapshotId), eq(snapshots.projectId, branch.projectId)),
       });
 
       if (!snapshot) {
@@ -368,7 +407,7 @@ export const branchRouter = {
     )
     .mutation(async ({ ctx, input }) => {
       const branch = await ctx.db.query.branches.findFirst({
-        where: eq(branches.id, input.branchId),
+        where: and(eq(branches.id, input.branchId), eq(branches.userId, ctx.session.user.id)),
       });
 
       if (!branch) {
@@ -385,6 +424,7 @@ export const branchRouter = {
         await tx.insert(snapshots).values({
           id: snapshotId,
           projectId: branch.projectId,
+          userId: ctx.session.user.id,
           commitSha: input.commitSha,
           title: input.title,
           description: input.description,
@@ -428,18 +468,8 @@ export const branchRouter = {
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Get all source snapshots
-      const sourceBranches = await ctx.db.query.branches.findMany({
-        where: inArray(branches.id, input.sourceBranchIds),
-      });
-
-      const parentIds: string[] = sourceBranches
-        .map((b) => b.snapshotId)
-        .filter((id): id is string => id !== null);
-
-      // Get target branch's current snapshot too
       const targetBranch = await ctx.db.query.branches.findFirst({
-        where: eq(branches.id, input.targetBranchId),
+        where: and(eq(branches.id, input.targetBranchId), eq(branches.userId, ctx.session.user.id)),
       });
 
       if (!targetBranch) {
@@ -448,6 +478,18 @@ export const branchRouter = {
           message: "Target branch not found",
         });
       }
+
+      // Get all source branches and verify they belong to the same project
+      const sourceBranches = await ctx.db.query.branches.findMany({
+        where: and(
+          inArray(branches.id, input.sourceBranchIds),
+          eq(branches.projectId, targetBranch.projectId),
+        ),
+      });
+
+      const parentIds: string[] = sourceBranches
+        .map((b) => b.snapshotId)
+        .filter((id): id is string => id !== null);
 
       if (targetBranch.snapshotId) {
         parentIds.push(targetBranch.snapshotId);
@@ -460,6 +502,7 @@ export const branchRouter = {
         await tx.insert(snapshots).values({
           id: snapshotId,
           projectId: targetBranch.projectId,
+          userId: ctx.session.user.id,
           commitSha: input.commitSha,
           title: input.title,
           createdBy: ctx.session.user.id,
@@ -495,7 +538,7 @@ export const branchRouter = {
     .input(z.object({ branchId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const branch = await ctx.db.query.branches.findFirst({
-        where: eq(branches.id, input.branchId),
+        where: and(eq(branches.id, input.branchId), eq(branches.userId, ctx.session.user.id)),
       });
 
       if (!branch) {

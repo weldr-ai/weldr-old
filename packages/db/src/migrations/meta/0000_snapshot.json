@@ -1,5 +1,5 @@
 {
-  "id": "0b7c5b4a-832d-44ef-8cba-5d0d6fe0fb39",
+  "id": "eef1b656-5293-4fdf-88ff-8b919b7ade76",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -699,6 +699,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "name": {
           "name": "name",
           "type": "text",
@@ -774,13 +780,22 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
+        "branches_user_id_users_id_fk": {
+          "name": "branches_user_id_users_id_fk",
+          "tableFrom": "branches",
+          "tableTo": "users",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
         "branches_snapshot_id_snapshots_id_fk": {
           "name": "branches_snapshot_id_snapshots_id_fk",
           "tableFrom": "branches",
           "tableTo": "snapshots",
           "columnsFrom": ["snapshot_id"],
           "columnsTo": ["id"],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "branches_created_by_users_id_fk": {
@@ -2181,6 +2196,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {
@@ -2206,6 +2227,15 @@
           "tableFrom": "nodes",
           "tableTo": "projects",
           "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "nodes_user_id_users_id_fk": {
+          "name": "nodes_user_id_users_id_fk",
+          "tableFrom": "nodes",
+          "tableTo": "users",
+          "columnsFrom": ["user_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"

@@ -24,6 +24,9 @@ export const snapshots = pgTable(
     projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
 
     // State reference
     commitSha: text("commit_sha"),

@@ -119,6 +119,7 @@ export const createSnapshot = async ({
       .values({
         id: snapshotId,
         projectId,
+        userId,
         commitSha,
         title,
         description,
