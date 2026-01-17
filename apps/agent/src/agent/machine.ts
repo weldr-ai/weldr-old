@@ -150,6 +150,7 @@ const agentMachineSetup = setup({
             id: `orchestrator-${request.toolCallId}`,
             input: {
               toolCallId: request.toolCallId,
+              chatId: context.chatId,
               agents: request.agents.map((agent) => ({
                 id: agent.id,
                 task: agent.task,

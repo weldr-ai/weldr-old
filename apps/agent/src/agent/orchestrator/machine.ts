@@ -1,4 +1,4 @@
-import { assign, emit, sendParent, setup, stopChild, type AnyActorLogic } from "xstate";
+import { assign, emit, sendParent, setup, type AnyActorLogic } from "xstate";
 
 import type {
   OrchestratorContext,
@@ -141,6 +141,7 @@ RULES:
               id: `sub-agent-${agent.id}`,
               input: {
                 agentId: agent.id,
+                chatId: context.chatId,
                 isSubAgent: true,
                 task: agent.task,
                 project: context.project,
@@ -231,7 +232,7 @@ RULES:
             }
 
             if (agent.actorRef) {
-              stopChild(agent.actorRef as Parameters<typeof stopChild>[0]);
+              agent.actorRef.stop();
             }
 
             return {
@@ -256,7 +257,7 @@ RULES:
             }
 
             if (agent.actorRef) {
-              stopChild(agent.actorRef as Parameters<typeof stopChild>[0]);
+              agent.actorRef.stop();
             }
 
             return {
@@ -281,7 +282,7 @@ RULES:
           return context.agents.map((agent) => {
             if (agent.id === failedAgentId) {
               if (agent.actorRef) {
-                stopChild(agent.actorRef as Parameters<typeof stopChild>[0]);
+                agent.actorRef.stop();
               }
 
               return {
@@ -294,7 +295,7 @@ RULES:
 
             if (dependentIds.includes(agent.id) && agent.status === "waiting") {
               if (agent.actorRef) {
-                stopChild(agent.actorRef as Parameters<typeof stopChild>[0]);
+                agent.actorRef.stop();
               }
 
               return {
@@ -313,7 +314,7 @@ RULES:
       stopAllAgents: ({ context }) => {
         for (const agent of context.agents) {
           if (agent.actorRef) {
-            stopChild(agent.actorRef as Parameters<typeof stopChild>[0]);
+            agent.actorRef.stop();
           }
         }
       },
@@ -342,6 +343,7 @@ RULES:
     initial: "validating",
     context: ({ input }) => ({
       toolCallId: input.toolCallId,
+      chatId: input.chatId,
       agents: input.agents.map(
         (a): SubAgentState => ({
           id: a.id,

@@ -15,16 +15,7 @@
  */
 
 import type { AssistantContent, ModelMessage } from "ai";
-import {
-  assign,
-  createActor,
-  emit,
-  fromPromise,
-  sendTo,
-  setup,
-  stopChild,
-  type AnyActorRef,
-} from "xstate";
+import { assign, createActor, emit, fromPromise, sendTo, setup, type AnyActorRef } from "xstate";
 
 import type { AiModel } from "@weldr/db/schema";
 import { nanoid } from "@weldr/shared/nanoid";
@@ -129,7 +120,7 @@ const saveMessagesActor = fromPromise<
           type: "tool-result" as const,
           toolCallId: part.toolCallId,
           toolName: part.toolName,
-          output: part.result,
+          output: part.output,
         };
       default: {
         const _exhaustive: never = part;
@@ -332,7 +323,7 @@ export const sessionMachine = setup({
     stopOrchestrators: assign(({ context }) => {
       for (const [, ref] of context.orchestratorRefs) {
         try {
-          stopChild(ref);
+          ref.stop();
         } catch {
           // Ignore if already stopped
         }
@@ -354,7 +345,7 @@ export const sessionMachine = setup({
           type: "tool-result",
           toolCallId: event.toolCallId,
           toolName: "spawn_agents",
-          result: { results: event.results },
+          output: { results: event.results },
         };
 
         return [...context.assistantContent, toolResult];
@@ -375,7 +366,7 @@ export const sessionMachine = setup({
         const ref = refs.get(event.toolCallId);
         if (ref) {
           try {
-            stopChild(ref);
+            ref.stop();
           } catch {
             // Ignore if already stopped
           }
@@ -395,7 +386,7 @@ export const sessionMachine = setup({
           type: "tool-result",
           toolCallId: event.toolCallId,
           toolName: "spawn_agents",
-          result: { success: false, error: event.error },
+          output: { success: false, error: event.error },
           isError: true,
         };
 
@@ -410,7 +401,7 @@ export const sessionMachine = setup({
         const ref = refs.get(event.toolCallId);
         if (ref) {
           try {
-            stopChild(ref);
+            ref.stop();
           } catch {
             // Ignore if already stopped
           }
@@ -675,6 +666,7 @@ export const sessionMachine = setup({
                   const orchestratorActor = createActor(orchestratorMachine, {
                     input: {
                       toolCallId: request.toolCallId,
+                      chatId: context.chatId,
                       agents: request.agents.map((agent) => ({
                         id: agent.id,
                         task: agent.task,

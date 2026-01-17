@@ -178,7 +178,7 @@ export const llmStreamActor = fromCallback<LLMActorCommand, LLMStreamInput, LLMS
                     type: "tool-result",
                     toolCallId: part.toolCallId,
                     toolName: part.toolName,
-                    result: {
+                    output: {
                       type: "error-text" as const,
                       value: "Invalid spawn_agents input.",
                     },
@@ -204,7 +204,7 @@ export const llmStreamActor = fromCallback<LLMActorCommand, LLMStreamInput, LLMS
                       type: "tool-result",
                       toolCallId: part.toolCallId,
                       toolName: part.toolName,
-                      result: {
+                      output: {
                         type: "error-text" as const,
                         value: `Cannot spawn ${agentCount} agents. Maximum allowed is ${input.maxSubAgents}.`,
                       },
@@ -230,7 +230,7 @@ export const llmStreamActor = fromCallback<LLMActorCommand, LLMStreamInput, LLMS
                 type: "tool-result",
                 toolCallId: part.toolCallId,
                 toolName: part.toolName,
-                result: part.output,
+                output: part.output,
               });
               break;
             }

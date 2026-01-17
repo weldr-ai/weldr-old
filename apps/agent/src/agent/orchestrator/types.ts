@@ -32,6 +32,7 @@ export type SubAgentState = {
 
 export type OrchestratorContext = {
   toolCallId: string;
+  chatId: string;
   agents: SubAgentState[];
   maxRetries: number;
   project: ProjectWithConfig;
@@ -45,6 +46,7 @@ export type OrchestratorContext = {
 
 export type OrchestratorInput = {
   toolCallId: string;
+  chatId: string;
   agents: SubAgentTask[];
   maxRetries?: number;
   project: ProjectWithConfig;
