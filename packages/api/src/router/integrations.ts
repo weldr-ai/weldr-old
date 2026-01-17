@@ -27,7 +27,8 @@ export const integrationsRouter = createTRPCRouter({
         integrationId: z.string(),
         snapshotId: z.string(),
         branchId: z.string(),
-        triggerWorkflow: z.boolean().optional().default(false),
+        chatId: z.string().optional(),
+        startSession: z.boolean().optional().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -90,7 +91,8 @@ export const integrationsRouter = createTRPCRouter({
           {
             projectId: snapshot.projectId,
             branchId: input.branchId,
-            triggerWorkflow: input.triggerWorkflow,
+            chatId: input.chatId,
+            startSession: input.startSession,
           },
           ctx.headers,
         );
@@ -210,12 +212,15 @@ export const integrationsRouter = createTRPCRouter({
     // Trigger installation if branchId was provided
     if (input.branchId) {
       try {
-        await callAgentProxy("/integrations/install", {
-          projectId: input.projectId,
-          branchId: input.branchId,
-          triggerWorkflow: false,
-          headers: ctx.headers,
-        });
+        await callAgentProxy(
+          "/integrations/install",
+          {
+            projectId: input.projectId,
+            branchId: input.branchId,
+            startSession: false,
+          },
+          ctx.headers,
+        );
 
         console.log(`[integrations.create:${input.projectId}] Installation triggered successfully`);
       } catch (error) {
@@ -502,7 +507,8 @@ export const integrationsRouter = createTRPCRouter({
             {
               projectId: input.projectId,
               branchId: input.branchId,
-              triggerWorkflow: input.triggerWorkflow ?? false,
+              chatId: input.chatId,
+              startSession: input.startSession ?? false,
             },
             ctx.headers,
           );

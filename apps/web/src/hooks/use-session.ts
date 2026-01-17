@@ -2,7 +2,7 @@ import { useCallback, useRef } from "react";
 
 import type { TriggerWorkflowResponse, TStatus, UserMessage } from "@weldr/shared/types";
 
-interface UseWorkflowTriggerOptions {
+interface UseSessionOptions {
   projectId: string;
   branchId: string;
   setStatus: (status: TStatus) => void;
@@ -10,88 +10,88 @@ interface UseWorkflowTriggerOptions {
   connectToEventStream: () => EventSource | null;
 }
 
-export function useWorkflowTrigger({
+export function useSession({
   projectId,
   branchId,
   setStatus,
   eventSourceRef,
   connectToEventStream,
-}: UseWorkflowTriggerOptions) {
-  // Use refs to avoid recreating triggerGeneration when eventSourceRef changes
+}: UseSessionOptions) {
+  // Use refs to avoid recreating sendMessage when eventSourceRef changes
   const eventSourceRefValue = useRef(eventSourceRef);
   const connectToEventStreamRef = useRef(connectToEventStream);
 
-  // Track if we're currently triggering to prevent double triggers
-  const isTriggeringRef = useRef(false);
+  // Track if we're currently starting a session to prevent double triggers
+  const isStartingRef = useRef(false);
 
   // Update refs when values change
   eventSourceRefValue.current = eventSourceRef;
   connectToEventStreamRef.current = connectToEventStream;
 
-  const triggerWorkflow = useCallback(
+  const startSession = useCallback(
     async (message?: { content: UserMessage["content"]; attachmentIds?: string[] }) => {
       try {
-        const triggerResponse = await fetch("/api/proxy", {
+        const response = await fetch("/api/proxy", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            endpoint: "/trigger",
+            endpoint: "/session",
             projectId,
             branchId,
             message,
           }),
         });
 
-        if (!triggerResponse.ok) {
-          throw new Error("Failed to trigger workflow");
+        if (!response.ok) {
+          throw new Error("Failed to start session");
         }
 
-        const triggerResult: TriggerWorkflowResponse = await triggerResponse.json();
-        return triggerResult;
+        const result: TriggerWorkflowResponse = await response.json();
+        return result;
       } catch (error) {
-        console.error("Failed to trigger workflow:", error);
+        console.error("Failed to start session:", error);
         throw error;
       }
     },
     [projectId, branchId],
   );
 
-  const triggerGeneration = useCallback(
+  const sendMessage = useCallback(
     async (message?: { content: UserMessage["content"]; attachmentIds?: string[] }) => {
-      // Prevent multiple simultaneous triggers
-      if (isTriggeringRef.current) {
-        console.warn("Trigger already in progress, ignoring duplicate request");
+      // Prevent multiple simultaneous session starts
+      if (isStartingRef.current) {
+        console.warn("Session start already in progress, ignoring duplicate request");
         return;
       }
 
-      isTriggeringRef.current = true;
+      isStartingRef.current = true;
       setStatus("thinking");
 
       try {
-        // First trigger the workflow
-        await triggerWorkflow(message);
+        // Start the session
+        await startSession(message);
 
         // Only connect to event stream if we don't already have a connection
         if (!eventSourceRefValue.current) {
           connectToEventStreamRef.current();
         }
       } catch (error) {
-        console.error("Failed to start generation:", error);
+        console.error("Failed to send message:", error);
         setStatus(null);
       } finally {
-        // Reset trigger flag after a short delay to prevent rapid double-clicks
+        // Reset flag after a short delay to prevent rapid double-clicks
         setTimeout(() => {
-          isTriggeringRef.current = false;
+          isStartingRef.current = false;
         }, 1000);
       }
     },
-    [triggerWorkflow, setStatus],
+    [startSession, setStatus],
   );
 
   return {
-    triggerWorkflow,
-    triggerGeneration,
+    startSession,
+    sendMessage,
   };
 }

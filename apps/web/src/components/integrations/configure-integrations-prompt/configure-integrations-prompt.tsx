@@ -332,7 +332,8 @@ const PureConfigureIntegrationsPrompt = ({
     createBatchIntegrationsMutation.mutate({
       projectId,
       branchId,
-      triggerWorkflow: true,
+      chatId,
+      startSession: true,
       integrations: configurations,
     });
   }, [

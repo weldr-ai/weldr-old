@@ -92,7 +92,8 @@ export const updateIntegrationSchema = z.object({
 export const createBatchIntegrationsSchema = z.object({
   projectId: z.string().min(1),
   branchId: z.string().min(1).optional(),
-  triggerWorkflow: z.boolean().optional().default(false),
+  chatId: z.string().min(1).optional(),
+  startSession: z.boolean().optional().default(false),
   integrations: z
     .array(
       z.object({

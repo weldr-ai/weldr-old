@@ -3,13 +3,14 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { and, db, eq } from "@weldr/db";
 import { branches, projects } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
+import { nanoid } from "@weldr/shared/nanoid";
 
 import { auth } from "@/core/auth";
 import { getInstalledCategories } from "@/core/integrations/utils/get-installed-categories";
 import { installQueuedIntegrations } from "@/core/integrations/utils/queue-installer";
 import { processIntegrationQueue } from "@/core/integrations/utils/queue-manager";
 import { createRouter } from "@/http/utils";
-import { type ExecutionContext } from "@/session";
+import { type ExecutionContext, sessionRegistry } from "@/session";
 
 const route = createRoute({
   method: "post",
@@ -24,7 +25,10 @@ const route = createRoute({
           schema: z.object({
             projectId: z.string().openapi({ description: "Project ID" }),
             branchId: z.string().openapi({ description: "Branch ID" }),
-            triggerWorkflow: z.boolean().optional().default(false),
+            chatId: z.string().optional().openapi({ description: "Chat ID for session creation" }),
+            startSession: z.boolean().optional().default(false).openapi({
+              description: "Whether to start a session after installation",
+            }),
           }),
         },
       },
@@ -74,8 +78,9 @@ const route = createRoute({
 const router = createRouter();
 
 router.openapi(route, async (c) => {
-  const { projectId, branchId, triggerWorkflow } = c.req.valid("json");
+  const { projectId, branchId, chatId, startSession } = c.req.valid("json");
   const logger = Logger.get({ projectId });
+  const traceId = c.req.header("x-request-id") ?? nanoid();
 
   try {
     const session = await auth.api.getSession({
@@ -150,16 +155,29 @@ router.openapi(route, async (c) => {
       );
     }
 
-    // FIXME: this is a HUGE problem here is whole thing does not work now
-    if (triggerWorkflow) {
-      // Note: triggerWorkflow requires a chatId to create a session
-      // This route currently doesn't have chatId context, so we skip session creation
-      logger.warn("triggerWorkflow requested but chatId not available in this context");
-    }
-
     logger.info("Integration installation completed successfully", {
       extra: { installedCount: result.installedIntegrations.length },
     });
+
+    // Start session if requested and chatId is provided
+    if (startSession && chatId) {
+      logger.info("Starting session after integration installation", {
+        extra: { chatId },
+      });
+
+      const sessionActor = await sessionRegistry.getOrCreate({
+        chatId,
+        traceId,
+        project: {
+          ...project,
+          integrationCategories: new Set(installedCategories),
+        },
+        branch,
+        user: session.user,
+      });
+
+      sessionActor.send({ type: "START" });
+    }
 
     return c.json({ success: true });
   } catch (error) {

@@ -15,10 +15,10 @@ import { sessionRegistry } from "@/session";
 
 const route = createRoute({
   method: "post",
-  path: "/trigger",
-  summary: "Trigger workflow with user message",
-  description: "Trigger workflow with user message",
-  tags: ["Agent"],
+  path: "/session",
+  summary: "Start or resume a session",
+  description: "Start or resume a session, optionally sending a user message",
+  tags: ["Session"],
   request: {
     body: {
       content: {
@@ -54,7 +54,7 @@ const route = createRoute({
   },
   responses: {
     200: {
-      description: "Workflow triggered successfully",
+      description: "Session started successfully",
       content: {
         "application/json": {
           schema: z.object({

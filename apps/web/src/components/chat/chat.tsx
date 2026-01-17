@@ -13,8 +13,8 @@ import { useEditorReferences } from "@/hooks/use-editor-references";
 import { useEventStream } from "@/hooks/use-event-stream";
 import { useMessages } from "@/hooks/use-messages";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
+import { useSession } from "@/hooks/use-session";
 import { useStatus } from "@/hooks/use-status";
-import { useWorkflowTrigger } from "@/hooks/use-workflow-trigger";
 import { parseConventionalCommit } from "@/lib/utils";
 import { CommitTypeBadge } from "../commit-type-badge";
 import { Timeline, TimelineContent, TimelineTrigger } from "../timeline";
@@ -73,7 +73,7 @@ export const Chat = memo<ChatProps>(
       setMessages,
     });
 
-    const { triggerGeneration } = useWorkflowTrigger({
+    const { sendMessage } = useSession({
       projectId: project.id,
       branchId: branch.id,
       setStatus,
@@ -91,7 +91,7 @@ export const Chat = memo<ChatProps>(
 
       try {
         await handleMessageSubmit();
-        await triggerGeneration({
+        await sendMessage({
           content: userMessageContent,
           attachmentIds: attachments.map((attachment) => attachment.id),
         });
@@ -101,7 +101,7 @@ export const Chat = memo<ChatProps>(
           isSubmittingRef.current = false;
         }, 500);
       }
-    }, [handleMessageSubmit, triggerGeneration, userMessageContent, attachments]);
+    }, [handleMessageSubmit, sendMessage, userMessageContent, attachments]);
 
     const editorReferences = useEditorReferences({
       snapshot,
