@@ -13,8 +13,8 @@ import {
   integrations,
   nodes,
   projects,
-  versionDeclarations,
-  versions,
+  snapshotDeclarations,
+  snapshots,
 } from "../schema";
 
 /**
@@ -84,11 +84,9 @@ export async function seedProjectData(userId: string): Promise<void> {
         .insert(branches)
         .values({
           name: "main",
-          description: "Main development branch",
-          projectId: project.id,
-          type: "stream",
-          isMain: true,
           userId,
+          projectId: project.id,
+          createdBy: userId,
         })
         .returning();
 
@@ -207,17 +205,12 @@ export async function seedProjectData(userId: string): Promise<void> {
       await tx.insert(chatMessages).values(mainV1Messages);
 
       const [mainV1] = await tx
-        .insert(versions)
+        .insert(snapshots)
         .values({
           projectId: project.id,
           userId,
-          chatId: mainV1Chat.id,
-          branchId: mainBranch.id,
-          number: 1,
-          sequenceNumber: 1,
-          kind: "checkpoint",
-          status: "completed",
-          message: "feat: initialize task management app with core integrations",
+          createdBy: userId,
+          title: "feat: initialize task management app with core integrations",
           description:
             "Sets up the initial project with database models for users, tasks, and projects, along with API endpoints and pages.",
         })
@@ -230,7 +223,7 @@ export async function seedProjectData(userId: string): Promise<void> {
       // Update main branch head
       await tx
         .update(branches)
-        .set({ headVersionId: mainV1.id })
+        .set({ snapshotId: mainV1.id })
         .where(eq(branches.id, mainBranch.id));
 
       console.log(`  ✅ Created main v1: ${mainV1.id}`);
@@ -240,7 +233,7 @@ export async function seedProjectData(userId: string): Promise<void> {
         if (!integration) continue;
         await tx.insert(integrationInstallations).values({
           integrationId: integration.id,
-          versionId: mainV1.id,
+          snapshotId: mainV1.id,
           status: "installed",
           installedAt: new Date(),
           installationMetadata: {
@@ -288,6 +281,7 @@ export async function seedProjectData(userId: string): Promise<void> {
           .insert(nodes)
           .values({
             projectId: project.id,
+            userId,
             position,
           })
           .returning();
@@ -310,8 +304,8 @@ export async function seedProjectData(userId: string): Promise<void> {
         createdDeclarations.push(declaration);
 
         // Link to main v1
-        await tx.insert(versionDeclarations).values({
-          versionId: mainV1.id,
+        await tx.insert(snapshotDeclarations).values({
+          snapshotId: mainV1.id,
           declarationId: declaration.id,
         });
       }
@@ -339,18 +333,12 @@ export async function seedProjectData(userId: string): Promise<void> {
       await tx.insert(chatMessages).values(mainV2Messages);
 
       const [mainV2] = await tx
-        .insert(versions)
+        .insert(snapshots)
         .values({
           projectId: project.id,
           userId,
-          chatId: mainV2Chat.id,
-          branchId: mainBranch.id,
-          parentVersionId: mainV1.id,
-          number: 2,
-          sequenceNumber: 2,
-          kind: "checkpoint",
-          status: "completed",
-          message: "feat: add filtering and sorting to tasks endpoint",
+          createdBy: userId,
+          title: "feat: add filtering and sorting to tasks endpoint",
           description:
             "Adds query parameters to the GET /api/tasks endpoint to filter tasks by status and project, and sort by date or priority.",
         })
@@ -362,15 +350,15 @@ export async function seedProjectData(userId: string): Promise<void> {
 
       // Link all declarations to main v2
       for (const decl of createdDeclarations) {
-        await tx.insert(versionDeclarations).values({
-          versionId: mainV2.id,
+        await tx.insert(snapshotDeclarations).values({
+          snapshotId: mainV2.id,
           declarationId: decl.id,
         });
       }
 
       await tx
         .update(branches)
-        .set({ headVersionId: mainV2.id })
+        .set({ snapshotId: mainV2.id })
         .where(eq(branches.id, mainBranch.id));
 
       console.log(`  ✅ Created main v2: ${mainV2.id}`);
@@ -398,18 +386,12 @@ export async function seedProjectData(userId: string): Promise<void> {
       await tx.insert(chatMessages).values(mainV3Messages);
 
       const [mainV3] = await tx
-        .insert(versions)
+        .insert(snapshots)
         .values({
           projectId: project.id,
           userId,
-          chatId: mainV3Chat.id,
-          branchId: mainBranch.id,
-          parentVersionId: mainV2.id,
-          number: 3,
-          sequenceNumber: 3,
-          kind: "checkpoint",
-          status: "completed",
-          message: "feat: add search functionality to tasks endpoint",
+          createdBy: userId,
+          title: "feat: add search functionality to tasks endpoint",
           description:
             "Adds a search query parameter to the GET /api/tasks endpoint to filter tasks by title.",
         })
@@ -421,15 +403,15 @@ export async function seedProjectData(userId: string): Promise<void> {
 
       // Link all declarations to main v3
       for (const decl of createdDeclarations) {
-        await tx.insert(versionDeclarations).values({
-          versionId: mainV3.id,
+        await tx.insert(snapshotDeclarations).values({
+          snapshotId: mainV3.id,
           declarationId: decl.id,
         });
       }
 
       await tx
         .update(branches)
-        .set({ headVersionId: mainV3.id })
+        .set({ snapshotId: mainV3.id })
         .where(eq(branches.id, mainBranch.id));
 
       console.log(`  ✅ Created main v3: ${mainV3.id}`);
@@ -439,12 +421,9 @@ export async function seedProjectData(userId: string): Promise<void> {
         .insert(branches)
         .values({
           name: "feature/task-comments",
-          description: "Add comments to tasks",
           projectId: project.id,
-          type: "stream",
-          parentBranchId: mainBranch.id,
-          forkedFromVersionId: mainV1.id,
           userId,
+          createdBy: userId,
         })
         .returning();
 
@@ -475,18 +454,12 @@ export async function seedProjectData(userId: string): Promise<void> {
       await tx.insert(chatMessages).values(streamV1Messages);
 
       const [streamV1] = await tx
-        .insert(versions)
+        .insert(snapshots)
         .values({
           projectId: project.id,
           userId,
-          chatId: streamV1Chat.id,
-          branchId: streamBranch.id,
-          parentVersionId: mainV1.id,
-          number: 1,
-          sequenceNumber: 1,
-          kind: "checkpoint",
-          status: "completed",
-          message: "feat: add comments to tasks",
+          createdBy: userId,
+          title: "feat: add comments to tasks",
           description:
             "Adds a comments field to the tasks model and updates the task detail page to display and manage comments.",
         })
@@ -498,15 +471,15 @@ export async function seedProjectData(userId: string): Promise<void> {
 
       // Link all declarations to stream v1
       for (const decl of createdDeclarations) {
-        await tx.insert(versionDeclarations).values({
-          versionId: streamV1.id,
+        await tx.insert(snapshotDeclarations).values({
+          snapshotId: streamV1.id,
           declarationId: decl.id,
         });
       }
 
       await tx
         .update(branches)
-        .set({ headVersionId: streamV1.id })
+        .set({ snapshotId: streamV1.id })
         .where(eq(branches.id, streamBranch.id));
 
       console.log(`  ✅ Created stream v1: ${streamV1.id}`);
@@ -532,18 +505,12 @@ export async function seedProjectData(userId: string): Promise<void> {
       await tx.insert(chatMessages).values(streamV2Messages);
 
       const [streamV2] = await tx
-        .insert(versions)
+        .insert(snapshots)
         .values({
           projectId: project.id,
           userId,
-          chatId: streamV2Chat.id,
-          branchId: streamBranch.id,
-          parentVersionId: streamV1.id,
-          number: 2,
-          sequenceNumber: 2,
-          kind: "checkpoint",
-          status: "completed",
-          message: "feat: add edit and delete functionality for comments",
+          createdBy: userId,
+          title: "feat: add edit and delete functionality for comments",
           description: "Adds API endpoints to update and delete task comments.",
         })
         .returning();
@@ -554,15 +521,15 @@ export async function seedProjectData(userId: string): Promise<void> {
 
       // Link all declarations to stream v2
       for (const decl of createdDeclarations) {
-        await tx.insert(versionDeclarations).values({
-          versionId: streamV2.id,
+        await tx.insert(snapshotDeclarations).values({
+          snapshotId: streamV2.id,
           declarationId: decl.id,
         });
       }
 
       await tx
         .update(branches)
-        .set({ headVersionId: streamV2.id })
+        .set({ snapshotId: streamV2.id })
         .where(eq(branches.id, streamBranch.id));
 
       console.log(`  ✅ Created stream v2: ${streamV2.id}`);
@@ -582,21 +549,14 @@ export async function seedProjectData(userId: string): Promise<void> {
       }
 
       const [mainV4] = await tx
-        .insert(versions)
+        .insert(snapshots)
         .values({
           projectId: project.id,
           userId,
-          chatId: mainV4Chat.id,
-          branchId: mainBranch.id,
-          parentVersionId: mainV3.id,
-          number: 4,
-          sequenceNumber: 4,
-          kind: "integration",
-          status: "completed",
-          message: "feat: integrate task comments from stream branch",
+          createdBy: userId,
+          title: "feat: integrate task comments from stream branch",
           description:
             "Merges the task comments feature from the stream branch into main, including the ability to add, edit, and delete comments on tasks.",
-          appliedFromBranchId: streamBranch.id,
         })
         .returning();
 
@@ -606,32 +566,27 @@ export async function seedProjectData(userId: string): Promise<void> {
 
       // Link all declarations to main v4
       for (const decl of createdDeclarations) {
-        await tx.insert(versionDeclarations).values({
-          versionId: mainV4.id,
+        await tx.insert(snapshotDeclarations).values({
+          snapshotId: mainV4.id,
           declarationId: decl.id,
         });
       }
 
       await tx
         .update(branches)
-        .set({ headVersionId: mainV4.id })
+        .set({ snapshotId: mainV4.id })
         .where(eq(branches.id, mainBranch.id));
 
       console.log(`  ✅ Created main v4 (integration): ${mainV4.id}`);
 
-      // 14. Create variant branches (both fork from main v1, share forksetId)
-      const forksetId = `forkset-${Date.now()}`;
-
+      // 14. Create variant branches
       const [variant1Branch] = await tx
         .insert(branches)
         .values({
           name: "variant/alternative-ui",
-          description: "Alternative UI approach for tasks",
           projectId: project.id,
-          type: "variant",
-          forkedFromVersionId: mainV1.id,
-          forksetId,
           userId,
+          createdBy: userId,
         })
         .returning();
 
@@ -643,12 +598,9 @@ export async function seedProjectData(userId: string): Promise<void> {
         .insert(branches)
         .values({
           name: "variant/card-based-ui",
-          description: "Card-based UI approach for tasks",
           projectId: project.id,
-          type: "variant",
-          forkedFromVersionId: mainV1.id,
-          forksetId,
           userId,
+          createdBy: userId,
         })
         .returning();
 
@@ -681,18 +633,12 @@ export async function seedProjectData(userId: string): Promise<void> {
       await tx.insert(chatMessages).values(variant1V1Messages);
 
       const [variant1V1] = await tx
-        .insert(versions)
+        .insert(snapshots)
         .values({
           projectId: project.id,
           userId,
-          chatId: variant1V1Chat.id,
-          branchId: variant1Branch.id,
-          parentVersionId: mainV1.id,
-          number: 1,
-          sequenceNumber: 1,
-          kind: "checkpoint",
-          status: "completed",
-          message: "feat: implement table-based UI for tasks list",
+          createdBy: userId,
+          title: "feat: implement table-based UI for tasks list",
           description:
             "Creates a table-based layout for displaying tasks with sortable columns for title, status, priority, and due date.",
         })
@@ -704,15 +650,15 @@ export async function seedProjectData(userId: string): Promise<void> {
 
       // Link all declarations to variant-1 v1
       for (const decl of createdDeclarations) {
-        await tx.insert(versionDeclarations).values({
-          versionId: variant1V1.id,
+        await tx.insert(snapshotDeclarations).values({
+          snapshotId: variant1V1.id,
           declarationId: decl.id,
         });
       }
 
       await tx
         .update(branches)
-        .set({ headVersionId: variant1V1.id })
+        .set({ snapshotId: variant1V1.id })
         .where(eq(branches.id, variant1Branch.id));
 
       console.log(`  ✅ Created variant-1 v1: ${variant1V1.id}`);
@@ -740,18 +686,12 @@ export async function seedProjectData(userId: string): Promise<void> {
       await tx.insert(chatMessages).values(variant1V2Messages);
 
       const [variant1V2] = await tx
-        .insert(versions)
+        .insert(snapshots)
         .values({
           projectId: project.id,
           userId,
-          chatId: variant1V2Chat.id,
-          branchId: variant1Branch.id,
-          parentVersionId: variant1V1.id,
-          number: 2,
-          sequenceNumber: 2,
-          kind: "checkpoint",
-          status: "completed",
-          message: "feat: add bulk actions to table-based tasks view",
+          createdBy: userId,
+          title: "feat: add bulk actions to table-based tasks view",
           description:
             "Adds checkbox selection and bulk action buttons to update or delete multiple tasks at once.",
         })
@@ -763,15 +703,15 @@ export async function seedProjectData(userId: string): Promise<void> {
 
       // Link all declarations to variant-1 v2
       for (const decl of createdDeclarations) {
-        await tx.insert(versionDeclarations).values({
-          versionId: variant1V2.id,
+        await tx.insert(snapshotDeclarations).values({
+          snapshotId: variant1V2.id,
           declarationId: decl.id,
         });
       }
 
       await tx
         .update(branches)
-        .set({ headVersionId: variant1V2.id })
+        .set({ snapshotId: variant1V2.id })
         .where(eq(branches.id, variant1Branch.id));
 
       console.log(`  ✅ Created variant-1 v2: ${variant1V2.id}`);
@@ -799,18 +739,12 @@ export async function seedProjectData(userId: string): Promise<void> {
       await tx.insert(chatMessages).values(variant2V1Messages);
 
       const [variant2V1] = await tx
-        .insert(versions)
+        .insert(snapshots)
         .values({
           projectId: project.id,
           userId,
-          chatId: variant2V1Chat.id,
-          branchId: variant2Branch.id,
-          parentVersionId: mainV1.id,
-          number: 1,
-          sequenceNumber: 1,
-          kind: "checkpoint",
-          status: "completed",
-          message: "feat: implement card-based UI for tasks",
+          createdBy: userId,
+          title: "feat: implement card-based UI for tasks",
           description:
             "Creates a card-based layout for displaying tasks with drag-and-drop support to reorder tasks.",
         })
@@ -822,15 +756,15 @@ export async function seedProjectData(userId: string): Promise<void> {
 
       // Link all declarations to variant-2 v1
       for (const decl of createdDeclarations) {
-        await tx.insert(versionDeclarations).values({
-          versionId: variant2V1.id,
+        await tx.insert(snapshotDeclarations).values({
+          snapshotId: variant2V1.id,
           declarationId: decl.id,
         });
       }
 
       await tx
         .update(branches)
-        .set({ headVersionId: variant2V1.id })
+        .set({ snapshotId: variant2V1.id })
         .where(eq(branches.id, variant2Branch.id));
 
       console.log(`  ✅ Created variant-2 v1: ${variant2V1.id}`);
@@ -858,18 +792,12 @@ export async function seedProjectData(userId: string): Promise<void> {
       await tx.insert(chatMessages).values(variant2V2Messages);
 
       const [variant2V2] = await tx
-        .insert(versions)
+        .insert(snapshots)
         .values({
           projectId: project.id,
           userId,
-          chatId: variant2V2Chat.id,
-          branchId: variant2Branch.id,
-          parentVersionId: variant2V1.id,
-          number: 2,
-          sequenceNumber: 2,
-          kind: "checkpoint",
-          status: "completed",
-          message: "feat: add kanban board columns to card-based tasks view",
+          createdBy: userId,
+          title: "feat: add kanban board columns to card-based tasks view",
           description:
             "Organizes task cards into kanban columns (To Do, In Progress, Done) with drag-and-drop to move tasks between columns.",
         })
@@ -881,15 +809,15 @@ export async function seedProjectData(userId: string): Promise<void> {
 
       // Link all declarations to variant-2 v2
       for (const decl of createdDeclarations) {
-        await tx.insert(versionDeclarations).values({
-          versionId: variant2V2.id,
+        await tx.insert(snapshotDeclarations).values({
+          snapshotId: variant2V2.id,
           declarationId: decl.id,
         });
       }
 
       await tx
         .update(branches)
-        .set({ headVersionId: variant2V2.id })
+        .set({ snapshotId: variant2V2.id })
         .where(eq(branches.id, variant2Branch.id));
 
       console.log(`  ✅ Created variant-2 v2: ${variant2V2.id}`);

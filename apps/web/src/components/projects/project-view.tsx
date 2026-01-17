@@ -27,7 +27,7 @@ export function ProjectView({
 }) {
   const { branchId } = useParams<{ branchId?: string }>();
   const searchParams = useSearchParams();
-  const versionId = searchParams.get("versionId") ?? undefined;
+  const snapshotId = searchParams.get("snapshotId") ?? undefined;
 
   const trpc = useTRPC();
 
@@ -47,7 +47,7 @@ export function ProjectView({
       {
         id: branchId,
         projectId: _project.id,
-        versionId,
+        snapshotId,
       },
       {
         initialData: _branch,

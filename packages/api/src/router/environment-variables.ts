@@ -2,17 +2,29 @@ import { TRPCError, type TRPCRouterRecord } from "@trpc/server";
 import { z } from "zod";
 
 import { and, eq } from "@weldr/db";
-import { environmentVariables, secrets } from "@weldr/db/schema";
+import { environmentVariables, projects, secrets } from "@weldr/db/schema";
 import { Fly } from "@weldr/shared/fly";
-import { isLocalMode } from "@weldr/shared/state";
 import { insertEnvironmentVariableSchema } from "@weldr/shared/validators/environment-variables";
 
 import { protectedProcedure } from "../init";
+import { isLocalMode } from "../utils";
 
 export const environmentVariablesRouter = {
   create: protectedProcedure
     .input(insertEnvironmentVariableSchema)
     .mutation(async ({ input, ctx }) => {
+      const project = await ctx.db.query.projects.findFirst({
+        where: and(eq(projects.id, input.projectId), eq(projects.userId, ctx.session.user.id)),
+        columns: { id: true },
+      });
+
+      if (!project) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Project not found",
+        });
+      }
+
       const isUnique = await ctx.db.query.environmentVariables.findFirst({
         where: and(
           eq(environmentVariables.projectId, input.projectId),
@@ -92,7 +104,10 @@ export const environmentVariablesRouter = {
     .input(z.object({ projectId: z.string() }))
     .query(async ({ input, ctx }) => {
       return ctx.db.query.environmentVariables.findMany({
-        where: eq(environmentVariables.projectId, input.projectId),
+        where: and(
+          eq(environmentVariables.projectId, input.projectId),
+          eq(environmentVariables.userId, ctx.session.user.id),
+        ),
         columns: {
           id: true,
           key: true,

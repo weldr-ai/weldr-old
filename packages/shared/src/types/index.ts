@@ -29,10 +29,9 @@ import type { dataTypeSchema } from "../validators/json-schema";
 import type { nodeSchema, nodeTypeSchema } from "../validators/nodes";
 import type { openApiEndpointSpecSchema } from "../validators/openapi";
 import type { packageSchema } from "../validators/packages";
-import type { planSchema, taskSchema } from "../validators/plans";
 import type { projectSchema } from "../validators/projects";
+import type { snapshotSchema } from "../validators/snapshots";
 import type { themeDataSchema, themeSchema } from "../validators/themes";
-import type { versionSchema } from "../validators/versions";
 import type { DeclarationMetadata, DeclarationProgress } from "./declarations";
 
 export type DataType = z.infer<typeof dataTypeSchema>;
@@ -42,8 +41,7 @@ export type JsonSchema = JSONSchema7;
 
 export type Project = z.infer<typeof projectSchema>;
 export type Branch = z.infer<typeof branchSchema>;
-
-export type Version = z.infer<typeof versionSchema>;
+export type Snapshot = z.infer<typeof snapshotSchema>;
 
 export type MessageRole = z.infer<typeof messageRoleSchema>;
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
@@ -64,9 +62,6 @@ export type Node = z.infer<typeof nodeSchema>;
 export type Theme = z.infer<typeof themeSchema>;
 export type ThemeData = z.infer<typeof themeDataSchema>;
 export type ThemeMode = keyof Theme;
-
-export type Plan = z.infer<typeof planSchema>;
-export type Task = z.infer<typeof taskSchema>;
 
 export type TStatus =
   | "thinking"
@@ -136,6 +131,7 @@ export type IntegrationStreamableValue = {
 export type SSEConnectionEvent = {
   type: "connected";
   streamId: string;
+  offset?: string;
 };
 
 export type SSEErrorEvent = {
@@ -165,12 +161,19 @@ export type SSEEvent = SSEValue & {
   id: string;
 };
 
-// Trigger API response type
+// Trigger API response type (legacy - kept for backwards compatibility)
 export type TriggerWorkflowResponse = {
   success: boolean;
   streamId: string;
   runId: string;
   message?: string;
+};
+
+// Session API response type
+export type SessionResponse = {
+  success: boolean;
+  chatId?: string;
+  error?: string;
 };
 
 export type IntegrationCategory = z.infer<typeof integrationCategorySchema>;

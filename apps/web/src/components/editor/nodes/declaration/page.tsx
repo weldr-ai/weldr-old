@@ -56,17 +56,17 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
     branchId?: string;
   }>();
   const searchParams = useSearchParams();
-  const versionId = searchParams.get("versionId") ?? undefined;
+  const snapshotId = searchParams.get("snapshotId") ?? undefined;
 
   const branch = queryClient.getQueryData(
     trpc.branches.byIdOrMain.queryKey({
       id: branchId,
       projectId,
-      versionId,
+      snapshotId,
     }),
   );
 
-  const versionToUse = branch?.selectedVersion ?? branch?.headVersion;
+  const snapshot = branch?.snapshot;
 
   const { data: declaration } = useQuery(
     trpc.declarations.byId.queryOptions(
@@ -103,8 +103,8 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
     }
 
     const baseUrl =
-      versionToUse?.id && projectId && branch?.id
-        ? buildPreviewUrl(versionToUse.id, projectId, branch.id)
+      snapshot?.id && projectId && branch?.id
+        ? buildPreviewUrl(snapshot.id, projectId, branch.id)
         : "";
 
     let route = specs?.route.replace(/^\//, "");
@@ -123,7 +123,7 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
     }
 
     return `${baseUrl}/${route}`;
-  }, [versionToUse?.id, projectId, branch?.id, specs, getRouteParameters, parameterValues]);
+  }, [snapshot?.id, projectId, branch?.id, specs, getRouteParameters, parameterValues]);
 
   const canShowPreview = useCallback(() => {
     const routeParameters = getRouteParameters();
@@ -176,10 +176,9 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
   }, [specs]);
 
   // Determine the current state
-  const isVersionCompleted = versionToUse?.status === "completed";
   const isDeclarationCompleted = declaration.progress === "completed";
   const needsParameters = getRouteParameters().length > 0 && (!showPreview || !canShowPreview());
-  const isPreviewReady = isDeclarationCompleted && isVersionCompleted && !needsParameters;
+  const isPreviewReady = isDeclarationCompleted && snapshot !== null && !needsParameters;
 
   if (!specs || specs.type !== "page") {
     return null;
@@ -227,7 +226,7 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
           </div>
         ) : (
           <CardContent className="flex size-full flex-col items-center justify-center space-y-6">
-            {(!isDeclarationCompleted || !isVersionCompleted) && (
+            {(!isDeclarationCompleted || !snapshot) && (
               <>
                 {declaration.progress !== "completed" && (
                   <div className="animate-pulse space-y-2">
@@ -246,7 +245,7 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
                   </div>
                 )}
 
-                {!isVersionCompleted && declaration.progress === "completed" && (
+                {!snapshot && declaration.progress === "completed" && (
                   <div className="space-y-2">
                     <LoaderIcon className="mx-auto size-8 animate-spin text-primary" />
                     <h3 className="font-semibold text-lg">Loading</h3>
@@ -272,7 +271,7 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
               </>
             )}
 
-            {needsParameters && isVersionCompleted && isDeclarationCompleted && (
+            {needsParameters && snapshot && isDeclarationCompleted && (
               <>
                 <div className="space-y-2 text-center">
                   <SettingsIcon className="mx-auto h-8 w-8 text-muted-foreground" />

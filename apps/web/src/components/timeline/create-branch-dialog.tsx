@@ -24,8 +24,8 @@ interface CreateBranchDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
-  versionId: string;
-  versionNumber: number;
+  snapshotId: string;
+  snapshotNumber: number;
   branchType: "variant" | "stream";
 }
 
@@ -33,8 +33,8 @@ export function CreateBranchDialog({
   open,
   onOpenChange,
   projectId,
-  versionId,
-  versionNumber,
+  snapshotId,
+  snapshotNumber,
   branchType,
 }: CreateBranchDialogProps) {
   const router = useRouter();
@@ -76,7 +76,7 @@ export function CreateBranchDialog({
             Create {branchType === "variant" ? "Variant" : "Stream"}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Create a new branch from version #{versionNumber}.
+            Create a new branch from snapshot #{snapshotNumber}.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -100,8 +100,7 @@ export function CreateBranchDialog({
               createBranch.mutate({
                 projectId,
                 name: generatedName,
-                type: branchType,
-                forkedFromVersionId: versionId,
+                fromSnapshotId: snapshotId,
               })
             }
             disabled={createBranch.isPending}

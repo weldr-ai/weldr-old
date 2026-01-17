@@ -1,7 +1,7 @@
 import { relations } from "drizzle-orm";
 
 import { users } from "./auth";
-import { branches, versions } from "./branches-versions";
+import { branches } from "./branches";
 import { attachments, chatMessages, chats, streams } from "./chats";
 import { declarations } from "./declarations";
 import { dependencies } from "./dependencies";
@@ -15,8 +15,8 @@ import {
 } from "./integrations";
 import { nodes } from "./nodes";
 import { projects } from "./projects";
-import { taskDependencies, tasks } from "./tasks";
-import { versionDeclarations } from "./version-declarations";
+import { snapshotDeclarations } from "./snapshot-declarations";
+import { snapshotParents, snapshots } from "./snapshots";
 
 export const usersRelations = relations(users, ({ many }) => ({
   projects: many(projects),
@@ -28,7 +28,6 @@ export const usersRelations = relations(users, ({ many }) => ({
 export const chatRelations = relations(chats, ({ one, many }) => ({
   messages: many(chatMessages),
   streams: many(streams),
-  version: one(versions),
   user: one(users, {
     fields: [chats.userId],
     references: [users.id],
@@ -36,6 +35,10 @@ export const chatRelations = relations(chats, ({ one, many }) => ({
   project: one(projects, {
     fields: [chats.projectId],
     references: [projects.id],
+  }),
+  branch: one(branches, {
+    fields: [chats.branchId],
+    references: [branches.id],
   }),
 }));
 
@@ -75,114 +78,70 @@ export const projectRelations = relations(projects, ({ many, one }) => ({
     fields: [projects.userId],
     references: [users.id],
   }),
-  versions: many(versions),
+  snapshots: many(snapshots),
   integrations: many(integrations),
   branches: many(branches),
 }));
 
+// Snapshot relations
+export const snapshotsRelations = relations(snapshots, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [snapshots.projectId],
+    references: [projects.id],
+  }),
+  creator: one(users, {
+    fields: [snapshots.createdBy],
+    references: [users.id],
+  }),
+  // Parents of this snapshot (via junction table)
+  parentEdges: many(snapshotParents, { relationName: "child" }),
+  // Children of this snapshot (via junction table)
+  childEdges: many(snapshotParents, { relationName: "parent" }),
+  // Declarations in this snapshot
+  declarations: many(snapshotDeclarations),
+  // Integration installations for this snapshot
+  integrationInstallations: many(integrationInstallations),
+}));
+
+export const snapshotParentsRelations = relations(snapshotParents, ({ one }) => ({
+  snapshot: one(snapshots, {
+    fields: [snapshotParents.snapshotId],
+    references: [snapshots.id],
+    relationName: "child",
+  }),
+  parent: one(snapshots, {
+    fields: [snapshotParents.parentId],
+    references: [snapshots.id],
+    relationName: "parent",
+  }),
+}));
+
+// Branch relations
 export const branchesRelations = relations(branches, ({ one, many }) => ({
   project: one(projects, {
     fields: [branches.projectId],
     references: [projects.id],
   }),
-  parent: one(branches, {
-    fields: [branches.parentBranchId],
-    references: [branches.id],
-    relationName: "branch_parent",
+  snapshot: one(snapshots, {
+    fields: [branches.snapshotId],
+    references: [snapshots.id],
   }),
-  forkedFromVersion: one(versions, {
-    relationName: "branch_forked_from_version",
-    fields: [branches.forkedFromVersionId],
-    references: [versions.id],
-  }),
-  headVersion: one(versions, {
-    relationName: "branch_head_version",
-    fields: [branches.headVersionId],
-    references: [versions.id],
-  }),
-  children: many(branches, { relationName: "branch_parent" }),
-  versions: many(versions, { relationName: "version_branch" }),
-}));
-
-export const versionsRelations = relations(versions, ({ one, many }) => ({
-  parent: one(versions, {
-    fields: [versions.parentVersionId],
-    references: [versions.id],
-    relationName: "version_parent",
-  }),
-  branch: one(branches, {
-    relationName: "version_branch",
-    fields: [versions.branchId],
-    references: [branches.id],
-  }),
-  appliedFromBranch: one(branches, {
-    relationName: "version_applied_from_branch",
-    fields: [versions.appliedFromBranchId],
-    references: [branches.id],
-  }),
-  revertedVersion: one(versions, {
-    relationName: "version_reverted_version",
-    fields: [versions.revertedVersionId],
-    references: [versions.id],
-  }),
-  tasks: many(tasks),
-  children: many(versions, {
-    relationName: "version_children",
-  }),
-  chat: one(chats, {
-    fields: [versions.chatId],
-    references: [chats.id],
-  }),
-  project: one(projects, {
-    fields: [versions.projectId],
-    references: [projects.id],
-  }),
-  user: one(users, {
-    fields: [versions.userId],
+  creator: one(users, {
+    fields: [branches.createdBy],
     references: [users.id],
   }),
-  declarations: many(versionDeclarations),
-  integrationInstallations: many(integrationInstallations),
+  chats: many(chats),
 }));
 
-export const versionDeclarationsRelations = relations(versionDeclarations, ({ one }) => ({
+// Snapshot declarations relations
+export const snapshotDeclarationsRelations = relations(snapshotDeclarations, ({ one }) => ({
   declaration: one(declarations, {
-    fields: [versionDeclarations.declarationId],
+    fields: [snapshotDeclarations.declarationId],
     references: [declarations.id],
   }),
-  version: one(versions, {
-    fields: [versionDeclarations.versionId],
-    references: [versions.id],
-  }),
-}));
-
-export const taskRelations = relations(tasks, ({ one, many }) => ({
-  version: one(versions, {
-    fields: [tasks.versionId],
-    references: [versions.id],
-  }),
-  dependencies: many(taskDependencies, {
-    relationName: "taskDependencies",
-  }),
-  dependents: many(taskDependencies, {
-    relationName: "taskDependents",
-  }),
-  declaration: one(declarations, {
-    fields: [tasks.id],
-    references: [declarations.taskId],
-  }),
-}));
-
-export const taskDependencyRelations = relations(taskDependencies, ({ one }) => ({
-  dependent: one(tasks, {
-    fields: [taskDependencies.dependentId],
-    references: [tasks.id],
-    relationName: "taskDependencies",
-  }),
-  dependency: one(tasks, {
-    fields: [taskDependencies.dependencyId],
-    references: [tasks.id],
-    relationName: "taskDependents",
+  snapshot: one(snapshots, {
+    fields: [snapshotDeclarations.snapshotId],
+    references: [snapshots.id],
   }),
 }));
 
@@ -196,10 +155,6 @@ export const declarationsRelations = relations(declarations, ({ one, many }) => 
     fields: [declarations.projectId],
     references: [projects.id],
   }),
-  task: one(tasks, {
-    fields: [declarations.taskId],
-    references: [tasks.id],
-  }),
   user: one(users, {
     fields: [declarations.userId],
     references: [users.id],
@@ -210,7 +165,7 @@ export const declarationsRelations = relations(declarations, ({ one, many }) => 
   dependents: many(dependencies, {
     relationName: "dependent_declaration",
   }),
-  versions: many(versionDeclarations),
+  snapshots: many(snapshotDeclarations),
 }));
 
 export const dependenciesRelations = relations(dependencies, ({ one }) => ({
@@ -283,9 +238,9 @@ export const integrationInstallationsRelations = relations(integrationInstallati
     fields: [integrationInstallations.integrationId],
     references: [integrations.id],
   }),
-  version: one(versions, {
-    fields: [integrationInstallations.versionId],
-    references: [versions.id],
+  snapshot: one(snapshots, {
+    fields: [integrationInstallations.snapshotId],
+    references: [snapshots.id],
   }),
 }));
 

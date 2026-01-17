@@ -25,11 +25,64 @@
 
 ## Current Structure
 
-- `src/app`: app router routes (landing, pricing, projects, auth flows, API handlers), shared layout/loading/not-found
-- `src/components`: auth, billing, chat, editor, integrations, projects, openapi viewer, command center, timeline, dialogs
-- `src/hooks`: event stream, workflow trigger, messages, chat visibility, editor references, scroll management, status
-- `src/lib`: tRPC client/server utils, context providers, gradient and preview helpers, dev-server manager, shutdown helpers
-- `src/types`: shared client-side types for UI
+```
+src/
+├── app/                          # Next.js App Router
+│   ├── api/                      # API Route Handlers
+│   │   ├── attachments/          # File upload handling (Tigris storage)
+│   │   ├── auth/[...all]/        # Better Auth catch-all handler
+│   │   ├── avatars/[name]/       # Dynamic avatar generation
+│   │   ├── chat/[projectId]/[branchId]/stream/  # SSE proxy to agent
+│   │   ├── proxy/                # General proxy to agent service
+│   │   └── trpc/[trpc]/          # tRPC handler
+│   ├── auth/                     # Auth pages (sign-in, sign-up, forgot-password, etc.)
+│   ├── pricing/                  # Pricing page
+│   └── projects/                 # Project management
+│       ├── [projectId]/          # Single project view
+│       │   ├── _utils/           # Server-side utilities
+│       │   └── branches/[branchId]/  # Branch-specific view
+│       └── page.tsx              # Projects list (redirects)
+├── components/                   # React components (feature-based)
+│   ├── auth/                     # Authentication forms and dialogs
+│   ├── billing/                  # Subscription and payment components
+│   ├── chat/                     # Chat interface (messages, editor, multimodal input)
+│   ├── editor/                   # Visual canvas editor (ReactFlow)
+│   ├── integrations/             # Integration configuration UI
+│   ├── openapi-viewer/           # API documentation viewer
+│   ├── projects/                 # Project management components
+│   └── timeline/                 # Version history/timeline (compound components)
+├── hooks/                        # Custom React hooks
+│   ├── use-event-stream.ts       # SSE with Durable Streams (offset-based resumption)
+│   ├── use-session.ts            # AI session management (replaces useWorkflowTrigger)
+│   ├── use-messages.ts           # Chat message state
+│   ├── use-chat-visibility.ts    # Chat panel visibility
+│   ├── use-scroll-to-bottom.ts   # Scroll management
+│   └── ...
+├── lib/                          # Utilities and configurations
+│   ├── actions/                  # Server actions
+│   ├── context/                  # React context providers
+│   │   ├── ui-store.tsx          # Auth dialog, account settings, command center state
+│   │   └── integrations.tsx      # Project integrations context
+│   └── trpc/                     # tRPC client setup
+│       ├── react.tsx             # Client-side tRPC with useTRPC hook
+│       ├── server.ts             # Server-side tRPC with api helper
+│       └── query-client.ts       # TanStack Query client config
+└── types/                        # TypeScript type definitions
+```
+
+## Local Commands
+
+- `bun dev`: `bun with-env next dev --turbopack -p 3000`
+- `bun build`: `next build`
+- `bun start`: `next start`
+- `bun typecheck`: `tsc --noEmit --emitDeclarationOnly false`
+- `bun clean`: `git clean -xdf .next .turbo node_modules dist tsconfig.tsbuildinfo`
+- `bun with-env`: `dotenv -e ../../.env --`
+
+## Providers & Globals
+
+- Root providers are configured in `src/app/layout.tsx` (ReactFlow, tRPC/query client, theme provider, tooltips).
+- Global styles are pulled from `@weldr/ui/styles/globals.css` in the root layout.
 
 ## Type Safety Requirements
 
@@ -55,31 +108,49 @@ export const MyComponent: React.FC<ComponentProps> = ({
 };
 ```
 
-### tRPC Usage
+### tRPC Usage (v11 with TanStack Query)
 
 ```typescript
-// ALWAYS use type-safe tRPC hooks
-import { api } from "@/lib/trpc/react";
+// Use the useTRPC hook from @trpc/tanstack-react-query
+import { useTRPC } from "@/lib/trpc/react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 
-export function MyComponent() {
-  // Queries with type inference
-  const { data, error, isLoading } = api.projects.list.useQuery();
+export function MyComponent({ projectId, initialData }: Props) {
+  const trpc = useTRPC();
 
-  // Mutations with type-safe inputs
-  const createProject = api.projects.create.useMutation({
-    onSuccess: (data) => {
-      // data is fully typed
-    },
-    onError: (error) => {
-      // Handle typed errors
-    },
-  });
+  // Queries with queryOptions pattern
+  const { data, error, isLoading } = useQuery(
+    trpc.projects.byId.queryOptions(
+      { id: projectId },
+      { initialData } // Server-side hydration
+    )
+  );
+
+  // Mutations with mutationOptions pattern
+  const createProject = useMutation(
+    trpc.projects.create.mutationOptions({
+      onSuccess: (data) => {
+        // data is fully typed
+      },
+      onError: (error) => {
+        // Handle typed errors
+      },
+    })
+  );
 
   // Call mutation with validated input
   await createProject.mutateAsync({
     title: "Project",
     description: "Description",
   });
+}
+
+// Server-side data fetching (in server components)
+import { api } from "@/lib/trpc/server";
+
+export default async function Page({ params }: Props) {
+  const project = await api.projects.byId({ id: params.projectId });
+  return <ClientComponent initialData={project} />;
 }
 ```
 
@@ -210,29 +281,36 @@ export async function POST(request: NextRequest) {
 
 ### useEventStream
 
-- Manages SSE connection to backend
-- Handles reconnection with Last-Event-ID
-- Processes streaming messages
-- Updates UI state based on events
+- Manages SSE connection to agent backend via Durable Streams
+- **Offset-based resumption** (not Last-Event-ID) for reliable reconnection
+- Stream URL pattern: `/api/chat/{projectId}/{snapshotId}/stream`
+- Fly.io replay headers for production routing
+- Processes streaming messages and updates UI state
+
+### useSession
+
+- **Replaces useWorkflowTrigger** - manages AI session lifecycle
+- Starts sessions and sends messages to agent
+- Manages pending states during AI processing
+- Handles error recovery and retry logic
 
 ### useMessages
 
 - Manages chat message state
-- Handles message submission
-- Manages attachments
-- Syncs with backend
-
-### useWorkflowTrigger
-
-- Triggers AI generation workflows
-- Manages pending states
-- Handles error recovery
+- Handles message submission with attachments
+- Syncs with backend via tRPC
+- Optimistic updates for better UX
 
 ### useChatVisibility
 
 - Controls chat panel visibility
 - Auto-shows on new messages
 - Handles focus management
+
+### useScrollToBottom
+
+- Auto-scroll behavior for chat messages
+- Scroll position persistence
 
 ## UI Component Patterns
 
@@ -373,50 +451,63 @@ const buttonVariants = cva("inline-flex items-center justify-center", {
 
 ## Authentication
 
-### Protected Routes
+### Better Auth Route Handler
 
 ```typescript
-// middleware.ts
+// src/app/api/auth/[...all]/route.ts
 import { auth } from "@weldr/auth";
+import { toNextJsHandler } from "better-auth/next-js";
 
-export default auth((req) => {
-  const isAuth = !!req.auth;
-  const isAuthPage = req.nextUrl.pathname.startsWith("/auth");
+export const { GET, POST } = toNextJsHandler(auth);
+```
 
-  if (isAuthPage) {
-    if (isAuth) {
-      return Response.redirect(new URL("/dashboard", req.url));
-    }
-    return null;
-  }
+## API Route Patterns
 
-  if (!isAuth) {
-    return Response.redirect(new URL("/auth/sign-in", req.url));
-  }
-});
+- **tRPC handler**: `src/app/api/trpc/[trpc]/route.ts`
+- **Attachment uploads**: `src/app/api/attachments/route.ts` (Tigris/S3 storage)
+- **Agent SSE proxy**: `src/app/api/chat/[projectId]/[branchId]/stream/route.ts`
+- **Agent proxy**: `src/app/api/proxy/route.ts` (general proxy to agent service)
+- **Dynamic avatars**: `src/app/api/avatars/[name]/route.tsx` (generated avatar images)
+- **Better Auth**: `src/app/api/auth/[...all]/route.ts` (catch-all auth handler)
 
-export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
-};
+### Fly.io Production Routing
+
+In production, routes use Fly.io replay headers to route requests to the correct machine:
+
+```typescript
+// For agent service calls in production
+headers.set("fly-force-instance-id", instanceId);
 ```
 
 ## Real-time Features
 
-### SSE Streaming
+### SSE Streaming with Durable Streams
+
+The app uses **Durable Streams** for reliable, resumable SSE connections:
 
 ```typescript
-// Handle server-sent events for real-time updates
-const eventSource = new EventSource(`/api/stream/${projectId}`);
+// useEventStream hook handles SSE with offset-based resumption
+const { events, status, error } = useEventStream({
+  projectId,
+  snapshotId,
+  enabled: isSessionActive,
+});
 
-eventSource.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  // Update UI based on event type
-};
+// Stream URL pattern
+// /api/chat/{projectId}/{snapshotId}/stream?offset={lastOffset}
 
-eventSource.onerror = () => {
-  // Handle reconnection
-};
+// Internally uses offset-based resumption (not Last-Event-ID)
+// Events include an offset that can be used to resume from interruption
 ```
+
+### Event Types
+
+The stream emits various event types:
+
+- **session**: Session lifecycle events (started, completed, failed)
+- **llm**: LLM streaming chunks and completions
+- **tool**: Tool execution events (start, result, error)
+- **orchestrator**: Sub-agent orchestration events
 
 ### Optimistic Updates
 

@@ -14,8 +14,7 @@
     "./machine-lookup-store": "./src/machine-lookup-store.ts",
     "./nanoid": "./src/nanoid.ts",
     "./logger": "./src/logger.ts",
-    "./process-text": "./src/process-text.ts",
-    "./state": "./src/state/index.ts"
+    "./process-text": "./src/process-text.ts"
   },
   "scripts": {
     "clean": "git clean -xdf .turbo node_modules dist",
@@ -33,7 +32,7 @@
   "devDependencies": {
     "@types/json-schema": "^7.0.15",
     "@weldr/tsconfig": "workspace:*",
-    "ai": "^5.0.12",
+    "ai": "^6.0.31",
     "pino-pretty": "^13.0.0",
     "typescript": "^5.9.3"
   }

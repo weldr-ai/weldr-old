@@ -1,272 +1,98 @@
-import * as path from "node:path";
-
-import { z } from "zod";
+import type { Tool } from "ai";
 
 import { Logger } from "@weldr/shared/logger";
-import { getBranchDir } from "@weldr/shared/state";
 
-import { type AgentFSBashTools, agentFSManager, createAgentFSBashTool } from "@/lib/storage";
-import type { WorkflowContext } from "@/workflow/context";
-import { trackFileChange } from "../utils/extract-changed-files";
-import { createTool } from "./utils";
-
-const CODE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mts", ".mjs", ".cts", ".cjs"]);
-const WORKSPACE_ROOT = "/workspace";
-const WORKSPACE_PREFIX = "workspace/";
+import {
+  type WorkspaceSession,
+  getOrCreateWorkspace,
+  closeWorkspace,
+} from "@/core/workspace/just-bash";
 
 /**
- * Extract all regex matches from a string.
+ * Result of a bash command execution
  */
-function getAllMatches(pattern: RegExp, text: string): RegExpExecArray[] {
-  const matches: RegExpExecArray[] = [];
-  let match = pattern.exec(text);
-  while (match !== null) {
-    matches.push(match);
-    match = pattern.exec(text);
-  }
-  return matches;
+export interface BashResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
 }
 
 /**
- * Extract file paths that are being modified from a bash command.
- * Returns paths that are targets of write operations.
+ * Bash tools type - compatible with ToolSet
  */
-function extractModifiedFiles(command: string): string[] {
-  const files: string[] = [];
+export type BashTools = Record<string, Tool>;
 
-  // Match output redirections: > file, >> file
-  const redirectMatches = getAllMatches(/(?:>>?)\s*["']?([^\s"'|;&]+)["']?/g, command);
-  for (const match of redirectMatches) {
-    if (match[1]) files.push(match[1]);
-  }
-
-  // Match tee command: tee file, tee -a file
-  const teeMatches = getAllMatches(/\btee\s+(?:-a\s+)?["']?([^\s"'|;&]+)["']?/g, command);
-  for (const match of teeMatches) {
-    if (match[1]) files.push(match[1]);
-  }
-
-  // Match touch command: touch file1 file2
-  const touchMatches = getAllMatches(/\btouch\s+((?:["']?[^\s"'|;&]+["']?\s*)+)/g, command);
-  for (const match of touchMatches) {
-    if (match[1]) {
-      const touchFiles = match[1].trim().split(/\s+/);
-      files.push(...touchFiles.map((f) => f.replace(/["']/g, "")));
-    }
-  }
-
-  // Match cp command: cp source dest (last arg is destination)
-  const cpMatches = getAllMatches(/\bcp\s+(?:-[a-zA-Z]+\s+)*(.+)/g, command);
-  for (const match of cpMatches) {
-    if (match[1]) {
-      const args = match[1].trim().split(/\s+/);
-      if (args.length >= 2) {
-        const dest = args[args.length - 1];
-        if (dest) files.push(dest.replace(/["']/g, ""));
-      }
-    }
-  }
-
-  // Match mv command: mv source dest (last arg is destination)
-  const mvMatches = getAllMatches(/\bmv\s+(?:-[a-zA-Z]+\s+)*(.+)/g, command);
-  for (const match of mvMatches) {
-    if (match[1]) {
-      const args = match[1].trim().split(/\s+/);
-      if (args.length >= 2) {
-        const dest = args[args.length - 1];
-        if (dest) files.push(dest.replace(/["']/g, ""));
-      }
-    }
-  }
-
-  // Match sed -i: sed -i 's/...' file
-  const sedMatches = getAllMatches(
-    /\bsed\s+(?:-[a-zA-Z]*i[a-zA-Z]*\s+).*?\s+["']?([^\s"'|;&]+)["']?$/g,
-    command,
-  );
-  for (const match of sedMatches) {
-    if (match[1]) files.push(match[1]);
-  }
-
-  // Filter to only include code files and normalize paths
-  return files
-    .map((filePath) => {
-      const trimmed = filePath.replace(/^\/+/, "");
-      if (filePath.startsWith(`${WORKSPACE_ROOT}/`)) {
-        return trimmed.slice(WORKSPACE_PREFIX.length);
-      }
-      return trimmed;
-    })
-    .filter((filePath) => CODE_EXTENSIONS.has(path.extname(filePath)));
+/**
+ * Extended bash tools with access to workspace and AgentFS SDK features
+ */
+export interface BashToolsWithWorkspace {
+  tools: BashTools;
+  workspace: WorkspaceSession;
 }
 
 /**
- * Cache for bash tool instances per branch.
- * The underlying AgentFS connections are managed by agentFSManager.
+ * Options for creating bash tools
  */
-const bashToolCache = new Map<string, AgentFSBashTools>();
+export interface CreateBashToolsOptions {
+  projectId: string;
+  snapshotId: string;
+  workdir?: string;
+}
 
 /**
- * Get or create a bash tool instance for a branch.
- * Uses AgentFSManager for connection lifecycle management.
+ * Create bash tools for AI agents using just-bash with AgentFS SDK.
+ *
+ * This provides:
+ * - 80+ built-in bash commands (cat, ls, grep, find, sed, awk, etc.)
+ * - Custom git and bun commands (sync to temp dir, execute real binary, sync back)
+ * - Persistent virtual filesystem backed by SQLite
+ * - KV store for workflow state
+ * - Tool call tracking persisted to SQLite
+ * - Workflow snapshot storage in SQLite
  */
-async function getOrCreateBashTool(projectId: string, branchId: string): Promise<AgentFSBashTools> {
-  const cacheKey = `${projectId}:${branchId}`;
+export async function createBashTools(
+  options: CreateBashToolsOptions,
+): Promise<BashToolsWithWorkspace> {
+  const { projectId, snapshotId, workdir = "/home/user/project" } = options;
+  const logger = Logger.get({ projectId, snapshotId, component: "bash-tool" });
 
-  const cached = bashToolCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
+  logger.debug("Creating bash tools with just-bash and AgentFS SDK");
 
-  const branchDir = getBranchDir(projectId, branchId);
-  const agent = await agentFSManager.acquire(projectId, branchId, branchDir);
-
-  const bashTools = await createAgentFSBashTool({
-    agent,
-    cwd: "/workspace",
-    onBeforeBashCall: ({ command }) => {
-      const logger = Logger.get({ projectId, branchId });
-      logger.debug(`Executing bash command: ${command}`);
-      return undefined;
-    },
-    onAfterBashCall: ({ command, result }) => {
-      const logger = Logger.get({ projectId, branchId });
-      logger.debug(`Bash command completed with exit code ${result.exitCode}`, {
-        extra: { command, stdout: result.stdout.slice(0, 500) },
-      });
-      return undefined;
-    },
+  const workspace = await getOrCreateWorkspace({
+    snapshotId,
+    projectId,
+    workdir,
   });
 
-  bashToolCache.set(cacheKey, bashTools);
-  return bashTools;
+  logger.debug("Workspace ready", {
+    extra: { hasStorage: !!workspace.storage, hasMetrics: !!workspace.metrics },
+  });
+
+  return {
+    tools: workspace.tools,
+    workspace,
+  };
 }
 
 /**
- * Clear the bash tool cache for a branch.
- * Also releases the underlying AgentFS connection.
+ * Get or create bash tools for a snapshot.
+ * Returns just the tools map for backwards compatibility.
  */
-export async function clearBashToolCache(projectId: string, branchId: string): Promise<void> {
-  const cacheKey = `${projectId}:${branchId}`;
-  if (bashToolCache.has(cacheKey)) {
-    bashToolCache.delete(cacheKey);
-    await agentFSManager.release(projectId, branchId);
-  }
+export async function getOrCreateBashTool(
+  projectId: string,
+  snapshotId: string,
+): Promise<BashTools> {
+  const { tools } = await createBashTools({
+    projectId,
+    snapshotId,
+  });
+  return tools;
 }
 
 /**
- * Bash tool for AI agents.
- *
- * This tool provides a sandboxed bash environment backed by AgentFS.
- * The agent can execute any bash command (grep, find, cat, ls, etc.)
- * in a secure TypeScript-based bash implementation.
- *
- * All file operations are persisted to AgentFS (SQLite-backed),
- * enabling versioning and snapshots.
- *
- * Supported commands include:
- * - File operations: cat, cp, ls, mkdir, mv, rm, touch, tree
- * - Text processing: grep, sed, awk, head, tail, wc, sort, uniq, cut
- * - Search: find, grep (with regex support)
- * - Compression: gzip, gunzip
- * - Data processing: jq, yq
- * - And many more standard Unix utilities
+ * Close a workspace and cleanup resources.
+ * Should be called when the workspace is no longer needed.
  */
-export const bashTool = createTool({
-  name: "bash",
-  description: `Execute bash commands in the project's sandboxed environment. Use this for file exploration, text search, data processing, and any shell operations. Commands run in a TypeScript-based bash with full support for pipes, redirections, variables, and common utilities (grep, find, awk, sed, jq, etc.).`,
-  whenToUse: `Use this tool when you need to:
-- Search for patterns in files (grep, find)
-- Explore directory structure (ls, tree, find)
-- Process text or data (awk, sed, jq, cut, sort)
-- View file contents (cat, head, tail)
-- Count lines/words/characters (wc)
-- Any other shell operation
-
-Prefer this over specialized tools when you need flexibility or when combining multiple operations with pipes.`,
-  inputSchema: z.object({
-    command: z
-      .string()
-      .describe(
-        "The bash command to execute. Supports pipes (|), redirections (>, >>), command chaining (&&, ||, ;), variables, and standard Unix utilities.",
-      ),
-  }),
-  outputSchema: z.object({
-    stdout: z.string().describe("Standard output from the command"),
-    stderr: z.string().describe("Standard error from the command"),
-    exitCode: z.number().describe("Exit code of the command (0 = success)"),
-  }),
-  execute: async ({ input, context }) => {
-    const { command } = input;
-    const project = context.get("project");
-    const branch = context.get("branch");
-
-    const logger = Logger.get({
-      projectId: project.id,
-      versionId: branch.headVersion.id,
-    });
-
-    logger.info("Executing bash command", {
-      extra: { command: command.slice(0, 200) },
-    });
-
-    try {
-      const bashTools = await getOrCreateBashTool(project.id, branch.id);
-      const result = await bashTools.exec(command);
-
-      logger.info("Bash command completed", {
-        extra: {
-          exitCode: result.exitCode,
-          stdoutLength: result.stdout.length,
-          stderrLength: result.stderr.length,
-        },
-      });
-
-      // Track modified files for incremental declaration extraction
-      if (result.exitCode === 0) {
-        const modifiedFiles = extractModifiedFiles(command);
-        for (const filePath of modifiedFiles) {
-          await trackFileChange({
-            context,
-            filePath,
-            type: "modified",
-          });
-        }
-        if (modifiedFiles.length > 0) {
-          logger.debug("Tracked file changes", {
-            extra: { files: modifiedFiles },
-          });
-        }
-      }
-
-      return {
-        stdout: result.stdout,
-        stderr: result.stderr,
-        exitCode: result.exitCode,
-      };
-    } catch (error) {
-      logger.error("Failed to execute bash command", {
-        extra: {
-          command,
-          error: error instanceof Error ? error.message : String(error),
-        },
-      });
-
-      return {
-        stdout: "",
-        stderr: error instanceof Error ? error.message : "Failed to execute command",
-        exitCode: 1,
-      };
-    }
-  },
-});
-
-/**
- * Get the bash tools instance for direct access.
- * This can be used for operations that need direct access to the sandbox.
- */
-export async function getBashTools(context: WorkflowContext): Promise<AgentFSBashTools> {
-  const project = context.get("project");
-  const branch = context.get("branch");
-  return getOrCreateBashTool(project.id, branch.id);
+export async function closeBashTools(snapshotId: string): Promise<void> {
+  await closeWorkspace(snapshotId);
 }

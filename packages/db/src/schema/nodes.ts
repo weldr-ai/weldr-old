@@ -2,6 +2,7 @@ import { index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { nanoid } from "@weldr/shared/nanoid";
 
+import { users } from "./auth";
 import { projects } from "./projects";
 
 export const nodes = pgTable(
@@ -17,6 +18,9 @@ export const nodes = pgTable(
     projectId: text("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
   },
   (t) => [index("nodes_created_at_idx").on(t.createdAt)],
 );

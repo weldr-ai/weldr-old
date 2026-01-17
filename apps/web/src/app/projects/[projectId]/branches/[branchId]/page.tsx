@@ -7,31 +7,30 @@ import type { NodeType } from "@weldr/shared/types";
 import { ProjectView } from "@/components/projects/project-view";
 import { api } from "@/lib/trpc/server";
 import type { CanvasNode } from "@/types";
-import { getVersionDeclarations } from "../../_utils/get-version-declarations";
+import { getSnapshotDeclarations } from "../../_utils/get-snapshot-declarations";
 
 export default async function BranchPage({
   params,
   searchParams,
 }: {
   params: Promise<{ projectId: string; branchId: string }>;
-  searchParams: Promise<{ versionId?: string }>;
+  searchParams: Promise<{ snapshotId?: string }>;
 }) {
   try {
     const { projectId, branchId } = await params;
-    const { versionId } = await searchParams;
+    const { snapshotId } = await searchParams;
     const project = await api.projects.byId({ id: projectId });
     const branch = await api.branches.byIdOrMain({
       id: branchId,
       projectId,
-      versionId,
+      snapshotId,
     });
     const integrationTemplates = await api.integrationTemplates.list();
 
-    const versionToUse = branch.selectedVersion ?? branch.headVersion;
-    const versionDeclarations = getVersionDeclarations(versionToUse);
+    const snapshotDeclarations = getSnapshotDeclarations(branch.snapshot);
 
     const initialNodes: CanvasNode[] =
-      versionDeclarations?.reduce<CanvasNode[]>((acc, e) => {
+      snapshotDeclarations?.reduce<CanvasNode[]>((acc, e) => {
         if (!e.declaration.metadata?.specs) return acc;
 
         acc.push({
@@ -48,10 +47,13 @@ export default async function BranchPage({
       }, []) ?? [];
 
     const initialEdges: Edge[] = Array.from(
-      versionDeclarations
-        .flatMap((decl) => decl.edges)
-        .filter((edge) => edge.dependencyId !== undefined && edge.dependentId !== undefined)
-        .reduce((map, edge) => {
+      snapshotDeclarations
+        .flatMap((decl: { edges: { dependencyId?: string; dependentId?: string }[] }) => decl.edges)
+        .filter(
+          (edge: { dependencyId?: string; dependentId?: string }) =>
+            edge.dependencyId !== undefined && edge.dependentId !== undefined,
+        )
+        .reduce((map: Map<string, Edge>, edge: { dependencyId?: string; dependentId?: string }) => {
           const id = `${edge.dependencyId}-${edge.dependentId}`;
           if (!map.has(id)) {
             map.set(id, {

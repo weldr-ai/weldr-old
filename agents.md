@@ -81,7 +81,7 @@ Each app and package has its own `agents.md` file with package-specific developm
 - Use oxfmt for code formatting and oxlint for linting
 - Format code before committing: `bun format`
 - Check formatting: `bun format:check`
-- Lint code: `bun lint`
+- **ALWAYS** use `bun lint:fix` instead of `bun lint` - automatically fix linting issues when possible
 - Use `// oxlint-disable-next-line [rule-name]` for intentional rule violations (with reason)
 
 ### 4. Error Handling & Resilience
@@ -184,6 +184,9 @@ logger.error("Payment failed", { reason: "insufficient-funds" });
 - **IMPLEMENT** consistent naming conventions across the codebase
 - **REFACTOR** code regularly to reduce technical debt
 - **REMOVE** dead code and unused imports regularly
+- **NEVER** create deprecated exports or type aliases - remove old code entirely when refactoring
+- **ALWAYS** remove old exports, types, or functions instead of marking them as deprecated
+- **UPDATE** all usages of renamed/refactored code throughout the codebase rather than keeping deprecated aliases
 
 ### 9.1. Style Consistency & Pattern Matching
 
@@ -322,7 +325,7 @@ bun typecheck    # Run TypeScript type checking
 # Code Quality
 bun format       # Format code with oxfmt
 bun format:check # Check code formatting
-bun lint         # Lint code with oxlint
+bun lint:fix     # Lint and automatically fix code with oxlint (preferred over lint)
 
 # Database
 bun db:push      # Push schema changes
@@ -347,6 +350,8 @@ bun commit       # Create conventional commit
 - ❌ Mixed import styles (require/import)
 - ❌ Non-validated external data
 - ❌ SQL injection vulnerabilities
+- ❌ **Creating deprecated exports or type aliases** - remove old code entirely instead of keeping deprecated wrappers
+- ❌ **Keeping deprecated code around** - update all usages and remove old exports/types completely
 - ❌ **Implementing functionality without first checking if it already exists**
 - ❌ **Using functions without reading their parameters and signatures first**
 - ❌ **Creating duplicate utilities when existing ones could be reused**

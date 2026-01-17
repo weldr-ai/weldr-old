@@ -2,19 +2,18 @@ import { embedMany } from "ai";
 import { z } from "zod";
 
 import { and, cosineDistance, db, desc, eq, getTableColumns, gt, isNotNull, sql } from "@weldr/db";
-import { declarations, versionDeclarations, versions } from "@weldr/db/schema";
+import { declarations, snapshotDeclarations, snapshots } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
-import { formatDeclarationData, formatDeclarationSpecs } from "@/ai/utils/formatters";
-import { registry } from "@/ai/utils/registry";
-import { createTool } from "./utils";
+import { registry } from "@/ai/providers";
+import { formatDeclarationData, formatDeclarationSpecs } from "@/core/project/declarations";
+import { createTool } from "../utils/create-tool";
 
 export const searchCodebaseTool = createTool({
   name: "search_codebase",
-  description:
-    "Searches for the most relevant declarations in the codebase based on semantic similarity to a query text. Returns formatted results with detailed information including path, position, purpose, parameters, and example usage.",
-  whenToUse:
-    "When you need to find declarations (functions, components, models, endpoints) that are semantically similar to a specific query or concept.",
+  description: `Searches for the most relevant declarations in the codebase based on semantic similarity to a query text. Returns formatted results with detailed information including path, position, purpose, parameters, and example usage.
+
+When you need to find declarations (functions, components, models, endpoints) that are semantically similar to a specific query or concept.`,
   inputSchema: z.object({
     query: z.string().describe("The search query to find semantically similar declarations."),
     limit: z
@@ -44,23 +43,31 @@ export const searchCodebaseTool = createTool({
   ]),
   execute: async ({ input, context }) => {
     const { query, limit, minSimilarity } = input;
-    const project = context.get("project");
-    const user = context.get("user");
-    const branch = context.get("branch");
+    const project = context.project;
+    const user = context.user;
+    const branch = context.branch;
 
     const logger = Logger.get({
       projectId: project.id,
-      versionId: branch.headVersion.id,
+      snapshotId: branch.snapshot?.id,
       userId: user.id,
       input,
     });
+
+    if (!branch.snapshot) {
+      logger.error("Branch has no snapshot");
+      return {
+        success: false as const,
+        error: "Branch has no snapshot",
+      };
+    }
 
     logger.info(`Starting codebase search for query: "${query}"`);
 
     try {
       // Generate embedding for the query
       logger.info("Generating embedding for search query");
-      const embeddingModel = registry.textEmbeddingModel("openai:text-embedding-ada-002");
+      const embeddingModel = registry.embeddingModel("openai:text-embedding-ada-002");
 
       const { embeddings } = await embedMany({
         model: embeddingModel,
@@ -97,16 +104,16 @@ export const searchCodebaseTool = createTool({
         })
         .from(declarations)
         .innerJoin(
-          versionDeclarations,
-          sql`${versionDeclarations.declarationId} = ${declarations.id}`,
+          snapshotDeclarations,
+          sql`${snapshotDeclarations.declarationId} = ${declarations.id}`,
         )
-        .innerJoin(versions, sql`${versions.id} = ${versionDeclarations.versionId}`)
+        .innerJoin(snapshots, sql`${snapshots.id} = ${snapshotDeclarations.snapshotId}`)
         .where(
           and(
             eq(declarations.projectId, project.id),
             isNotNull(declarations.embedding),
             gt(similarity, minSimilarity),
-            eq(versions.id, branch.headVersion.id),
+            eq(snapshots.id, branch.snapshot.id),
           ),
         )
         .orderBy(desc(similarity))

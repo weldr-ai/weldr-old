@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
 
-import type { RouterOutputs } from "@weldr/api";
 import type { ChatMessage, IntegrationCategoryKey, TStatus } from "@weldr/shared/types";
 
 import type { IntegrationToolResultPart } from "@/components/integrations/shared/types";
 
 interface UseStatusOptions {
-  version: RouterOutputs["branches"]["byIdOrMain"]["headVersion"];
   messages: ChatMessage[];
   project: {
     integrations: Array<{
@@ -19,35 +17,17 @@ interface UseStatusOptions {
   };
 }
 
-export function useStatus({ version, messages, project }: UseStatusOptions) {
+export function useStatus({ messages, project }: UseStatusOptions) {
   const getInitialPendingMessage = (): TStatus => {
     const lastMessage = messages[messages.length - 1];
-    if (lastMessage?.role === "user" && version.status === "planning") {
+    // Check if there's an unanswered user message
+    if (lastMessage?.role === "user") {
       return "thinking";
     }
     return null;
   };
 
   const [status, setStatus] = useState<TStatus>(getInitialPendingMessage());
-
-  // Handle version status changes
-  useEffect(() => {
-    switch (version.status) {
-      case "coding":
-        setStatus("coding");
-        break;
-      case "finalizing":
-        setStatus("finalizing");
-        break;
-      case "completed":
-      case "failed":
-        setStatus(null);
-        break;
-      default:
-        setStatus(null);
-        break;
-    }
-  }, [version.status]);
 
   // Handle integration setup waiting state
   useEffect(() => {

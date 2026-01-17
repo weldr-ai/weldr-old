@@ -3,7 +3,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@weldr/auth";
 import { and, db, eq } from "@weldr/db";
 import { branches, projects } from "@weldr/db/schema";
-import { isLocalMode } from "@weldr/shared/state";
+
+import { isLocalMode } from "@/lib/mode";
 
 export async function GET(
   request: NextRequest,
@@ -36,6 +37,10 @@ export async function GET(
       return NextResponse.json({ error: "Branch not found" }, { status: 404 });
     }
 
+    if (!branch.snapshotId) {
+      return NextResponse.json({ error: "Branch has no active snapshot" }, { status: 404 });
+    }
+
     if (!isLocalMode()) {
       const appName = `project-development-${projectId}`;
 
@@ -64,31 +69,45 @@ export async function GET(
     headers.set("host", "localhost:8080");
     headers.set("origin", "http://localhost:8080");
 
-    // Check for lastEventId in query params and set as Last-Event-ID header
+    // Build the stream URL with offset parameter for Durable Streams resumption
     const { searchParams } = new URL(request.url);
-    const lastEventId = searchParams.get("lastEventId");
-    if (lastEventId) {
-      headers.set("Last-Event-ID", lastEventId);
+    const offset = searchParams.get("offset");
+    const streamUrl = new URL(`${url}/stream/${projectId}/${branch.snapshotId}`);
+    if (offset) {
+      streamUrl.searchParams.set("offset", offset);
     }
 
     // Make the proxy request to the agent service
-    const response = await fetch(`${url}/stream/${projectId}/${branchId}`, {
+    const response = await fetch(streamUrl.toString(), {
       method: "GET",
       headers,
     });
 
-    // Stream the SSE response
+    // Stream the SSE response, including the X-Stream-Offset header for client resumption
+    const responseHeaders: Record<string, string> = {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Cache-Control",
+      "Access-Control-Expose-Headers": "X-Stream-Offset, X-Stream-ID",
+    };
+
+    // Forward the stream offset header from the agent response
+    const streamOffset = response.headers.get("X-Stream-Offset");
+    if (streamOffset) {
+      responseHeaders["X-Stream-Offset"] = streamOffset;
+    }
+
+    const streamId = response.headers.get("X-Stream-ID");
+    if (streamId) {
+      responseHeaders["X-Stream-ID"] = streamId;
+    }
+
     return new NextResponse(response.body, {
       status: response.status,
       statusText: response.statusText,
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Cache-Control, Last-Event-ID",
-        "Access-Control-Expose-Headers": "Last-Event-ID",
-      },
+      headers: responseHeaders,
     });
   } catch (error) {
     console.error("Proxy error:", error);

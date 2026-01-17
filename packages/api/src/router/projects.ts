@@ -2,15 +2,14 @@ import { TRPCError, type TRPCRouterRecord } from "@trpc/server";
 import { z } from "zod";
 
 import { and, eq } from "@weldr/db";
-import { attachments, branches, chatMessages, chats, projects, versions } from "@weldr/db/schema";
+import { attachments, branches, chatMessages, chats, projects, snapshots } from "@weldr/db/schema";
 import { Fly } from "@weldr/shared/fly";
 import { nanoid } from "@weldr/shared/nanoid";
-import { isLocalMode } from "@weldr/shared/state";
 import { Tigris } from "@weldr/shared/tigris";
 import { insertProjectSchema, updateProjectSchema } from "@weldr/shared/validators/projects";
 
 import { protectedProcedure } from "../init";
-import { callAgentProxy } from "../utils";
+import { callAgentProxy, isLocalMode } from "../utils";
 
 export const projectsRouter = {
   create: protectedProcedure.input(insertProjectSchema).mutation(async ({ ctx, input }) => {
@@ -112,8 +111,8 @@ export const projectsRouter = {
             id: mainBranchId,
             name: "main",
             projectId,
-            isMain: true,
             userId: ctx.session.user.id,
+            createdBy: ctx.session.user.id,
           })
           .returning();
 
@@ -124,29 +123,27 @@ export const projectsRouter = {
           });
         }
 
-        const [version] = await tx
-          .insert(versions)
+        const [snapshot] = await tx
+          .insert(snapshots)
           .values({
             projectId,
             userId: ctx.session.user.id,
-            number: 1,
-            sequenceNumber: 1,
-            chatId: chat.id,
-            branchId: mainBranchId,
+            createdBy: ctx.session.user.id,
+            title: "Initial snapshot",
           })
           .returning();
 
-        if (!version) {
+        if (!snapshot) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to create version",
+            message: "Failed to create snapshot",
           });
         }
 
         await tx
           .update(branches)
           .set({
-            headVersionId: version.id,
+            snapshotId: snapshot.id,
           })
           .where(eq(branches.id, mainBranchId));
 

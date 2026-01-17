@@ -50,6 +50,8 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@weldr/db";
 
 export const auth = betterAuth({
+  baseURL: process.env.NEXT_PUBLIC_BASE_URL,
+  trustedOrigins: ["https://weldr.ai", "http://localhost:3000"],
   database: drizzleAdapter(db, {
     provider: "pg",
     usePlural: true,
@@ -57,7 +59,9 @@ export const auth = betterAuth({
 
   // Custom ID generation
   advanced: {
-    generateId: () => nanoid(),
+    database: {
+      generateId: () => nanoid(),
+    },
     cookiePrefix: "weldr",
   },
 
@@ -92,11 +96,14 @@ export const auth = betterAuth({
 
   // Plugins
   plugins: [
+    oAuthProxy(),
+    nextCookies(),
     admin(),
+    openAPI(),
+    organization(),
     stripe({
       /* config */
     }),
-    organization(),
   ],
 });
 ```
@@ -104,11 +111,17 @@ export const auth = betterAuth({
 ### Client-Side Auth Setup
 
 ```typescript
+import { stripeClient } from "@better-auth/stripe/client";
+import { adminClient } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
-import { adminClient, stripeClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
-  plugins: [adminClient(), stripeClient({ subscription: true })],
+  plugins: [
+    adminClient(),
+    stripeClient({
+      subscription: true,
+    }),
+  ],
 });
 ```
 
@@ -394,13 +407,29 @@ if (session?.user) {
 export type Session = typeof auth.$Infer.Session;
 export type User = typeof auth.$Infer.Session.user;
 export type Subscription = {
+  limits: Record<string, unknown> | undefined;
   id: string;
   plan: string;
-  status: "active" | "canceled" | "incomplete" | "past_due" | "trialing" | "unpaid";
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  trialStart?: Date;
+  trialEnd?: Date;
+  priceId?: string;
+  referenceId: string;
+  status:
+    | "active"
+    | "canceled"
+    | "incomplete"
+    | "incomplete_expired"
+    | "past_due"
+    | "paused"
+    | "trialing"
+    | "unpaid";
   periodStart?: Date;
   periodEnd?: Date;
   cancelAtPeriodEnd?: boolean;
-  limits?: Record<string, unknown>;
+  groupId?: string;
+  seats?: number;
 };
 ```
 

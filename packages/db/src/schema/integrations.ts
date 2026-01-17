@@ -19,7 +19,7 @@ import { users } from "./auth";
 import { environmentVariables } from "./environment-variables";
 import { integrationTemplates } from "./integration-templates";
 import { projects } from "./projects";
-import { versions } from "./versions";
+import { snapshots } from "./snapshots";
 
 export const integrations = pgTable(
   "integrations",
@@ -71,8 +71,8 @@ export const integrationInstallations = pgTable(
     integrationId: text("integration_id")
       .references(() => integrations.id, { onDelete: "cascade" })
       .notNull(),
-    versionId: text("version_id")
-      .references(() => versions.id, { onDelete: "cascade" })
+    snapshotId: text("snapshot_id")
+      .references(() => snapshots.id, { onDelete: "cascade" })
       .notNull(),
     status: text("status").$type<IntegrationInstallationStatus>().notNull().default("installing"),
     installedAt: timestamp("installed_at"),
@@ -89,8 +89,8 @@ export const integrationInstallations = pgTable(
       .notNull(),
   },
   (t) => [
-    uniqueIndex("integration_installations_unique_idx").on(t.integrationId, t.versionId),
-    index("integration_installations_version_idx").on(t.versionId),
+    uniqueIndex("integration_installations_unique_idx").on(t.integrationId, t.snapshotId),
+    index("integration_installations_snapshot_idx").on(t.snapshotId),
     index("integration_installations_integration_idx").on(t.integrationId),
     index("integration_installations_status_idx").on(t.status),
   ],

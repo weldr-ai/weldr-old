@@ -56,7 +56,7 @@ logger.info("Payment processed");
 ### State Management
 
 ```typescript
-import { getBranchDir, getWorkspaceBase } from "@weldr/shared/state";
+import { isLocalMode, isCloudMode, initializeWorkspace } from "@weldr/shared/state";
 ```
 
 ### Nanoid
@@ -131,10 +131,15 @@ try {
 ### State Management
 
 ```typescript
-import { getBranchDir } from "@weldr/shared/state";
+import { isLocalMode, isCloudMode, initializeWorkspace } from "@weldr/shared/state";
 
-const branchDir = getBranchDir(projectId, branchId);
-// Returns: ~/.weldr/{projectId}/{branchId} (local) or /workspace/{branchId} (cloud)
+// Check environment mode
+if (isLocalMode()) {
+  // Local development
+}
+
+// Initialize local workspace for state files
+await initializeWorkspace();
 ```
 
 ### Nanoid

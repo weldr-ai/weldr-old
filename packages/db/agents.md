@@ -6,12 +6,89 @@ The @weldr/db package manages all database operations using Drizzle ORM with Pos
 
 ## Current Structure
 
-- `src/schema`: tables for projects, branches, versions, chats/messages, declarations, declaration-templates, dependencies, nodes, tasks, integrations (and categories/templates), environment-variables, themes, vault, auth tables, ai-models
-- `src/migrations`: SQL migration history and meta tracking
-- `src/index.ts`: drizzle client setup and exports
-- `src/types.ts`: shared types from schemas
-- `src/scripts` and `seed.ts`: helpers for seeding and maintenance
-- `src/utils.ts`: common helpers for DB interactions
+```
+packages/db/
+├── drizzle.config.ts          # Drizzle kit configuration
+├── package.json
+├── tsconfig.json
+└── src/
+    ├── index.ts               # Main entry - exports db client and drizzle-orm
+    ├── types.ts               # Transaction (Tx) and Db type exports
+    ├── utils.ts               # mergeJson helper utility for JSONB updates
+    ├── seed.ts                # Main seeding orchestrator
+    ├── migrations/
+    │   └── *.sql              # Migration files with meta tracking
+    ├── scripts/
+    │   ├── seed-ai-models.ts  # AI models seeding
+    │   └── seed-project-data.ts # Project data seeding
+    └── schema/
+        ├── index.ts           # Barrel export for all schemas
+        ├── relations.ts       # All Drizzle relations defined centrally
+        ├── ai-models.ts       # AI model pricing and configuration
+        ├── auth.ts            # Better Auth tables (users, sessions, accounts, orgs)
+        ├── branches.ts        # Git-like mutable branch pointers
+        ├── chats.ts           # Chat conversations, messages, attachments, streams
+        ├── declaration-templates.ts  # Template declarations linked to integrations
+        ├── declarations.ts    # Code declarations with vector embeddings
+        ├── dependencies.ts    # Declaration dependency junction table
+        ├── environment-variables.ts  # Project environment variables
+        ├── integration-categories.ts # Integration groupings
+        ├── integration-templates.ts  # Available integration templates
+        ├── integrations.ts    # Project-level integration config
+        ├── nodes.ts           # Visual canvas nodes with JSONB positions
+        ├── projects.ts        # Project entities with subdomain
+        ├── snapshot-declarations.ts  # Junction linking snapshots to declarations
+        ├── snapshots.ts       # Immutable commit-like snapshots (DAG structure)
+        ├── themes.ts          # JSONB theme data
+        └── vault.ts           # Encrypted secrets (pgsodium)
+```
+
+### Architecture Overview
+
+The database uses a **git-like versioning model**:
+
+- **Snapshots**: Immutable commit-like records representing a point-in-time state
+- **Branches**: Mutable pointers to snapshots (like git branch refs)
+- **snapshotParents**: Junction table enabling DAG structure for merge support
+- **snapshotDeclarations**: Junction linking snapshots to their declarations
+
+### Core Domain Tables
+
+| Table                  | Description                 | Key Features                                     | Ownership              |
+| ---------------------- | --------------------------- | ------------------------------------------------ | ---------------------- |
+| `projects`             | Project entities            | nanoid PK, unique subdomain                      | Direct `userId` FK     |
+| `branches`             | Git-like branches           | Points to snapshot, unique name per project      | Direct `userId` FK     |
+| `snapshots`            | Immutable commit-like state | DAG structure via snapshotParents, token metrics | Direct `userId` FK     |
+| `snapshotParents`      | Junction for DAG            | Composite PK, enables merge scenarios            | Via snapshot ownership |
+| `snapshotDeclarations` | Junction table              | Links snapshots to declarations                  | Via snapshot ownership |
+| `chats`                | Chat conversations          | Messages, project context                        | Direct `userId` FK     |
+| `declarations`         | Code declarations           | Vector embeddings, progress state                | Direct `userId` FK     |
+| `nodes`                | Visual canvas nodes         | JSONB position data                              | Direct `userId` FK     |
+| `environmentVariables` | Project env vars            | Linked to vault secrets                          | Direct `userId` FK     |
+
+### Ownership Validation Pattern
+
+All queries for user-owned resources MUST validate ownership using the direct `userId` column:
+
+```typescript
+// For tables with direct userId FK, check userId directly
+const branch = await db.query.branches.findFirst({
+  where: and(eq(branches.id, branchId), eq(branches.userId, userId)),
+});
+
+if (!branch) {
+  throw new Error("Not found or not authorized");
+}
+```
+
+### Integration Tables
+
+| Table                      | Description            | Key Features                              | Ownership                                   |
+| -------------------------- | ---------------------- | ----------------------------------------- | ------------------------------------------- |
+| `integrationCategories`    | Integration groups     | Key-based, priority ordering              | Global (no ownership)                       |
+| `integrationTemplates`     | Available integrations | Version, options JSONB, recommended flags | Global (no ownership)                       |
+| `integrations`             | Installed integrations | Project-specific, options JSONB           | Direct `userId` FK                          |
+| `integrationInstallations` | Installation tracking  | Status, metadata, per snapshot            | Via `integrationId` -> `integration.userId` |
 
 ## Type Safety Requirements
 
@@ -20,12 +97,12 @@ The @weldr/db package manages all database operations using Drizzle ORM with Pos
 ```typescript
 // ALWAYS define schemas with proper types and constraints
 import { pgTable, text, timestamp, boolean, integer, uuid } from "drizzle-orm/pg-core";
-import { createId } from "@paralleldrive/cuid2";
+import { nanoid } from "@weldr/shared/nanoid";
 
 export const tableName = pgTable("table_name", {
-  // Use cuid2 for primary keys
+  // Use nanoid for primary keys
   id: text("id")
-    .$defaultFn(() => createId())
+    .$defaultFn(() => nanoid())
     .primaryKey(),
 
   // Required fields
@@ -90,14 +167,25 @@ export type UpdateTableName = Partial<InsertTableName>;
 
 ```
 src/schema/
-├── index.ts           # Main export file
-├── auth.ts           # Authentication tables
-├── projects.ts       # Project-related tables
-├── chats.ts         # Chat and messaging tables
-├── declarations.ts   # Code declarations tables
-├── integrations.ts   # Integration tables
-├── environment-variables.ts
-└── types.ts         # Shared types and enums
+├── index.ts                    # Barrel export for all schemas
+├── relations.ts                # All Drizzle relations (centralized)
+├── auth.ts                     # Better Auth tables (users, sessions, accounts, orgs, subscriptions)
+├── projects.ts                 # Project entities
+├── branches.ts                 # Git-like mutable branch pointers
+├── snapshots.ts                # Immutable commit-like snapshots
+├── snapshot-declarations.ts    # Junction: snapshots <-> declarations
+├── chats.ts                    # Chat conversations, messages, attachments, streams
+├── declarations.ts             # Code declarations with vector embeddings (1536d)
+├── declaration-templates.ts    # Template declarations for integrations
+├── dependencies.ts             # Declaration dependency junction
+├── integrations.ts             # Project-level integration config
+├── integration-categories.ts   # Integration groupings
+├── integration-templates.ts    # Available integration templates
+├── environment-variables.ts    # Project env vars (linked to vault)
+├── nodes.ts                    # Visual canvas nodes
+├── themes.ts                   # JSONB theme data
+├── ai-models.ts                # AI model pricing configuration
+└── vault.ts                    # Encrypted secrets (pgsodium, separate schema)
 ```
 
 ### Naming Conventions
@@ -113,16 +201,18 @@ src/schema/
 
 ```bash
 # Generate migration from schema changes
-bun db:generate
+bun generate
 
 # Apply migrations to database
-bun db:migrate
+bun migrate
 
 # Push schema directly (development only)
-bun db:push
+bun push
 ```
 
 ### Migration Best Practices
+
+- `drizzle.config.ts` enumerates schema files explicitly; update it when adding/removing schema files.
 
 ```typescript
 // ALWAYS test migrations locally first
@@ -136,11 +226,14 @@ bun db:push
 ### Basic Queries
 
 ```typescript
-// Select with relations
+// Select with relations - ALWAYS validate userId ownership
 const projectWithRelations = await db.query.projects.findFirst({
-  where: eq(projects.id, projectId),
+  where: and(
+    eq(projects.id, projectId),
+    eq(projects.userId, userId), // REQUIRED: ownership check
+  ),
   with: {
-    versions: true,
+    branches: true,
     integrations: {
       with: {
         integrationTemplate: true,
@@ -158,14 +251,19 @@ const [newProject] = await db
   })
   .returning();
 
-// Update with conditions
+// Update with conditions - ALWAYS include userId check
 await db
   .update(projects)
   .set({ status: "active" })
   .where(and(eq(projects.id, projectId), eq(projects.userId, userId)));
 
-// Delete with cascade
-await db.delete(projects).where(eq(projects.id, projectId));
+// Delete with cascade - ALWAYS include userId check
+await db.delete(projects).where(and(eq(projects.id, projectId), eq(projects.userId, userId)));
+
+await db
+  .update(branches)
+  .set({ name: "new-name" })
+  .where(and(eq(branches.id, branchId), eq(branches.userId, userId)));
 ```
 
 ### Transaction Patterns
@@ -180,10 +278,19 @@ const result = await db.transaction(async (tx) => {
     throw new Error("Failed to create project");
   }
 
-  // Create related records
-  await tx.insert(versions).values({
+  // Create related records (e.g., initial snapshot and branch)
+  const [snapshot] = await tx
+    .insert(snapshots)
+    .values({
+      projectId: project.id,
+      type: "initial",
+    })
+    .returning();
+
+  await tx.insert(branches).values({
     projectId: project.id,
-    number: 1,
+    name: "main",
+    snapshotId: snapshot.id,
   });
 
   // Return transaction result
@@ -198,14 +305,7 @@ const result = await db.transaction(async (tx) => {
 const activeProjects = db
   .select()
   .from(projects)
-  .where(
-    exists(
-      db
-        .select()
-        .from(versions)
-        .where(and(eq(versions.projectId, projects.id), isNotNull(versions.publishedAt))),
-    ),
-  );
+  .where(exists(db.select().from(branches).where(eq(branches.projectId, projects.id))));
 
 // Aggregations
 const projectStats = await db
@@ -308,27 +408,24 @@ seed();
 // src/index.ts
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+
 import * as schema from "./schema";
 
-const connectionString = process.env.DATABASE_URL;
+const globalForDb = globalThis as unknown as {
+  conn: postgres.Sql | undefined;
+};
 
+const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
   throw new Error("DATABASE_URL is not defined");
 }
 
-const client = postgres(connectionString, {
-  max: 10, // Connection pool size
-  idle_timeout: 20,
-  connect_timeout: 10,
-});
+const conn = globalForDb.conn ?? postgres(connectionString);
+if (process.env.NODE_ENV !== "production") {
+  globalForDb.conn = conn;
+}
 
-export const db = drizzle(client, {
-  schema,
-  logger: process.env.NODE_ENV === "development",
-});
-
-// Export all schema and types
-export * from "./schema";
+export const db = drizzle(conn, { schema });
 export * from "drizzle-orm";
 ```
 
@@ -450,6 +547,33 @@ test("should rollback on error", async () => {
 
 ## Security Considerations
 
+### User Ownership Validation (CRITICAL)
+
+**EVERY query for user-owned data MUST validate ownership:**
+
+```typescript
+// ❌ BAD - No ownership check (security vulnerability!)
+const project = await db.query.projects.findFirst({
+  where: eq(projects.id, projectId),
+});
+
+// ✅ GOOD - Direct userId check for projects table
+const project = await db.query.projects.findFirst({
+  where: and(eq(projects.id, projectId), eq(projects.userId, userId)),
+});
+
+// ✅ GOOD - Direct userId check for tables with userId column
+const branch = await db.query.branches.findFirst({
+  where: and(eq(branches.id, branchId), eq(branches.userId, userId)),
+});
+if (!branch) {
+  throw new Error("Not authorized");
+}
+
+// ✅ GOOD - Direct userId check for updates/deletes
+await db.delete(branches).where(and(eq(branches.id, branchId), eq(branches.userId, userId)));
+```
+
 ### SQL Injection Prevention
 
 ```typescript
@@ -523,6 +647,7 @@ if (duration > 1000) {
 
 ### Do's
 
+✅ **ALWAYS validate userId ownership** on all user-owned data queries
 ✅ Use transactions for multi-step operations
 ✅ Define proper indexes for performance
 ✅ Use TypeScript types from schema
@@ -532,9 +657,11 @@ if (duration > 1000) {
 ✅ Test migrations locally first
 ✅ Use parameterized queries
 ✅ Export inferred types
+✅ Check `userId` directly in WHERE clauses for tables with `userId` columns
 
 ### Don'ts
 
+❌ **Query user-owned data without userId validation** (security vulnerability!)
 ❌ Modify existing migrations
 ❌ Use raw SQL without parameterization
 ❌ Skip transaction for related operations
@@ -544,3 +671,5 @@ if (duration > 1000) {
 ❌ Skip index on foreign keys
 ❌ Use SELECT \* in production
 ❌ Ignore connection limits
+❌ Assume ownership is validated elsewhere - always check in the query
+❌ Join through project relation when tables have direct `userId` columns - check `userId` directly instead

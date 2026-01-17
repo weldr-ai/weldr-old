@@ -17,7 +17,11 @@ export const declarationsRouter = {
         progress: true,
       },
       with: {
-        node: true,
+        node: {
+          columns: {
+            userId: false,
+          },
+        },
       },
     });
 

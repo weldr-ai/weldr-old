@@ -1,11 +1,11 @@
 /**
- * Get the preview URL for a version based on deployment mode
+ * Get the preview URL for a snapshot based on deployment mode
  *
  * In local mode: Uses the local preview proxy at /api/preview/[projectId]/[branchId]
- * In cloud mode: Uses the isolated Fly.io preview URLs at https://[versionId].preview.weldr.app
+ * In cloud mode: Uses the isolated Fly.io preview URLs at https://[snapshotId].preview.weldr.app
  */
 export function getPreviewUrl(
-  versionId: string,
+  snapshotId: string,
   projectId: string,
   branchId: string,
   path = "",
@@ -23,6 +23,6 @@ export function getPreviewUrl(
   }
 
   // Cloud mode: use the Fly.io preview subdomain
-  const base = `https://${versionId}.preview.weldr.app`;
+  const base = `https://${snapshotId}.preview.weldr.app`;
   return path ? (path.startsWith("/") ? `${base}${path}` : `${base}/${path}`) : base;
 }

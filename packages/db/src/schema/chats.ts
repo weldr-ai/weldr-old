@@ -4,6 +4,7 @@ import { nanoid } from "@weldr/shared/nanoid";
 import type { AiMessageMetadata, ChatMessageContent } from "@weldr/shared/types";
 
 import { users } from "./auth";
+import { branches } from "./branches";
 import { projects } from "./projects";
 
 export const messageRoles = pgEnum("message_roles", ["user", "assistant", "tool"]);
@@ -23,8 +24,10 @@ export const chats = pgTable(
     userId: text("user_id")
       .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
+    // Branch this chat works on
+    branchId: text("branch_id").references(() => branches.id, { onDelete: "set null" }),
   },
-  (t) => [index("chats_created_at_idx").on(t.createdAt)],
+  (t) => [index("chats_created_at_idx").on(t.createdAt), index("chats_branch_idx").on(t.branchId)],
 );
 
 export const chatMessages = pgTable(

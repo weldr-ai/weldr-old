@@ -6,12 +6,88 @@ The Agent application is the core AI-powered backend service built with Hono and
 
 ## Current Structure
 
-- `src/ai`: agents (planner, coder), prompts, schemas, tools, shared utils
-- `src/routes`: health, trigger, stream, revert, install-integrations (Hono OpenAPI routes)
-- `src/workflow`: engine, context, steps (generate-project-info, generate-branch-name, generate-version-details, planning, coding, finalizing)
-- `src/integrations`: authentication (better-auth), backend (orpc), frontend (tanstack-start), database (postgresql), utils (registry, queue-manager/installer, declaration templates, env writer)
-- `src/lib`: git/worktrees, branch-state, build, commands runner, constants, extract-declarations, storage, stream-utils, misc utils
-- `src/middlewares`: logger middleware for request logging
+```
+src/
+├── index.ts              # Main entry point - Hono server setup
+├── agent/                # Sub-agent machine and orchestration
+│   ├── actors/           # Sub-agent specific actors
+│   ├── machine.ts        # Agent state machine (XState 5.x)
+│   ├── orchestrator/     # Sub-agent orchestration (parallel execution)
+│   └── types.ts
+├── ai/                   # AI/LLM related code
+│   ├── messages/         # Message handling and persistence
+│   ├── prompts/          # System prompts
+│   ├── providers/        # LLM provider registry (Anthropic, OpenAI, Google)
+│   ├── schemas/          # Zod schemas for AI responses
+│   ├── tools/            # AI tools (bash, spawn-agents, search, etc.)
+│   └── utils/            # Tool creation utilities
+├── core/                 # Core infrastructure
+│   ├── auth/             # Authentication (Better Auth)
+│   ├── build/            # Build utilities
+│   ├── constants.ts
+│   ├── events/           # Event types and forwarders
+│   ├── git/              # Git operations
+│   ├── integrations/     # Integration system
+│   ├── metrics/          # Metrics collection
+│   ├── persistence/      # Session/state persistence
+│   ├── project/          # Project context and declarations
+│   ├── stream/           # Durable Streams (SSE)
+│   ├── types.ts
+│   ├── utils/
+│   └── workspace/        # AgentFS workspace management
+├── http/                 # HTTP layer
+│   ├── middlewares/      # Logger middleware
+│   ├── routes/           # health, session, stream, revert, install-integrations
+│   └── utils.ts
+└── session/              # Session state machine
+    ├── actors/           # Session actors (initialize, llm-stream, finalize, etc.)
+    ├── branch-state.ts
+    ├── context.ts
+    ├── machine.ts        # Main session state machine
+    ├── recovery.ts
+    ├── registry.ts       # In-memory session registry
+    └── types.ts
+```
+
+### Key Architectural Changes
+
+- **`src/machines`** renamed to **`src/session`** - contains session state machine
+- **`src/actors`** moved into **`src/session/actors`** and **`src/agent/actors`**
+- **`src/routes`** moved to **`src/http/routes`**
+- **`src/middlewares`** moved to **`src/http/middlewares`**
+- **`src/lib`** reorganized into **`src/core`** with clear subdirectories
+- **`src/agent`** is NEW - handles sub-agent machines and orchestration
+
+## Commands
+
+- `bun dev`: `bun with-env tsx watch --clear-screen=false src/index.ts`
+- `bun build`: `tsdown`
+- `bun start`: `node dist/index.js`
+- `bun typecheck`: `tsc --noEmit --emitDeclarationOnly false`
+- `bun clean`: `git clean -xdf .turbo node_modules dist tsconfig.tsbuildinfo`
+- `bun with-env`: `dotenv -e ../../.env --`
+
+## Build Notes
+
+- `tsdown.config.ts` copies integration template data from `src/integrations/**/data` into the build output.
+
+## Routes
+
+| Route               | Method | Path                             | Purpose                             |
+| ------------------- | ------ | -------------------------------- | ----------------------------------- |
+| health              | GET    | `/health`                        | Health check                        |
+| session             | POST   | `/session`                       | Start/resume session, send messages |
+| stream              | GET    | `/stream/:projectId/:snapshotId` | SSE stream subscription             |
+| revert              | POST   | `/revert`                        | Revert to previous snapshot         |
+| installIntegrations | POST   | `/integrations/install`          | Install queued integrations         |
+
+### Streaming with Durable Streams
+
+- `GET /stream/:projectId/:snapshotId` uses **Durable Streams** for reliable SSE
+- Supports **offset-based resumption** via `?offset={lastOffset}` query param
+- Embedded Durable Streams server on port 4437
+- Stream path pattern: `stream/{projectId}/{snapshotId}/{chatId}`
+- 5-minute TTL for streams
 
 ## Type Safety Requirements
 
@@ -73,6 +149,7 @@ router.openapi(route, async (c) => {
 // ALWAYS use createTool utility with proper schemas
 import { z } from "zod";
 import { createTool } from "./utils";
+import { exec } from "@/core/workspace";
 
 export const myTool = createTool({
   name: "toolName",
@@ -93,27 +170,29 @@ export const myTool = createTool({
     }),
   ]),
   execute: async ({ input, context }) => {
-    // Get context data
-    const project = context.get("project");
-    const branch = context.get("branch");
-
-    // Get the correct workspace directory
-    const workspaceDir = Git.getBranchWorkspaceDir(branch.id, branch.isMain);
+    // Context properties are accessed directly (not via .get())
+    const project = context.project;
+    const branch = context.branch;
+    const snapshot = context.snapshot;
 
     // Initialize logger with context
     const logger = Logger.get({
       projectId: project.id,
-      versionId: branch.headVersion.id,
+      snapshotId: snapshot.id,
       input,
     });
 
     try {
-      // Tool implementation with correct workspace
-      const result = await performAction(input, workspaceDir);
+      // Tool implementation - use exec() for commands inside agentfs session
+      // All commands run in the virtual /workspace directory
+      const result = await exec("some-command", {
+        projectId: project.id,
+        snapshotId: snapshot.id,
+      });
 
       return {
         success: true as const,
-        data: result,
+        data: result.stdout,
       };
     } catch (error) {
       logger.error("Tool execution failed", { extra: { error } });
@@ -200,12 +279,14 @@ Logger.warn("High memory usage detected", { memoryUsage: process.memoryUsage() }
 export const myTool = createTool({
   // ... tool definition
   execute: async ({ input, context }) => {
-    const project = context.get("project");
-    const branch = context.get("branch");
+    // Access context properties directly (not via .get())
+    const project = context.project;
+    const branch = context.branch;
+    const snapshot = context.snapshot;
 
     const logger = Logger.get({
       projectId: project.id,
-      versionId: branch.headVersion.id,
+      snapshotId: snapshot.id,
       toolName: "myTool",
       input: input.someId, // Safe contextual data only
     });
@@ -333,9 +414,9 @@ logger.info("Declaration extraction completed", {
 ### Route Organization
 
 ```typescript
-// In src/routes/[resource].ts
+// In src/http/routes/[resource].ts
 import { createRoute } from "@hono/zod-openapi";
-import { createRouter } from "@/lib/utils";
+import { createRouter } from "@/http/utils";
 
 const router = createRouter();
 
@@ -436,7 +517,7 @@ router.openapi(streamRoute, async (c) => {
 3. **Error Messages**: Provide clear, actionable error messages
 4. **Return Types**: Use discriminated unions for success/failure
 5. **Context Usage**: Always get project/branch from context
-6. **Workspace Awareness**: Use Git.getBranchWorkspaceDir() for file operations
+6. **Sandbox Execution**: Use `exec()` from `@/lib/sandbox` for all commands - they run inside the agentfs virtual `/workspace` directory
 7. **Logging**: Use structured logging with Logger.get()
 
 ### XML Tool Support
@@ -472,121 +553,134 @@ const markdown = myTool.toMarkdown(); // Documentation format
 - Use environment variable mappings
 - Validate integration status before use
 
-## Workflow Engine
+## Session Machine Architecture
 
-### Step Implementation
+The agent uses XState 5.x state machines for session orchestration:
+
+### Session Machine
 
 ```typescript
-// ALWAYS type workflow steps
-interface StepContext {
-  projectId: string;
-  versionId: string;
-  messages: ChatMessage[];
-}
-
-export const myStep: WorkflowStep<StepContext> = {
-  name: "myStep",
-  execute: async (context) => {
-    // Type-safe implementation
-  },
-};
+// src/session/machine.ts - Main session orchestration
+// States: idle -> initializing -> streaming -> processing -> finalizing -> completed/failed
+// Uses emit() for events, assign() for context, fromPromise() for async actors
 ```
 
-### Workflow Context Pattern
+### Agent Machine (Sub-agents)
 
 ```typescript
-// Access workflow context in tools
-const project = context.get("project");
-const branch = context.get("branch");
-const chatId = context.get("chatId");
-const messages = context.get("messages");
+// src/agent/machine.ts - Sub-agent execution
+// Handles individual agent tasks spawned by the main session
+// Can run in parallel via the orchestrator
+```
+
+### Orchestrator Machine
+
+```typescript
+// src/agent/orchestrator/ - Parallel sub-agent coordination
+// Manages multiple sub-agents running concurrently
+// Aggregates results and handles failures
+```
+
+### Session Context Pattern
+
+```typescript
+// Access session context properties directly (not via .get())
+interface SessionMachineContext {
+  project: Project;
+  branch: Branch;
+  snapshot: Snapshot;
+  chatId: string;
+  messages: ChatMessage[];
+  user: User;
+  // ... other properties
+}
+
+// In tools and actors:
+const project = context.project;
+const snapshot = context.snapshot;
+```
+
+### Session Registry
+
+```typescript
+// src/session/registry.ts - In-memory session tracking
+// Maps active sessions for lookup
+// Automatic cleanup on completion/failure
+// State restoration from SQLite persistence
+```
+
+## AgentFS Workspace
+
+### Architecture Overview
+
+All file operations and command execution happen inside an **agentfs session**. The agentfs SDK provides:
+
+- **Virtual `/workspace` directory**: All commands see files at `/workspace`, which is a FUSE-mounted overlay
+- **Snapshot-based isolation**: Each snapshot has its own SQLite database (`~/.weldr/db/{snapshotId}.db`) storing file changes
+- **Cloud sync**: Session databases are synced to Tigris/S3 for persistence
+
+### Command Execution
+
+```typescript
+// Use exec() from workspace for all commands
+import { exec } from "@/core/workspace";
+
+// Commands automatically run in the virtual /workspace directory
+const result = await exec("bun install", {
+  projectId: project.id,
+  snapshotId: snapshot.id,
+});
+
+if (result.exitCode !== 0) {
+  throw new Error(`Command failed: ${result.stderr}`);
+}
+```
+
+### Bash Tools (via just-bash + AgentFS SDK)
+
+The agent provides 80+ built-in bash commands via `just-bash`:
+
+```typescript
+// Custom git and bun commands sync to temp, execute, and sync back
+// All tool calls are tracked and persisted
+
+import { createBashTools } from "@/ai/tools";
+
+const bashTools = createBashTools(projectId, snapshotId);
+```
+
+### File Operations
+
+File operations are performed through bash commands (no separate fs utilities):
+
+```typescript
+// All file operations go through exec() with bash commands
+await exec("cat /workspace/package.json", { projectId, snapshotId });
+await exec("echo 'content' > /workspace/file.txt", { projectId, snapshotId });
+await exec("ls -la /workspace/src", { projectId, snapshotId });
 ```
 
 ## Git Operations
 
-### Branch Workspace Management
+### Git Commands in AgentFS
 
 ```typescript
 // Use Git namespace for all git-related operations
-import { Git } from "@/lib/git";
+import { Git } from "@/core/git";
 
-// Get the correct workspace directory for a branch
-const workspaceDir = Git.getBranchWorkspaceDir(branchId, isMainBranch);
-// Returns: /workspace (main) or /workspace/.weldr/{branchId} (feature)
-
-// Initialize git repository (only once per project)
-await Git.initRepository();
+// Initialize git repository (runs inside agentfs session)
+await Git.initRepository(projectId, snapshotId);
 
 // Create git commits
 const commitHash = await Git.commit(
   "commit message",
   { name: "Author", email: "author@example.com" },
-  { worktreeName: branchId }, // Only for feature branches
+  projectId,
+  snapshotId,
 );
 
-// Create worktrees for feature branches
-const worktreePath = await Git.getOrCreateWorktree(
-  branchId, // worktree name
-  `branch-${branchId}`, // git branch name
-  "main", // start from main
-);
-```
-
-## File Operations
-
-### Safe File Handling
-
-```typescript
-// For branch-aware file operations, use Git.getBranchWorkspaceDir()
-import { Git } from "@/lib/git";
-
-// Get the correct workspace directory for the branch
-const workspaceDir = Git.getBranchWorkspaceDir(branchId, isMainBranch);
-const safePath = path.resolve(workspaceDir, userInput);
-if (!safePath.startsWith(workspaceDir)) {
-  throw new Error("Path traversal attempt");
-}
-
-// For simple operations, use WORKSPACE_DIR constant
-import { WORKSPACE_DIR } from "@/lib/constants";
-const safePath = path.resolve(WORKSPACE_DIR, userInput);
-if (!safePath.startsWith(WORKSPACE_DIR)) {
-  throw new Error("Path traversal attempt");
-}
-
-// ALWAYS handle file errors
-try {
-  const content = await fs.readFile(filePath, "utf-8");
-} catch (error) {
-  if (error.code === "ENOENT") {
-    // File not found handling
-  }
-  throw error;
-}
-```
-
-### Command Execution
-
-```typescript
-// Use runCommand utility for shell commands
-import { runCommand } from "@/lib/commands";
-import { Git } from "@/lib/git";
-
-// For branch-aware commands, get the correct workspace directory
-const workspaceDir = Git.getBranchWorkspaceDir(branchId, isMainBranch);
-const { stdout, stderr, exitCode } = await runCommand("command", args, {
-  cwd: workspaceDir,
-});
-
-// For simple commands, use WORKSPACE_DIR
-import { WORKSPACE_DIR } from "@/lib/constants";
-const { stdout, stderr, exitCode } = await runCommand("command", args, {
-  cwd: WORKSPACE_DIR,
-});
-
-if (exitCode !== 0) {
-  // Handle command failure
-}
+// Get changed files
+const changedFiles = await Git.getChangedFiles(projectId, snapshotId);
 ```
 
 ## OpenAPI Documentation
@@ -706,6 +800,22 @@ logger.info("Operation completed", {
 - Stream processing performance
 - Integration success rates
 
+## AI Provider Registry
+
+```typescript
+// src/ai/providers/registry.ts
+import { createProviderRegistry } from "ai";
+
+// Supports multiple LLM providers
+const registry = createProviderRegistry({
+  anthropic: anthropicProvider,
+  openai: openaiProvider,
+  google: googleProvider,
+});
+
+// Default model: google:gemini-2.5-pro
+```
+
 ## Security Considerations
 
 ### Input Sanitization
@@ -728,16 +838,47 @@ logger.info("Operation completed", {
 ### Tool Registry Pattern
 
 ```typescript
-// Tools are registered automatically via index.ts
+// Tools are exported from src/ai/tools/index.ts
 export const tools = {
-  grep: grepTool,
-  readFile: readFileTool,
-  writeFile: writeFileTool,
-  // ... other tools
+  addIntegrationsTool,
+  queryRelatedDeclarationsTool,
+  searchCodebaseTool,
+  spawnAgentsTool,
+  ...createBashTools(projectId, snapshotId),
 };
 
 // Use in agent
-const availableTools = Object.values(tools).map((tool) => tool(context));
+const availableTools = Object.values(tools);
+```
+
+## Event System
+
+The agent emits events through Durable Streams for real-time updates:
+
+### Public Events (sent to clients)
+
+```typescript
+// Session events
+type SessionEvent = { type: "session"; status: "started" | "completed" | "failed" };
+
+// LLM events
+type LLMEvent = { type: "llm"; chunk?: string; done?: boolean };
+
+// Tool events
+type ToolEvent = { type: "tool"; name: string; status: "start" | "result" | "error" };
+
+// Orchestrator events
+type OrchestratorEvent = { type: "orchestrator"; agents: AgentStatus[] };
+```
+
+### Event Forwarding
+
+```typescript
+// src/core/events/forwarders.ts
+import { appendToStream } from "@/core/stream/durable";
+
+// Events are forwarded to Durable Streams for client consumption
+await appendToStream(streamPath, event);
 ```
 
 ### Context Propagation
@@ -816,8 +957,8 @@ router.use(loggingMiddleware);
 ✅ Handle all error cases explicitly
 ✅ Stream large responses
 ✅ Use Logger.get() for structured logging
-✅ Use Git.getBranchWorkspaceDir() for branch-aware file operations
-✅ Use WORKSPACE_DIR for simple file operations
+✅ Use `exec()` from `@/lib/sandbox` for all commands
+✅ Use sandbox fs utilities (`readFile`, `writeFile`, etc.) for file operations
 ✅ Document all API endpoints
 
 ### Don'ts
@@ -831,5 +972,5 @@ router.use(loggingMiddleware);
 ❌ Trust user input without validation
 ❌ Use console.log, console.error, console.warn, or any console methods (use Logger from @weldr/shared)
 ❌ Skip OpenAPI documentation
-❌ Access files outside the correct workspace directory
-❌ Use WORKSPACE_DIR when you need branch-specific operations
+❌ Use Node.js `fs` directly for user workspace files (use sandbox fs utilities)
+❌ Assume real filesystem paths exist (everything is virtual in agentfs)

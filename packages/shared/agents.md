@@ -153,35 +153,6 @@ const parts = processText("Check <Reference type='page' id='home' /> page");
 // Returns: [{ type: 'text', content: 'Check ' }, { type: 'reference', ... }, ...]
 ```
 
-## State Management
-
-### Workspace Utilities
-
-```typescript
-import {
-  isLocalMode,
-  isCloudMode,
-  WORKSPACE_DIR,
-  getProjectDir,
-  getBranchDir,
-  initializeWorkspace,
-} from "@weldr/shared/state";
-
-// Check environment mode
-if (isLocalMode()) {
-  // Local development: ~/.weldr
-} else {
-  // Cloud deployment: /workspace
-}
-
-// Get workspace paths
-const projectDir = getProjectDir("project_123");
-const branchDir = getBranchDir("project_123", "branch_456");
-
-// Initialize workspace directory
-await initializeWorkspace();
-```
-
 ## Fly.io Integration
 
 ### App Operations
@@ -301,7 +272,6 @@ src/validators/
 ├── nodes.ts             # Node schemas
 ├── openapi.ts           # OpenAPI validators
 ├── packages.ts          # Package schemas
-├── plans.ts             # Plan/task schemas
 ├── projects.ts          # Project schemas
 ├── themes.ts            # Theme schemas
 ├── vault.ts             # Vault schemas
@@ -411,10 +381,10 @@ export interface DeclarationMetadata {
     "./fly": "./src/fly/index.ts",
     "./tigris": "./src/tigris.ts",
     "./color-utils": "./src/color-utils.ts",
+    "./machine-lookup-store": "./src/machine-lookup-store.ts",
     "./nanoid": "./src/nanoid.ts",
     "./logger": "./src/logger.ts",
-    "./process-text": "./src/process-text.ts",
-    "./state": "./src/state/index.ts"
+    "./process-text": "./src/process-text.ts"
   }
 }
 ```
@@ -445,7 +415,6 @@ export interface DeclarationMetadata {
 - Create insert/update schema variants
 - Document schema fields with `.describe()`
 - Use discriminated unions for variants
-- Check `isLocalMode()` before cloud operations
 
 ### Don'ts
 

@@ -1,19 +1,18 @@
 import { serve } from "@hono/node-server";
+import type { Context } from "hono";
 import { cors } from "hono/cors";
 import { requestId } from "hono/request-id";
 
 import { Logger } from "@weldr/shared/logger";
-import { initializeWorkspace } from "@weldr/shared/state";
 
-import { recoverEnrichingJobs } from "./ai/utils/enriching-jobs";
-import { closeRedisConnections } from "./lib/stream-utils";
-import { configureOpenAPI, createRouter } from "./lib/utils";
-import { loggerMiddleware } from "./middlewares/logger";
-import { routes } from "./routes";
-import { recoverWorkflow } from "./workflow";
-import { WorkflowContext } from "./workflow/context";
+import { recoverEnrichingJobs } from "./core/project/declarations/enriching-jobs";
+import { closeDurableStreams, initDurableStreams } from "./core/stream";
+import { loggerMiddleware } from "./http/middlewares/logger";
+import { routes } from "./http/routes";
+import { configureOpenAPI, createRouter } from "./http/utils";
+import { recoverSessions, sessionRegistry } from "./session";
 
-const app = createRouter();
+export const app = createRouter();
 
 app
   .use(requestId())
@@ -31,17 +30,11 @@ app
 
 configureOpenAPI(app);
 
-app.use(async (c, next) => {
-  const workflowContext = new WorkflowContext();
-  c.set("workflowContext", workflowContext);
-  await next();
-});
-
 for (const route of routes) {
   app.route("/", route);
 }
 
-app.use("*", async (c) => {
+app.use("*", async (c: Context) => {
   return c.json(
     {
       message: "Not found",
@@ -50,7 +43,7 @@ app.use("*", async (c) => {
   );
 });
 
-app.onError((err, c) => {
+app.onError((err: Error, c: Context) => {
   console.error(err);
   return c.json(
     {
@@ -67,8 +60,11 @@ async function gracefulShutdown(signal: string) {
   Logger.info(`Received ${signal}, shutting down gracefully...`);
 
   try {
-    // Close Redis connections
-    await closeRedisConnections();
+    // Stop all active session actors
+    sessionRegistry.shutdown();
+
+    // Close Durable Streams server
+    await closeDurableStreams();
   } catch (error) {
     Logger.error("Error during graceful shutdown", {
       extra: { error: error instanceof Error ? error.message : String(error) },
@@ -81,15 +77,21 @@ async function gracefulShutdown(signal: string) {
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 
-serve(
-  {
-    fetch: app.fetch,
-    port,
-  },
-  async (info) => {
-    Logger.info(`Server is running on http://localhost:${info.port}`);
-    await initializeWorkspace();
-    await recoverWorkflow();
-    await recoverEnrichingJobs();
-  },
-);
+// Only start server when run directly (not when imported by tests)
+if (import.meta.main) {
+  serve(
+    {
+      fetch: app.fetch,
+      port,
+    },
+    async (info) => {
+      Logger.info(`Server is running on http://localhost:${info.port}`);
+
+      // Initialize Durable Streams server
+      await initDurableStreams();
+
+      await recoverSessions();
+      await recoverEnrichingJobs();
+    },
+  );
+}

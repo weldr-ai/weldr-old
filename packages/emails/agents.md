@@ -34,9 +34,9 @@ export function VerificationEmail({
 VerificationEmail.PreviewProps = {
   firstName: "John",
   verificationLink: "https://weldr.ai/verify?token=abc123",
-} as VerificationEmailProps;
+} satisfies VerificationEmailProps;
 
-export default VerificationEmail;
+export { VerificationEmail };
 ```
 
 ## Template Structure
@@ -119,9 +119,9 @@ export function TemplateName({ props }: TemplateProps) {
 
 TemplateName.PreviewProps = {
   // Sample data for preview
-} as TemplateProps;
+} satisfies TemplateProps;
 
-export default TemplateName;
+export { TemplateName };
 ```
 
 ## Available Components
@@ -212,15 +212,15 @@ export default TemplateName;
 
 ```typescript
 // In @weldr/auth
-import ResetPasswordEmail from "@weldr/emails/reset-password";
-import VerificationEmail from "@weldr/emails/verification-email";
+import { ResetPasswordEmail } from "@weldr/emails/reset-password";
+import { VerificationEmail } from "@weldr/emails/verification-email";
 ```
 
 ### Sending Emails with Resend
 
 ```typescript
 import { Resend } from "resend";
-import VerificationEmail from "@weldr/emails/verification-email";
+import { VerificationEmail } from "@weldr/emails/verification-email";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -250,11 +250,12 @@ bun dev --filter @weldr/emails
 
 ### Available Scripts
 
-| Script      | Command                                   | Description           |
-| ----------- | ----------------------------------------- | --------------------- |
-| `dev`       | `email dev -p 3001 --dir ./src/templates` | Start preview server  |
-| `export`    | `email export`                            | Export emails to HTML |
-| `typecheck` | `tsc --noEmit`                            | Type validation       |
+| Script      | Command                                    | Description           |
+| ----------- | ------------------------------------------ | --------------------- |
+| `dev`       | `email dev -p 3001 --dir ./src/templates`  | Start preview server  |
+| `export`    | `email export`                             | Export emails to HTML |
+| `clean`     | `git clean -xdf .turbo node_modules dist`  | Cleanup workspace     |
+| `typecheck` | `tsc --noEmit --emitDeclarationOnly false` | Type validation       |
 
 ## Creating New Templates
 
@@ -264,7 +265,7 @@ bun dev --filter @weldr/emails
 2. Define typed props interface
 3. Implement template with proper structure
 4. Add `PreviewProps` static property
-5. Export both named and default exports
+5. Export a named template function
 6. Test in preview server
 
 ### Template Checklist
@@ -277,7 +278,7 @@ bun dev --filter @weldr/emails
 - [ ] Logo with environment-aware URL
 - [ ] Clear CTA button
 - [ ] Footer with branding
-- [ ] Both named and default exports
+- [ ] Named export for the template
 
 ## Current Templates
 
@@ -306,7 +307,7 @@ bun dev --filter @weldr/emails
 Import pattern:
 
 ```typescript
-import TemplateName from "@weldr/emails/template-name";
+import { TemplateName } from "@weldr/emails/template-name";
 ```
 
 ## Dependencies

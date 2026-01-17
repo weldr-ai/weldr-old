@@ -1,5 +1,5 @@
 {
-  "id": "551b6efb-9faf-4f09-914e-ec9c53ad60aa",
+  "id": "eef1b656-5293-4fdf-88ff-8b919b7ade76",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -693,74 +693,35 @@
           "primaryKey": true,
           "notNull": true
         },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "project_id": {
           "name": "project_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "type": {
-          "name": "type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'stream'"
-        },
-        "parent_branch_id": {
-          "name": "parent_branch_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "forked_from_version_id": {
-          "name": "forked_from_version_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "forkset_id": {
-          "name": "forkset_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "head_version_id": {
-          "name": "head_version_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_main": {
-          "name": "is_main",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'active'"
-        },
         "user_id": {
           "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "snapshot_id": {
+          "name": "snapshot_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -773,7 +734,7 @@
           "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "now()"
         }
       },
@@ -793,69 +754,17 @@
           "method": "btree",
           "with": {}
         },
-        "branches_parent_fork_idx": {
-          "name": "branches_parent_fork_idx",
+        "branches_snapshot_idx": {
+          "name": "branches_snapshot_idx",
           "columns": [
             {
-              "expression": "parent_branch_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "forked_from_version_id",
+              "expression": "snapshot_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
           "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "branches_forkset_idx": {
-          "name": "branches_forkset_idx",
-          "columns": [
-            {
-              "expression": "forkset_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "branches_head_idx": {
-          "name": "branches_head_idx",
-          "columns": [
-            {
-              "expression": "head_version_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "branches_one_main_per_project_uidx": {
-          "name": "branches_one_main_per_project_uidx",
-          "columns": [
-            {
-              "expression": "project_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"branches\".\"is_main\" = true",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -871,33 +780,6 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "branches_parent_branch_id_branches_id_fk": {
-          "name": "branches_parent_branch_id_branches_id_fk",
-          "tableFrom": "branches",
-          "tableTo": "branches",
-          "columnsFrom": ["parent_branch_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "branches_forked_from_version_id_versions_id_fk": {
-          "name": "branches_forked_from_version_id_versions_id_fk",
-          "tableFrom": "branches",
-          "tableTo": "versions",
-          "columnsFrom": ["forked_from_version_id"],
-          "columnsTo": ["id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "branches_head_version_id_versions_id_fk": {
-          "name": "branches_head_version_id_versions_id_fk",
-          "tableFrom": "branches",
-          "tableTo": "versions",
-          "columnsFrom": ["head_version_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
         "branches_user_id_users_id_fk": {
           "name": "branches_user_id_users_id_fk",
           "tableFrom": "branches",
@@ -906,35 +788,36 @@
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
+        },
+        "branches_snapshot_id_snapshots_id_fk": {
+          "name": "branches_snapshot_id_snapshots_id_fk",
+          "tableFrom": "branches",
+          "tableTo": "snapshots",
+          "columnsFrom": ["snapshot_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "branches_created_by_users_id_fk": {
+          "name": "branches_created_by_users_id_fk",
+          "tableFrom": "branches",
+          "tableTo": "users",
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "branches_name_unique": {
-          "name": "branches_name_unique",
+        "branches_project_name_unique": {
+          "name": "branches_project_name_unique",
           "nullsNotDistinct": false,
           "columns": ["project_id", "name"]
         }
       },
       "policies": {},
-      "checkConstraints": {
-        "branches_main_no_fork_chk": {
-          "name": "branches_main_no_fork_chk",
-          "value": "(NOT \"branches\".\"is_main\" OR \"branches\".\"forked_from_version_id\" IS NULL)"
-        },
-        "branches_variant_requirements_chk": {
-          "name": "branches_variant_requirements_chk",
-          "value": "(\"branches\".\"type\" <> 'variant' OR (\"branches\".\"forked_from_version_id\" IS NOT NULL AND \"branches\".\"forkset_id\" IS NOT NULL))"
-        },
-        "branches_stream_no_forkset_chk": {
-          "name": "branches_stream_no_forkset_chk",
-          "value": "(\"branches\".\"type\" <> 'stream' OR \"branches\".\"forkset_id\" IS NULL)"
-        },
-        "branches_stream_parent_requires_fork_chk": {
-          "name": "branches_stream_parent_requires_fork_chk",
-          "value": "(NOT (\"branches\".\"type\" = 'stream' AND \"branches\".\"is_main\" = false AND \"branches\".\"parent_branch_id\" IS NOT NULL) OR \"branches\".\"forked_from_version_id\" IS NOT NULL)"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.attachments": {
@@ -1155,6 +1038,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "branch_id": {
+          "name": "branch_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -1163,6 +1052,21 @@
           "columns": [
             {
               "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "chats_branch_idx": {
+          "name": "chats_branch_idx",
+          "columns": [
+            {
+              "expression": "branch_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1191,6 +1095,15 @@
           "columnsFrom": ["user_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "chats_branch_id_branches_id_fk": {
+          "name": "chats_branch_id_branches_id_fk",
+          "tableFrom": "chats",
+          "tableTo": "branches",
+          "columnsFrom": ["branch_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1442,12 +1355,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "task_id": {
-          "name": "task_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "project_id": {
           "name": "project_id",
           "type": "text",
@@ -1508,15 +1415,6 @@
           "columnsFrom": ["previous_id"],
           "columnsTo": ["id"],
           "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "declarations_task_id_tasks_id_fk": {
-          "name": "declarations_task_id_tasks_id_fk",
-          "tableFrom": "declarations",
-          "tableTo": "tasks",
-          "columnsFrom": ["task_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "declarations_project_id_projects_id_fk": {
@@ -2016,8 +1914,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "version_id": {
-          "name": "version_id",
+        "snapshot_id": {
+          "name": "snapshot_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -2067,7 +1965,7 @@
               "nulls": "last"
             },
             {
-              "expression": "version_id",
+              "expression": "snapshot_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2078,11 +1976,11 @@
           "method": "btree",
           "with": {}
         },
-        "integration_installations_version_idx": {
-          "name": "integration_installations_version_idx",
+        "integration_installations_snapshot_idx": {
+          "name": "integration_installations_snapshot_idx",
           "columns": [
             {
-              "expression": "version_id",
+              "expression": "snapshot_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2134,11 +2032,11 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "integration_installations_version_id_versions_id_fk": {
-          "name": "integration_installations_version_id_versions_id_fk",
+        "integration_installations_snapshot_id_snapshots_id_fk": {
+          "name": "integration_installations_snapshot_id_snapshots_id_fk",
           "tableFrom": "integration_installations",
-          "tableTo": "versions",
-          "columnsFrom": ["version_id"],
+          "tableTo": "snapshots",
+          "columnsFrom": ["snapshot_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -2298,6 +2196,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {
@@ -2323,6 +2227,15 @@
           "tableFrom": "nodes",
           "tableTo": "projects",
           "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "nodes_user_id_users_id_fk": {
+          "name": "nodes_user_id_users_id_fk",
+          "tableFrom": "nodes",
+          "tableTo": "users",
+          "columnsFrom": ["user_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -2423,134 +2336,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.task_dependencies": {
-      "name": "task_dependencies",
-      "schema": "",
-      "columns": {
-        "dependent_id": {
-          "name": "dependent_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "dependency_id": {
-          "name": "dependency_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "task_dependencies_dependent_id_idx": {
-          "name": "task_dependencies_dependent_id_idx",
-          "columns": [
-            {
-              "expression": "dependent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "task_dependencies_dependency_id_idx": {
-          "name": "task_dependencies_dependency_id_idx",
-          "columns": [
-            {
-              "expression": "dependency_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "task_dependencies_dependent_id_tasks_id_fk": {
-          "name": "task_dependencies_dependent_id_tasks_id_fk",
-          "tableFrom": "task_dependencies",
-          "tableTo": "tasks",
-          "columnsFrom": ["dependent_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "task_dependencies_dependency_id_tasks_id_fk": {
-          "name": "task_dependencies_dependency_id_tasks_id_fk",
-          "tableFrom": "task_dependencies",
-          "tableTo": "tasks",
-          "columnsFrom": ["dependency_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "task_dependencies_dependent_id_dependency_id_pk": {
-          "name": "task_dependencies_dependent_id_dependency_id_pk",
-          "columns": ["dependent_id", "dependency_id"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.tasks": {
-      "name": "tasks",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "data": {
-          "name": "data",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "version_id": {
-          "name": "version_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "tasks_version_id_versions_id_fk": {
-          "name": "tasks_version_id_versions_id_fk",
-          "tableFrom": "tasks",
-          "tableTo": "versions",
-          "columnsFrom": ["version_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.themes": {
       "name": "themes",
       "schema": "",
@@ -2619,383 +2404,6 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.version_declarations": {
-      "name": "version_declarations",
-      "schema": "",
-      "columns": {
-        "version_id": {
-          "name": "version_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "declaration_id": {
-          "name": "declaration_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "version_declarations_version_id_versions_id_fk": {
-          "name": "version_declarations_version_id_versions_id_fk",
-          "tableFrom": "version_declarations",
-          "tableTo": "versions",
-          "columnsFrom": ["version_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "version_declarations_declaration_id_declarations_id_fk": {
-          "name": "version_declarations_declaration_id_declarations_id_fk",
-          "tableFrom": "version_declarations",
-          "tableTo": "declarations",
-          "columnsFrom": ["declaration_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "version_declarations_version_id_declaration_id_pk": {
-          "name": "version_declarations_version_id_declaration_id_pk",
-          "columns": ["version_id", "declaration_id"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.versions": {
-      "name": "versions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "project_id": {
-          "name": "project_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "chat_id": {
-          "name": "chat_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "branch_id": {
-          "name": "branch_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parent_version_id": {
-          "name": "parent_version_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "snapshot_path": {
-          "name": "snapshot_path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'checkpoint'"
-        },
-        "commit_hash": {
-          "name": "commit_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "number": {
-          "name": "number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "sequence_number": {
-          "name": "sequence_number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "message": {
-          "name": "message",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'planning'"
-        },
-        "acceptance_criteria": {
-          "name": "acceptance_criteria",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "changed_files": {
-          "name": "changed_files",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "applied_from_branch_id": {
-          "name": "applied_from_branch_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reverted_version_id": {
-          "name": "reverted_version_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "published_at": {
-          "name": "published_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "version_number_unique_idx": {
-          "name": "version_number_unique_idx",
-          "columns": [
-            {
-              "expression": "project_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "number",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "version_sequence_number_unique_idx": {
-          "name": "version_sequence_number_unique_idx",
-          "columns": [
-            {
-              "expression": "branch_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "sequence_number",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "versions_created_at_idx": {
-          "name": "versions_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "versions_chat_id_idx": {
-          "name": "versions_chat_id_idx",
-          "columns": [
-            {
-              "expression": "chat_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "versions_branch_created_idx": {
-          "name": "versions_branch_created_idx",
-          "columns": [
-            {
-              "expression": "branch_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "versions_commit_hash_uidx": {
-          "name": "versions_commit_hash_uidx",
-          "columns": [
-            {
-              "expression": "commit_hash",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "commit_hash IS NOT NULL",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "versions_project_id_projects_id_fk": {
-          "name": "versions_project_id_projects_id_fk",
-          "tableFrom": "versions",
-          "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "versions_user_id_users_id_fk": {
-          "name": "versions_user_id_users_id_fk",
-          "tableFrom": "versions",
-          "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "versions_chat_id_chats_id_fk": {
-          "name": "versions_chat_id_chats_id_fk",
-          "tableFrom": "versions",
-          "tableTo": "chats",
-          "columnsFrom": ["chat_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "versions_branch_id_branches_id_fk": {
-          "name": "versions_branch_id_branches_id_fk",
-          "tableFrom": "versions",
-          "tableTo": "branches",
-          "columnsFrom": ["branch_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "versions_parent_version_id_versions_id_fk": {
-          "name": "versions_parent_version_id_versions_id_fk",
-          "tableFrom": "versions",
-          "tableTo": "versions",
-          "columnsFrom": ["parent_version_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "versions_applied_from_branch_id_branches_id_fk": {
-          "name": "versions_applied_from_branch_id_branches_id_fk",
-          "tableFrom": "versions",
-          "tableTo": "branches",
-          "columnsFrom": ["applied_from_branch_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "versions_reverted_version_id_versions_id_fk": {
-          "name": "versions_reverted_version_id_versions_id_fk",
-          "tableFrom": "versions",
-          "tableTo": "versions",
-          "columnsFrom": ["reverted_version_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "versions_revert_link_chk": {
-          "name": "versions_revert_link_chk",
-          "value": "((\"versions\".\"kind\" <> 'revert') OR \"versions\".\"reverted_version_id\" IS NOT NULL)\n             AND ((\"versions\".\"kind\" = 'revert') OR \"versions\".\"reverted_version_id\" IS NULL)"
-        },
-        "versions_integration_link_chk": {
-          "name": "versions_integration_link_chk",
-          "value": "((\"versions\".\"kind\" <> 'integration') OR \"versions\".\"applied_from_branch_id\" IS NOT NULL)\n             AND ((\"versions\".\"kind\" = 'integration') OR \"versions\".\"applied_from_branch_id\" IS NULL)"
-        }
-      },
       "isRLSEnabled": false
     }
   },
