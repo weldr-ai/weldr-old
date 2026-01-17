@@ -2,7 +2,7 @@
  * Durable Streams implementation for reliable, resumable SSE streaming.
  *
  * Uses @durable-streams/server embedded in the agent service.
- * Streams are keyed by projectId/branchId/chatId for isolation.
+ * Streams are keyed by projectId/snapshotId/chatId for isolation.
  *
  * Features:
  * - Offset-based resumption (clients can resume from any position)
@@ -24,18 +24,18 @@ let baseUrl: string | null = null;
 const STREAM_PORT = 4437;
 const STREAM_TTL_SECONDS = 300; // 5 minutes
 
-// Registry mapping chatId to projectId/branchId for context lookup
-type StreamContext = { projectId: string; branchId: string };
+// Registry mapping chatId to projectId/snapshotId for context lookup
+type StreamContext = { projectId: string; snapshotId: string };
 const chatContextRegistry = new Map<string, StreamContext>();
 
 /**
  * Register a chat's context for stream routing.
  * Called when a session starts to enable chatId-only writes.
  */
-export function registerChatContext(chatId: string, projectId: string, branchId: string): void {
-  chatContextRegistry.set(chatId, { projectId, branchId });
+export function registerChatContext(chatId: string, projectId: string, snapshotId: string): void {
+  chatContextRegistry.set(chatId, { projectId, snapshotId });
   Logger.debug("Registered chat context for durable streams", {
-    extra: { chatId, projectId, branchId },
+    extra: { chatId, projectId, snapshotId },
   });
 }
 
@@ -111,15 +111,15 @@ export function getDurableStreamsBaseUrl(): string {
 /**
  * Build the stream path for a chat session
  */
-export function buildStreamPath(projectId: string, branchId: string, chatId: string): string {
-  return `stream/${projectId}/${branchId}/${chatId}`;
+export function buildStreamPath(projectId: string, snapshotId: string, chatId: string): string {
+  return `stream/${projectId}/${snapshotId}/${chatId}`;
 }
 
 /**
  * Build the full stream URL for a chat session
  */
-export function buildStreamUrl(projectId: string, branchId: string, chatId: string): string {
-  return `${getDurableStreamsBaseUrl()}/v1/${buildStreamPath(projectId, branchId, chatId)}`;
+export function buildStreamUrl(projectId: string, snapshotId: string, chatId: string): string {
+  return `${getDurableStreamsBaseUrl()}/v1/${buildStreamPath(projectId, snapshotId, chatId)}`;
 }
 
 // Cache of DurableStream handles by stream path
@@ -130,17 +130,17 @@ const streamHandles = new Map<string, DurableStream>();
  */
 async function getOrCreateStreamHandle(
   projectId: string,
-  branchId: string,
+  snapshotId: string,
   chatId: string,
 ): Promise<DurableStream> {
-  const path = buildStreamPath(projectId, branchId, chatId);
+  const path = buildStreamPath(projectId, snapshotId, chatId);
 
   let handle = streamHandles.get(path);
   if (handle) {
     return handle;
   }
 
-  const url = buildStreamUrl(projectId, branchId, chatId);
+  const url = buildStreamUrl(projectId, snapshotId, chatId);
 
   try {
     // Try to create a new stream
@@ -173,11 +173,11 @@ async function getOrCreateStreamHandle(
  */
 export async function appendToStream(
   projectId: string,
-  branchId: string,
+  snapshotId: string,
   chatId: string,
   chunk: SSEValue,
 ): Promise<void> {
-  const handle = await getOrCreateStreamHandle(projectId, branchId, chatId);
+  const handle = await getOrCreateStreamHandle(projectId, snapshotId, chatId);
 
   const event = {
     id: nanoid(),
@@ -198,7 +198,7 @@ export async function appendToStream(
  */
 export async function readFromStream(
   projectId: string,
-  branchId: string,
+  snapshotId: string,
   chatId: string,
   offset?: string,
   live: boolean | "auto" | "long-poll" | "sse" = "sse",
@@ -206,7 +206,7 @@ export async function readFromStream(
   bodyStream: () => AsyncIterable<Uint8Array> & ReadableStream<Uint8Array>;
   offset: string;
 }> {
-  const handle = await getOrCreateStreamHandle(projectId, branchId, chatId);
+  const handle = await getOrCreateStreamHandle(projectId, snapshotId, chatId);
 
   const response = await handle.stream({
     offset: offset ?? "-1",
@@ -224,11 +224,11 @@ export async function readFromStream(
  */
 export async function deleteStream(
   projectId: string,
-  branchId: string,
+  snapshotId: string,
   chatId: string,
 ): Promise<void> {
-  const path = buildStreamPath(projectId, branchId, chatId);
-  const url = buildStreamUrl(projectId, branchId, chatId);
+  const path = buildStreamPath(projectId, snapshotId, chatId);
+  const url = buildStreamUrl(projectId, snapshotId, chatId);
 
   try {
     await fetch(url, { method: "DELETE" });
@@ -249,7 +249,7 @@ export function clearStreamHandles(): void {
 /**
  * Append an event to a chat stream using only chatId.
  *
- * Convenience function that looks up project/branch context automatically.
+ * Convenience function that looks up project/snapshot context automatically.
  * The chatId must be registered via registerChatContext() before use.
  */
 export async function stream(chatId: string, chunk: SSEValue): Promise<void> {
@@ -262,5 +262,5 @@ export async function stream(chatId: string, chunk: SSEValue): Promise<void> {
     return;
   }
 
-  await appendToStream(context.projectId, context.branchId, chatId, chunk);
+  await appendToStream(context.projectId, context.snapshotId, chatId, chunk);
 }

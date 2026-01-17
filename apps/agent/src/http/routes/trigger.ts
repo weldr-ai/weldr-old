@@ -126,11 +126,10 @@ router.openapi(route, async (c) => {
   if (snapshotId) {
     const gitCheckResult = await exec("test -d .git && echo exists || echo not_exists", {
       projectId,
-      branchId,
       snapshotId,
     });
     if (gitCheckResult.stdout.trim() === "not_exists") {
-      await exec("git init", { projectId, branchId, snapshotId });
+      await exec("git init", { projectId, snapshotId });
     }
   }
 

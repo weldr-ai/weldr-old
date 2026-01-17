@@ -31,7 +31,6 @@ export interface BashToolsWithSandbox {
  */
 export interface CreateBashToolsOptions {
   projectId: string;
-  branchId: string;
   snapshotId: string;
   workdir?: string;
 }
@@ -50,15 +49,14 @@ export interface CreateBashToolsOptions {
 export async function createBashTools(
   options: CreateBashToolsOptions,
 ): Promise<BashToolsWithSandbox> {
-  const { projectId, branchId, snapshotId, workdir = "/home/user/project" } = options;
-  const logger = Logger.get({ projectId, branchId, component: "bash-tool" });
+  const { projectId, snapshotId, workdir = "/home/user/project" } = options;
+  const logger = Logger.get({ projectId, snapshotId, component: "bash-tool" });
 
   logger.debug("Creating bash tools with just-bash and AgentFS SDK");
 
   const sandbox = await getOrCreateSession({
-    branchId,
-    projectId,
     snapshotId,
+    projectId,
     workdir,
   });
 
@@ -73,20 +71,16 @@ export async function createBashTools(
 }
 
 /**
- * Get or create bash tools for a branch.
+ * Get or create bash tools for a snapshot.
  * Returns just the tools map for backwards compatibility.
- *
- * @deprecated Use createBashTools with full options instead
  */
 export async function getOrCreateBashTool(
   projectId: string,
-  branchId: string,
-  snapshotId?: string,
+  snapshotId: string,
 ): Promise<BashTools> {
   const { tools } = await createBashTools({
     projectId,
-    branchId,
-    snapshotId: snapshotId ?? branchId,
+    snapshotId,
   });
   return tools;
 }
@@ -95,6 +89,6 @@ export async function getOrCreateBashTool(
  * Close a sandbox session and cleanup resources.
  * Should be called when the sandbox is no longer needed.
  */
-export async function closeBashTools(branchId: string): Promise<void> {
-  await closeSession(branchId);
+export async function closeBashTools(snapshotId: string): Promise<void> {
+  await closeSession(snapshotId);
 }

@@ -5,35 +5,34 @@ import { createSnapshotService, syncFromCloud } from "@/core/sandbox";
 import { initSession, sessionExists } from "@/core/sandbox/exec";
 
 /**
- * Ensure agentfs session exists for a branch.
- * Each branch has its own isolated DB file.
+ * Ensure agentfs session exists for a snapshot.
+ * Each snapshot has its own isolated DB file.
  *
- * - Files are stored in the AgentFS SQLite database (~/.weldr/db/{branchId}.db)
+ * - Files are stored in the AgentFS SQLite database (~/.weldr/db/{snapshotId}.db)
  * - All commands run through just-bash with the AgentFS virtual filesystem
  */
-export async function ensureBranchSession(
-  branchId: string,
-  projectId: string,
+export async function ensureSnapshotSession(
   snapshotId: string,
+  projectId: string,
   parentSnapshotId?: string | null,
 ): Promise<{
   status: "created" | "reused" | "forked";
 }> {
-  const logger = Logger.get({ branchId, projectId });
+  const logger = Logger.get({ snapshotId, projectId });
 
-  logger.info("Ensuring agentfs session exists for branch");
+  logger.info("Ensuring agentfs session exists for snapshot");
 
   // Check if agentfs session already exists locally
-  const hasSession = sessionExists(branchId);
+  const hasSession = sessionExists(snapshotId);
 
   if (hasSession) {
-    logger.info("AgentFS session already exists", { extra: { branchId } });
+    logger.info("AgentFS session already exists", { extra: { snapshotId } });
 
     // Sync from cloud to get latest state
-    const syncResult = await syncFromCloud(branchId, projectId);
+    const syncResult = await syncFromCloud(snapshotId, projectId);
 
     if (!syncResult.success) {
-      logger.warn("Failed to sync existing branch from cloud, using local copy");
+      logger.warn("Failed to sync existing snapshot from cloud, using local copy");
     }
 
     return { status: "reused" };
@@ -41,17 +40,17 @@ export async function ensureBranchSession(
 
   // If we have a parent snapshot, fork from it
   if (parentSnapshotId) {
-    logger.info("Creating branch from parent snapshot", {
+    logger.info("Creating snapshot from parent snapshot", {
       extra: { parentSnapshotId },
     });
 
-    return await createBranchFromSnapshot(projectId, branchId, snapshotId, parentSnapshotId);
+    return await createSnapshotFromParent(projectId, snapshotId, parentSnapshotId);
   }
 
-  logger.info("Initializing new branch session");
+  logger.info("Initializing new snapshot session");
 
   // Try to sync from cloud first (in case session exists in cloud but not locally)
-  const syncResult = await syncFromCloud(branchId, projectId);
+  const syncResult = await syncFromCloud(snapshotId, projectId);
 
   if (syncResult.skipped || !syncResult.success) {
     if (!syncResult.success) {
@@ -59,7 +58,7 @@ export async function ensureBranchSession(
     }
     // Initialize a new agentfs session
     try {
-      await initSession(branchId);
+      await initSession(snapshotId);
     } catch (error) {
       logger.error("Failed to initialize agentfs session", {
         error: error instanceof Error ? error.message : String(error),
@@ -68,32 +67,31 @@ export async function ensureBranchSession(
   }
 
   // Initialize git repository if needed
-  const hasRepo = await Git.hasGitRepository(projectId, branchId, snapshotId);
+  const hasRepo = await Git.hasGitRepository(projectId, snapshotId);
   if (!hasRepo) {
-    await Git.initRepository(projectId, branchId, snapshotId);
+    await Git.initRepository(projectId, snapshotId);
   }
 
   return { status: "created" };
 }
 
 /**
- * Create a new branch session from a parent snapshot.
- * Copies the snapshot's DB state to the new branch's DB.
+ * Create a new snapshot session from a parent snapshot.
+ * Copies the parent snapshot's DB state to the new snapshot's DB.
  *
  * With the AgentFS SDK architecture:
- * - The snapshot's DB is copied to the new branch's path in cloud storage
- * - The database is downloaded locally to ~/.weldr/db/{branchId}.db
+ * - The parent snapshot's DB is copied to the new snapshot's path in cloud storage
+ * - The database is downloaded locally to ~/.weldr/db/{snapshotId}.db
  * - Files are accessed through the AgentFS SDK virtual filesystem
  */
-async function createBranchFromSnapshot(
+async function createSnapshotFromParent(
   projectId: string,
-  branchId: string,
   snapshotId: string,
   parentSnapshotId: string,
 ): Promise<{
   status: "forked";
 }> {
-  const logger = Logger.get({ branchId, parentSnapshotId });
+  const logger = Logger.get({ snapshotId, parentSnapshotId });
 
   const snapshotService = createSnapshotService(projectId);
 
@@ -106,18 +104,18 @@ async function createBranchFromSnapshot(
         extra: { parentSnapshotId },
       });
 
-      await snapshotService.forkFromSnapshot(parentSnapshotId, branchId);
+      await snapshotService.forkFromSnapshot(parentSnapshotId, snapshotId);
 
-      const syncResult = await syncFromCloud(branchId, projectId);
+      const syncResult = await syncFromCloud(snapshotId, projectId);
 
       if (!syncResult.success) {
-        throw new Error("Failed to sync new branch from cloud");
+        throw new Error("Failed to sync new snapshot from cloud");
       }
 
-      logger.info("Branch created from snapshot successfully");
+      logger.info("Snapshot created from parent successfully");
     } else {
       logger.info("Parent snapshot not found in cloud, initializing empty session");
-      await initSession(branchId);
+      await initSession(snapshotId);
     }
   } catch (error) {
     logger.warn("Failed to copy from parent snapshot, initializing empty session", {
@@ -128,7 +126,7 @@ async function createBranchFromSnapshot(
 
     // Initialize a new agentfs session as fallback
     try {
-      await initSession(branchId);
+      await initSession(snapshotId);
     } catch (initError) {
       logger.error("Failed to initialize agentfs session", {
         error: initError instanceof Error ? initError.message : String(initError),
@@ -137,12 +135,12 @@ async function createBranchFromSnapshot(
   }
 
   // Initialize git repository if needed
-  const hasRepo = await Git.hasGitRepository(projectId, branchId, snapshotId);
+  const hasRepo = await Git.hasGitRepository(projectId, snapshotId);
   if (!hasRepo) {
-    await Git.initRepository(projectId, branchId, snapshotId);
+    await Git.initRepository(projectId, snapshotId);
   }
 
-  logger.info("Branch forked successfully", { extra: { parentSnapshotId } });
+  logger.info("Snapshot forked successfully", { extra: { parentSnapshotId } });
 
   return { status: "forked" };
 }

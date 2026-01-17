@@ -136,11 +136,8 @@ export async function recoverEnrichingJobs(): Promise<void> {
             continue;
           }
 
-          const branchId = branch.id;
-
           try {
             const session = await getOrCreateSession({
-              branchId,
               projectId: project.id,
               snapshotId: snapshotRecord.id,
             });

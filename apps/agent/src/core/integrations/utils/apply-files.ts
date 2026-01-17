@@ -25,7 +25,6 @@ export async function applyFiles({
   categoryKey: IntegrationCategoryKey;
 }): Promise<void> {
   const branch = context.branch;
-  const branchId = branch.id;
   const snapshotId = branch.snapshot?.id;
 
   const logger = Logger.get({ projectId: integration.projectId });
@@ -44,7 +43,6 @@ export async function applyFiles({
   logger.info(`Generated ${files.length} files for integration ${integration.key}`);
 
   const session = await getOrCreateSession({
-    branchId,
     projectId: integration.projectId,
     snapshotId,
   });

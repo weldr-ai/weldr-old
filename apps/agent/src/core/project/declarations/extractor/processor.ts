@@ -100,7 +100,6 @@ async function processStatement({
       importedIdentifiers,
       filename,
       pathAliases,
-      branchId,
       projectId,
       snapshotId,
     });
@@ -217,7 +216,6 @@ async function processImportDeclaration({
   importedIdentifiers,
   filename,
   pathAliases,
-  branchId,
   projectId,
   snapshotId,
 }: {
@@ -225,7 +223,6 @@ async function processImportDeclaration({
   importedIdentifiers: Map<string, { source: string; isExternal: boolean }>;
   filename: string;
   pathAliases?: Record<string, string>;
-  branchId?: string;
   projectId?: string;
   snapshotId?: string;
 }): Promise<void> {
@@ -240,7 +237,6 @@ async function processImportDeclaration({
         importPath: source,
         currentFilePath: filename,
         pathAliases,
-        branchId,
         projectId,
         snapshotId,
       });

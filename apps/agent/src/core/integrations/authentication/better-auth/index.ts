@@ -77,7 +77,6 @@ export const betterAuthIntegration = defineIntegration<"better-auth">({
 
     try {
       const session = await getOrCreateSession({
-        branchId: branch.id,
         projectId: project.id,
         snapshotId,
       });
@@ -160,7 +159,6 @@ export const dummyTable = pgTable("dummy_table", {
       const generateSchemaResult = await exec(
         `bun x @better-auth/cli@latest generate --config src/lib/auth.ts --output src/db/schema/auth.ts --y`,
         {
-          branchId: branch.id,
           projectId: project.id,
           snapshotId,
         },

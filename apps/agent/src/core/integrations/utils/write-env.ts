@@ -49,13 +49,11 @@ function parseEnvFile(content: string): Map<string, string> {
  * Write environment variables to .env file for a specific target (server or web)
  */
 async function writeEnvToTarget({
-  branchId,
   projectId,
   snapshotId,
   target,
   envVars,
 }: {
-  branchId: string;
   projectId: string;
   snapshotId: string;
   target: "server" | "web";
@@ -67,7 +65,6 @@ async function writeEnvToTarget({
 
   // Get or create session for filesystem operations
   const session = await getOrCreateSession({
-    branchId,
     projectId,
     snapshotId,
   });
@@ -228,7 +225,6 @@ export async function writeEnvironmentVariables({
   for (const target of targets) {
     try {
       await writeEnvToTarget({
-        branchId: branch.id,
         projectId: project.id,
         snapshotId,
         target,

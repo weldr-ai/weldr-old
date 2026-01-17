@@ -21,7 +21,6 @@ export namespace Git {
 
   interface GitExecOptions {
     projectId: string;
-    branchId: string;
     snapshotId: string;
   }
 
@@ -29,12 +28,11 @@ export namespace Git {
     args: string[],
     options: GitExecOptions,
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-    const { projectId, branchId, snapshotId } = options;
+    const { projectId, snapshotId } = options;
     const command = `git ${args.join(" ")}`;
 
     return await exec(command, {
       projectId,
-      branchId,
       snapshotId,
     });
   }
@@ -46,11 +44,10 @@ export namespace Git {
 
   export async function initRepository(
     projectId: string,
-    branchId: string,
     snapshotId: string,
   ): Promise<void> {
     const logger = Logger.get({ operation: "git-init" });
-    const options = { projectId, branchId, snapshotId };
+    const options = { projectId, snapshotId };
 
     try {
       const result = await execGit(["init", "-b", TRUNK_BRANCH], options);
@@ -70,11 +67,10 @@ export namespace Git {
     message: string,
     author: { name: string; email: string },
     projectId: string,
-    branchId: string,
     snapshotId: string,
   ): Promise<string> {
     const logger = Logger.get({ operation: "git-commit" });
-    const options = { projectId, branchId, snapshotId };
+    const options = { projectId, snapshotId };
 
     try {
       execGit(["config", "user.name", author.name], options);
@@ -105,7 +101,6 @@ export namespace Git {
     branchName: string,
     startRef: string | undefined,
     projectId: string,
-    branchId: string,
     snapshotId: string,
   ): Promise<void> {
     const logger = Logger.get({
@@ -114,7 +109,7 @@ export namespace Git {
       startRef,
     });
 
-    const options = { projectId, branchId, snapshotId };
+    const options = { projectId, snapshotId };
 
     try {
       const branchExists = await checkBranchExists(branchName, options);
@@ -139,17 +134,15 @@ export namespace Git {
 
   export async function hasGitRepository(
     projectId: string,
-    branchId: string,
     snapshotId: string,
   ): Promise<boolean> {
-    const options = { projectId, branchId, snapshotId };
+    const options = { projectId, snapshotId };
     const result = await execGit(["rev-parse", "--git-dir"], options);
     return result.exitCode === 0;
   }
 
   export async function getChangedFiles(
     projectId: string,
-    branchId: string,
     snapshotId: string,
     fromRef?: string,
     toRef?: string,
@@ -160,7 +153,7 @@ export namespace Git {
       toRef,
     });
 
-    const options = { projectId, branchId, snapshotId };
+    const options = { projectId, snapshotId };
     const changedFiles: ChangedFile[] = [];
 
     try {
@@ -233,21 +226,18 @@ export namespace Git {
 
   export async function headCommit(
     projectId: string,
-    branchId: string,
     snapshotId: string,
   ): Promise<string> {
-    const result = await execGit(["rev-parse", "HEAD"], { projectId, branchId, snapshotId });
+    const result = await execGit(["rev-parse", "HEAD"], { projectId, snapshotId });
     return result.stdout.trim();
   }
 
   export async function getParentCommit(
     projectId: string,
-    branchId: string,
     snapshotId: string,
   ): Promise<string | null> {
     const result = await execGit(["rev-parse", "HEAD~1"], {
       projectId,
-      branchId,
       snapshotId,
     });
     if (result.exitCode !== 0) {
@@ -260,7 +250,6 @@ export namespace Git {
     oldName: string,
     newName: string,
     projectId: string,
-    branchId: string,
     snapshotId: string,
   ): Promise<void> {
     const logger = Logger.get({
@@ -269,7 +258,7 @@ export namespace Git {
       newName,
     });
 
-    const options = { projectId, branchId, snapshotId };
+    const options = { projectId, snapshotId };
 
     try {
       const result = await execGit(["branch", "-m", oldName, newName], options);
@@ -290,7 +279,6 @@ export namespace Git {
     commitHash: string,
     message: string | undefined,
     projectId: string,
-    branchId: string,
     snapshotId: string,
   ): Promise<string> {
     const logger = Logger.get({
@@ -299,7 +287,7 @@ export namespace Git {
       commitHash,
     });
 
-    const options = { projectId, branchId, snapshotId };
+    const options = { projectId, snapshotId };
 
     try {
       execGit(["checkout", targetBranch], options);

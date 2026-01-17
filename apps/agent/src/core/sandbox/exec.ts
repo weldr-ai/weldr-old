@@ -25,7 +25,6 @@ export interface ExecResult {
 
 export interface ExecOptions {
   projectId: string;
-  branchId: string;
   snapshotId: string;
 }
 
@@ -72,11 +71,10 @@ export function sessionExists(snapshotId: string): boolean {
  * Commands run in the virtual filesystem backed by AgentFS.
  */
 export async function exec(command: string, options: ExecOptions): Promise<ExecResult> {
-  const { projectId, branchId, snapshotId } = options;
+  const { projectId, snapshotId } = options;
 
   const session = await getOrCreateSession({
     projectId,
-    branchId,
     snapshotId,
   });
 

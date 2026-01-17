@@ -16,7 +16,6 @@ async function checkDirExists(session: SandboxSession, dirPath: string): Promise
 
 interface BuildOptions {
   projectId: string;
-  branchId: string;
   snapshotId: string;
 }
 
@@ -32,7 +31,6 @@ interface BuildResult {
  */
 export async function build({
   projectId,
-  branchId,
   snapshotId,
 }: BuildOptions): Promise<BuildResult> {
   const logger = Logger.get({ projectId, snapshotId });
@@ -41,13 +39,12 @@ export async function build({
     logger.info("Starting build process");
 
     // Get or create sandbox session
-    const session = await getOrCreateSession({ branchId, projectId, snapshotId });
+    const session = await getOrCreateSession({ projectId, snapshotId });
 
     // Install dependencies
     logger.info("Installing dependencies");
     const installResult = await exec("bun install --no-verify --no-progress --silent", {
       projectId,
-      branchId,
       snapshotId,
     });
 
@@ -57,7 +54,7 @@ export async function build({
 
     // Run build
     logger.info("Running build");
-    const buildResult = await exec("bun run build", { projectId, branchId, snapshotId });
+    const buildResult = await exec("bun run build", { projectId, snapshotId });
 
     if (buildResult.exitCode !== 0) {
       throw new Error(`Build failed: ${buildResult.stderr}`);
@@ -69,7 +66,7 @@ export async function build({
     logger.info("Installing production dependencies");
     const prodInstallResult = await exec(
       "bun install --production --no-verify --no-progress --silent",
-      { projectId, branchId, snapshotId },
+      { projectId, snapshotId },
     );
 
     if (prodInstallResult.exitCode !== 0) {
@@ -106,7 +103,6 @@ export async function build({
 
     const zipResult = await exec(`zip -r ${artifactName} ${filesToZip.join(" ")} -q`, {
       projectId,
-      branchId,
       snapshotId,
     });
 

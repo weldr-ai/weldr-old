@@ -70,7 +70,7 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
       };
 
       try {
-        commitHash = await Git.commit(commitMessage, author, project.id, branch.id, snapshotId);
+        commitHash = await Git.commit(commitMessage, author, project.id, snapshotId);
         logger.info("Git commit created", { extra: { commitHash } });
       } catch (error) {
         logger.warn("Failed to create git commit", {
@@ -117,7 +117,6 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
 
       const buildResult = await build({
         projectId: project.id,
-        branchId: branch.id,
         snapshotId,
       });
 

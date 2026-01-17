@@ -34,9 +34,8 @@ const sessions = new Map<string, SandboxSession>();
  * - Metrics collection
  */
 export interface SandboxSession {
-  branchId: string;
-  projectId: string;
   snapshotId: string;
+  projectId: string;
   agent: AgentFS;
   bash: Bash;
   tools: Awaited<ReturnType<typeof createBashTool>>["tools"];
@@ -46,9 +45,8 @@ export interface SandboxSession {
 }
 
 export interface CreateSessionOptions {
-  branchId: string;
-  projectId: string;
   snapshotId: string;
+  projectId: string;
   workdir?: string;
 }
 
@@ -56,11 +54,11 @@ export interface CreateSessionOptions {
  * Create a new sandbox session with AgentFS backing
  */
 export async function createSession(options: CreateSessionOptions): Promise<SandboxSession> {
-  const { branchId, projectId, snapshotId, workdir = "/home/user/project" } = options;
-  const logger = Logger.get({ component: "sandbox-session", branchId });
+  const { snapshotId, projectId, workdir = "/home/user/project" } = options;
+  const logger = Logger.get({ component: "sandbox-session", snapshotId });
 
   // Check if session already exists
-  const existing = sessions.get(branchId);
+  const existing = sessions.get(snapshotId);
   if (existing) {
     logger.debug("Reusing existing sandbox session");
     return existing;
@@ -74,7 +72,7 @@ export async function createSession(options: CreateSessionOptions): Promise<Sand
     mkdirSync(dbDir, { recursive: true });
   }
 
-  const dbPath = path.join(dbDir, `${branchId}.db`);
+  const dbPath = path.join(dbDir, `${snapshotId}.db`);
   const agent = await AgentFS.open({ path: dbPath });
 
   // Create SQLite-backed storage and metrics
@@ -109,9 +107,8 @@ export async function createSession(options: CreateSessionOptions): Promise<Sand
   });
 
   const session: SandboxSession = {
-    branchId,
-    projectId,
     snapshotId,
+    projectId,
     agent,
     bash,
     tools: bashToolkit.tools,
@@ -120,25 +117,25 @@ export async function createSession(options: CreateSessionOptions): Promise<Sand
     toolTracker,
   };
 
-  sessions.set(branchId, session);
+  sessions.set(snapshotId, session);
   logger.info("Sandbox session created successfully");
 
   return session;
 }
 
 /**
- * Get an existing sandbox session by branchId
+ * Get an existing sandbox session by snapshotId
  */
-export function getSession(branchId: string): SandboxSession | undefined {
-  return sessions.get(branchId);
+export function getSession(snapshotId: string): SandboxSession | undefined {
+  return sessions.get(snapshotId);
 }
 
 /**
  * Close a sandbox session and cleanup resources
  */
-export async function closeSession(branchId: string): Promise<void> {
-  const logger = Logger.get({ component: "sandbox-session", branchId });
-  const session = sessions.get(branchId);
+export async function closeSession(snapshotId: string): Promise<void> {
+  const logger = Logger.get({ component: "sandbox-session", snapshotId });
+  const session = sessions.get(snapshotId);
 
   if (!session) {
     logger.debug("No sandbox session to close");
@@ -153,7 +150,7 @@ export async function closeSession(branchId: string): Promise<void> {
     logger.error("Error closing AgentFS", { error: String(error) });
   }
 
-  sessions.delete(branchId);
+  sessions.delete(snapshotId);
   logger.info("Sandbox session closed");
 }
 
@@ -161,7 +158,7 @@ export async function closeSession(branchId: string): Promise<void> {
  * Get or create a sandbox session
  */
 export async function getOrCreateSession(options: CreateSessionOptions): Promise<SandboxSession> {
-  const existing = getSession(options.branchId);
+  const existing = getSession(options.snapshotId);
   if (existing) {
     return existing;
   }

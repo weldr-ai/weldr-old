@@ -140,7 +140,6 @@ router.openapi(route, async (c) => {
           email: session.user.email || "user@weldr.dev",
         },
         projectId,
-        branchId,
         targetSnapshotId,
       );
 
@@ -153,9 +152,9 @@ router.openapi(route, async (c) => {
       });
 
       // Initialize git and try again
-      const hasRepo = await Git.hasGitRepository(projectId, branchId, targetSnapshotId);
+      const hasRepo = await Git.hasGitRepository(projectId, targetSnapshotId);
       if (!hasRepo) {
-        await Git.initRepository(projectId, branchId, targetSnapshotId);
+        await Git.initRepository(projectId, targetSnapshotId);
         commitHash = await Git.commit(
           revertMessage,
           {
@@ -163,7 +162,6 @@ router.openapi(route, async (c) => {
             email: session.user.email || "user@weldr.dev",
           },
           projectId,
-          branchId,
           targetSnapshotId,
         );
       } else {

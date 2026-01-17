@@ -87,11 +87,10 @@ async function walkDirRecursive(
  * Scan workspace for code files using agentfs
  */
 async function scanWorkspace(
-  branchId: string,
   projectId: string,
   snapshotId: string,
 ): Promise<string[]> {
-  const session = await getOrCreateSession({ branchId, projectId, snapshotId });
+  const session = await getOrCreateSession({ projectId, snapshotId });
   const files = await walkDirRecursive(session.agent, "/", {
     excludeDirs: EXCLUDED_DIRS,
     extensions: CODE_EXTENSIONS,
@@ -148,7 +147,7 @@ export async function extractDeclarationsFromProject({
         .map((f) => f.path);
     } else {
       logger.info("Scanning project for code files...");
-      filesToProcess = await scanWorkspace(branchId, project.id, snapshotId);
+      filesToProcess = await scanWorkspace(project.id, snapshotId);
     }
 
     logger.info(
@@ -169,7 +168,6 @@ export async function extractDeclarationsFromProject({
 
     // Get session for reading files
     const session = await getOrCreateSession({
-      branchId,
       projectId: project.id,
       snapshotId,
     });

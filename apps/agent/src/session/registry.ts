@@ -32,7 +32,7 @@ export type SessionRegistryEntry = {
   agent: AgentFS;
   createdAt: number;
   chatId: string;
-  branchId: string;
+  snapshotId: string;
 };
 
 export type GetOrCreateOptions = {
@@ -69,8 +69,14 @@ class SessionRegistry {
       this.cleanupSession(chatId);
     }
 
-    // Open AgentFS SQLite database (keyed by branch for isolation)
-    const dbPath = path.join(os.homedir(), ".weldr", "db", `${branch.id}.db`);
+    // Ensure branch has a snapshot for isolation
+    const snapshotId = branch.snapshot?.id;
+    if (!snapshotId) {
+      throw new Error("Cannot create session: branch has no snapshot");
+    }
+
+    // Open AgentFS SQLite database (keyed by snapshot for isolation)
+    const dbPath = path.join(os.homedir(), ".weldr", "db", `${snapshotId}.db`);
     const agent = await AgentFS.open({ path: dbPath });
 
     // Create storage interface for this chat
@@ -82,7 +88,7 @@ class SessionRegistry {
     logger.info("Creating new session actor", {
       extra: {
         chatId,
-        branchId: branch.id,
+        snapshotId,
         traceId,
         restoredState: snapshot?.state ?? "fresh",
         restoredIterations: snapshot?.iterationCount ?? 0,
@@ -103,7 +109,7 @@ class SessionRegistry {
     });
 
     // Register chat context for durable streams
-    registerChatContext(chatId, project.id, branch.id);
+    registerChatContext(chatId, project.id, snapshotId);
 
     const eventForwarder = createEventForwarder(chatId);
     const subscription = actor.on("*", (event) => {
@@ -137,7 +143,7 @@ class SessionRegistry {
       agent,
       createdAt: Date.now(),
       chatId,
-      branchId: branch.id,
+      snapshotId,
     });
 
     // Start the actor

@@ -12,14 +12,14 @@ import { createRouter } from "@/http/utils";
 
 const route = createRoute({
   method: "get",
-  path: "/stream/:projectId/:branchId",
+  path: "/stream/:projectId/:snapshotId",
   summary: "Subscribe to workflow events",
   description: "Subscribe to workflow events via resumable SSE using Durable Streams",
   tags: ["Agent"],
   request: {
     params: z.object({
       projectId: z.string().openapi({ description: "Project ID" }),
-      branchId: z.string().openapi({ description: "Branch ID" }),
+      snapshotId: z.string().openapi({ description: "Snapshot ID" }),
     }),
     query: z.object({
       offset: z.string().optional().openapi({
@@ -146,7 +146,7 @@ function createSSETransformStream(): TransformStream<Uint8Array, Uint8Array> {
 }
 
 router.openapi(route, async (c) => {
-  const { projectId, branchId } = c.req.valid("param");
+  const { projectId, snapshotId } = c.req.valid("param");
   const offset = c.req.query("offset");
 
   const session = await auth.api.getSession({
@@ -165,20 +165,18 @@ router.openapi(route, async (c) => {
     return c.json({ error: "Project not found" }, 404);
   }
 
+  // Find the branch that points to this snapshot
   const branch = await db.query.branches.findFirst({
-    where: and(eq(branches.id, branchId), eq(branches.projectId, projectId)),
-    with: {
-      snapshot: true,
-    },
+    where: and(eq(branches.snapshotId, snapshotId), eq(branches.projectId, projectId)),
   });
 
   if (!branch) {
-    return c.json({ error: "Branch not found" }, 404);
+    return c.json({ error: "Branch not found for snapshot" }, 404);
   }
 
   // Find the most recent chat for this branch
   const chat = await db.query.chats.findFirst({
-    where: eq(chats.branchId, branchId),
+    where: eq(chats.branchId, branch.id),
     orderBy: [desc(chats.createdAt)],
   });
 
@@ -190,14 +188,14 @@ router.openapi(route, async (c) => {
 
   const logger = Logger.get({
     projectId,
-    branchId,
+    snapshotId,
     chatId,
   });
   const streamId = nanoid();
 
   // Ensure the chat context is registered for writes
   // (in case the session hasn't started yet or was recovered)
-  registerChatContext(chatId, projectId, branchId);
+  registerChatContext(chatId, projectId, snapshotId);
 
   const isResuming = !!offset && offset !== "-1";
 
@@ -207,7 +205,7 @@ router.openapi(route, async (c) => {
 
   try {
     // Read from Durable Streams with live tailing
-    const result = await readFromStream(projectId, branchId, chatId, offset, "sse");
+    const result = await readFromStream(projectId, snapshotId, chatId, offset, "sse");
 
     // Get the body stream and transform to SSE format
     const bodyStream = result.bodyStream();

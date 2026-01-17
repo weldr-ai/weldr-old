@@ -634,7 +634,6 @@ async function runDemoTests(): Promise<void> {
 
   // Create the session
   const session = await createSession({
-    branchId,
     projectId,
     snapshotId,
     workdir: "/home/user/project",
