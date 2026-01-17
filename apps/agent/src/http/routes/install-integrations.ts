@@ -3,14 +3,13 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { and, db, eq } from "@weldr/db";
 import { branches, projects } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
-import { nanoid } from "@weldr/shared/nanoid";
 
 import { auth } from "@/core/auth";
 import { getInstalledCategories } from "@/core/integrations/utils/get-installed-categories";
 import { installQueuedIntegrations } from "@/core/integrations/utils/queue-installer";
 import { processIntegrationQueue } from "@/core/integrations/utils/queue-manager";
 import { createRouter } from "@/http/utils";
-import { sessionRegistry, type SessionContext } from "@/session";
+import type { SessionContext } from "@/session";
 
 const route = createRoute({
   method: "post",
@@ -109,18 +108,18 @@ router.openapi(route, async (c) => {
     const branch = await db.query.branches.findFirst({
       where: and(eq(branches.projectId, projectId), eq(branches.id, branchId)),
       with: {
-        headVersion: true,
+        snapshot: true,
       },
     });
 
-    if (!branch || !branch.headVersion) {
-      logger.error("No active version found", {
+    if (!branch || !branch.snapshot) {
+      logger.error("No active snapshot found", {
         extra: { projectId },
       });
       return c.json({ success: false }, 500);
     }
 
-    const installedCategories = await getInstalledCategories(branch.headVersion.id);
+    const installedCategories = await getInstalledCategories(branch.snapshot.id);
 
     const sessionContext: SessionContext = {
       project: {
@@ -129,7 +128,7 @@ router.openapi(route, async (c) => {
       },
       branch: {
         ...branch,
-        headVersion: branch.headVersion,
+        snapshot: branch.snapshot,
       },
       user: session.user,
     };
@@ -152,17 +151,9 @@ router.openapi(route, async (c) => {
     }
 
     if (triggerWorkflow) {
-      const traceId = c.req.header("x-request-id") ?? nanoid();
-
-      const sessionActor = await sessionRegistry.getOrCreate({
-        versionId: sessionContext.branch.headVersion.id,
-        traceId,
-        project: sessionContext.project,
-        branch: sessionContext.branch,
-        user: sessionContext.user,
-      });
-
-      sessionActor.send({ type: "START" });
+      // Note: triggerWorkflow requires a chatId to create a session
+      // This route currently doesn't have chatId context, so we skip session creation
+      logger.warn("triggerWorkflow requested but chatId not available in this context");
     }
 
     logger.info("Integration installation completed successfully", {

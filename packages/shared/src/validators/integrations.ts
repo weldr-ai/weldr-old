@@ -107,7 +107,7 @@ export const createBatchIntegrationsSchema = z.object({
 export const integrationInstallationSchema = z.object({
   id: z.string(),
   integrationId: z.string(),
-  versionId: z.string(),
+  snapshotId: z.string(),
   status: integrationInstallationStatusSchema,
   installedAt: z.date().nullable(),
   installationMetadata: z
@@ -124,7 +124,7 @@ export const integrationInstallationSchema = z.object({
 
 export const createIntegrationInstallationSchema = z.object({
   integrationId: z.string().min(1),
-  versionId: z.string().min(1),
+  snapshotId: z.string().min(1),
   status: integrationInstallationStatusSchema.optional().default("installing"),
   installationMetadata: z
     .object({

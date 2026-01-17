@@ -65,12 +65,21 @@ export const betterAuthIntegration = defineIntegration<"better-auth">({
     const project = context.project;
     const branch = context.branch;
     const user = context.user;
+    const snapshotId = branch.snapshot?.id;
+
+    if (!snapshotId) {
+      return {
+        success: false,
+        message: "Cannot run post-install: branch has no snapshot",
+        errors: ["Branch has no snapshot"],
+      };
+    }
 
     try {
       const session = await getOrCreateSession({
         branchId: branch.id,
         projectId: project.id,
-        versionId: "integration-install",
+        snapshotId,
       });
 
       await db.transaction(async (tx) => {
@@ -151,8 +160,9 @@ export const dummyTable = pgTable("dummy_table", {
       const generateSchemaResult = await exec(
         `bun x @better-auth/cli@latest generate --config src/lib/auth.ts --output src/db/schema/auth.ts --y`,
         {
-          projectId: project.id,
           branchId: branch.id,
+          projectId: project.id,
+          snapshotId,
         },
       );
 

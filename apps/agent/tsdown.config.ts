@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { defineConfig } from "tsdown/config";
 
 export default defineConfig({
-  entry: ["src/**/*.ts", "!src/integrations/**/data/**"],
+  entry: ["src/**/*.ts", "!src/core/integrations/**/data/**"],
   platform: "node",
   format: "esm",
   minify: true,
@@ -11,7 +11,7 @@ export default defineConfig({
   external: ["pg-cloudflare"],
   copy: (options) => {
     const integrationPaths: Array<{ from: string; to: string }> = [];
-    const integrationsDir = join(options.cwd || process.cwd(), "src/integrations");
+    const integrationsDir = join(options.cwd || process.cwd(), "src/core/integrations");
 
     try {
       const findDataDirs = (dir: string, relativePath = ""): void => {
@@ -24,8 +24,8 @@ export default defineConfig({
           if (statSync(itemPath).isDirectory()) {
             if (item === "data") {
               integrationPaths.push({
-                from: join("src/integrations", itemRelativePath),
-                to: join("dist/integrations", itemRelativePath),
+                from: join("src/core/integrations", itemRelativePath),
+                to: join("dist/core/integrations", itemRelativePath),
               });
             } else {
               findDataDirs(itemPath, itemRelativePath);

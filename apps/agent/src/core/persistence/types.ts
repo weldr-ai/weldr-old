@@ -38,7 +38,7 @@ export type AgentCheckpoint = {
  * Used for reconstructing session actors from DB state.
  */
 export type PersistedSessionState = {
-  versionId: string;
+  chatId: string;
   sessionState: SessionState;
   awaitingUserKind: AwaitingUserKind | null;
   traceId: string;
@@ -56,7 +56,7 @@ export type PersistedSessionState = {
  * Input for saving session state to database.
  */
 export type SaveSessionStateInput = {
-  versionId: string;
+  chatId: string;
   sessionState: SessionState;
   awaitingUserKind?: AwaitingUserKind | null;
   traceId: string;
@@ -69,9 +69,9 @@ export type SaveSessionStateInput = {
 };
 
 /**
- * Metrics stored in the versions table.
+ * Metrics stored in the snapshots table.
  */
-export type VersionMetrics = {
+export type SnapshotMetrics = {
   inputTokens: number;
   outputTokens: number;
   totalCost: number;
@@ -93,7 +93,7 @@ export type SessionSnapshot = {
   assistantContentBuffer: string | null;
   pausedAt: number | null;
   pauseReason: string | null;
-  metrics: VersionMetrics;
+  metrics: SnapshotMetrics;
 };
 
 /**
@@ -101,7 +101,7 @@ export type SessionSnapshot = {
  */
 export interface SessionStorage {
   saveSessionState(input: SaveSessionStateInput): Promise<void>;
-  loadSessionState(versionId: string): Promise<SessionSnapshot | null>;
-  deleteSessionState(versionId: string): Promise<void>;
-  updateVersionMetrics(versionId: string, metrics: Partial<VersionMetrics>): Promise<void>;
+  loadSessionState(chatId: string): Promise<SessionSnapshot | null>;
+  deleteSessionState(chatId: string): Promise<void>;
+  updateChatMetrics(chatId: string, metrics: Partial<SnapshotMetrics>): Promise<void>;
 }

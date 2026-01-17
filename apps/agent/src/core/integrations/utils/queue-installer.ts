@@ -28,10 +28,15 @@ async function streamToolMessageUpdate({
   integrationKey: IntegrationKey;
   status: IntegrationInstallationStatus;
 }) {
-  const branch = context.branch;
+  const chatId = context.chatId;
+
+  // Skip streaming if no chatId is available
+  if (!chatId) {
+    return;
+  }
 
   const message = await db.query.chatMessages.findFirst({
-    where: and(eq(chatMessages.chatId, branch.headVersion.chatId), eq(chatMessages.role, "tool")),
+    where: and(eq(chatMessages.chatId, chatId), eq(chatMessages.role, "tool")),
     orderBy: (chatMessages, { desc }) => [desc(chatMessages.createdAt)],
   });
 
@@ -92,7 +97,7 @@ async function streamToolMessageUpdate({
     })
     .where(eq(chatMessages.id, message.id));
 
-  await stream(branch.headVersion.chatId, {
+  await stream(chatId, {
     type: "tool",
     message: {
       ...toolMessage,
@@ -117,13 +122,13 @@ export async function installQueuedIntegrations(context: SessionContext): Promis
 > {
   const project = context.project;
   const branch = context.branch;
-  const versionId = branch.headVersionId;
+  const snapshotId = branch.snapshot?.id;
   const logger = Logger.get({ projectId: project.id });
 
-  if (!versionId) {
+  if (!snapshotId) {
     return {
       status: "error",
-      error: "No head version found for branch",
+      error: "No snapshot found for branch",
     };
   }
 
@@ -153,7 +158,7 @@ export async function installQueuedIntegrations(context: SessionContext): Promis
 
     for (const integration of queuedIntegrations) {
       try {
-        await updateIntegrationInstallationStatus(versionId, integration.id, "installing");
+        await updateIntegrationInstallationStatus(snapshotId, integration.id, "installing");
         logger.info(`Started installing ${integration.key}`);
 
         await streamToolMessageUpdate({
@@ -167,7 +172,7 @@ export async function installQueuedIntegrations(context: SessionContext): Promis
           context,
         });
 
-        await updateIntegrationInstallationStatus(versionId, integration.id, "installed");
+        await updateIntegrationInstallationStatus(snapshotId, integration.id, "installed");
         logger.info(`Successfully installed ${integration.key}`);
 
         allInstalledIntegrations.push({
@@ -189,7 +194,7 @@ export async function installQueuedIntegrations(context: SessionContext): Promis
         });
 
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        await updateIntegrationInstallationStatus(versionId, integration.id, "failed");
+        await updateIntegrationInstallationStatus(snapshotId, integration.id, "failed");
 
         await streamToolMessageUpdate({
           context,
@@ -221,7 +226,7 @@ export async function installQueuedIntegrations(context: SessionContext): Promis
 
   const blockedIntegrations = await db.query.integrationInstallations.findMany({
     where: and(
-      eq(integrationInstallations.versionId, versionId),
+      eq(integrationInstallations.snapshotId, snapshotId),
       eq(integrationInstallations.status, "blocked"),
     ),
     with: {

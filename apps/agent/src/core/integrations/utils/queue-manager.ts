@@ -9,19 +9,19 @@ import { integrationRegistry } from "./registry";
 export async function processIntegrationQueue(context: SessionContext): Promise<void> {
   const project = context.project;
   const branch = context.branch;
-  const versionId = branch.headVersionId;
+  const snapshotId = branch.snapshotId;
   const logger = Logger.get({ projectId: project.id });
 
-  if (!versionId) {
-    logger.error("No head version found for branch");
-    throw new Error("No head version found for branch");
+  if (!snapshotId) {
+    logger.error("No snapshot found for branch");
+    throw new Error("No snapshot found for branch");
   }
 
   logger.info("Processing integration queue");
 
   const queuedInstallations = await db.query.integrationInstallations.findMany({
     where: and(
-      eq(integrationInstallations.versionId, versionId),
+      eq(integrationInstallations.snapshotId, snapshotId),
       eq(integrationInstallations.status, "queued"),
     ),
     with: {
@@ -65,10 +65,10 @@ export async function processIntegrationQueue(context: SessionContext): Promise<
     });
   }
 
-  // Get completed installations for this version
+  // Get completed installations for this snapshot
   const completedInstallations = await db.query.integrationInstallations.findMany({
     where: and(
-      eq(integrationInstallations.versionId, versionId),
+      eq(integrationInstallations.snapshotId, snapshotId),
       eq(integrationInstallations.status, "installed"),
     ),
     with: {
@@ -106,17 +106,17 @@ export async function processIntegrationQueue(context: SessionContext): Promise<
 export async function unblockIntegrations(context: SessionContext): Promise<void> {
   const project = context.project;
   const branch = context.branch;
-  const versionId = branch.headVersionId;
+  const snapshotId = branch.snapshotId;
   const logger = Logger.get({ projectId: project.id });
 
-  if (!versionId) {
-    logger.error("No head version found for branch");
+  if (!snapshotId) {
+    logger.error("No snapshot found for branch");
     return;
   }
 
   const blockedInstallations = await db.query.integrationInstallations.findMany({
     where: and(
-      eq(integrationInstallations.versionId, versionId),
+      eq(integrationInstallations.snapshotId, snapshotId),
       eq(integrationInstallations.status, "blocked"),
     ),
     with: {
@@ -130,7 +130,7 @@ export async function unblockIntegrations(context: SessionContext): Promise<void
 
   const completedInstallations = await db.query.integrationInstallations.findMany({
     where: and(
-      eq(integrationInstallations.versionId, versionId),
+      eq(integrationInstallations.snapshotId, snapshotId),
       eq(integrationInstallations.status, "installed"),
     ),
     with: {
@@ -161,15 +161,15 @@ export async function unblockIntegrations(context: SessionContext): Promise<void
 
 export async function getQueuedIntegrations(context: SessionContext): Promise<Integration[]> {
   const branch = context.branch;
-  const versionId = branch.headVersionId;
+  const snapshotId = branch.snapshotId;
 
-  if (!versionId) {
-    throw new Error("No head version found for branch");
+  if (!snapshotId) {
+    throw new Error("No snapshot found for branch");
   }
 
   const queuedInstallations = await db.query.integrationInstallations.findMany({
     where: and(
-      eq(integrationInstallations.versionId, versionId),
+      eq(integrationInstallations.snapshotId, snapshotId),
       eq(integrationInstallations.status, "queued"),
     ),
     with: {
@@ -218,7 +218,7 @@ export async function getQueuedIntegrations(context: SessionContext): Promise<In
 }
 
 export async function updateIntegrationInstallationStatus(
-  versionId: string,
+  snapshotId: string,
   integrationId: string,
   status: IntegrationInstallationStatus,
 ): Promise<void> {
@@ -230,7 +230,7 @@ export async function updateIntegrationInstallationStatus(
     })
     .where(
       and(
-        eq(integrationInstallations.versionId, versionId),
+        eq(integrationInstallations.snapshotId, snapshotId),
         eq(integrationInstallations.integrationId, integrationId),
       ),
     );

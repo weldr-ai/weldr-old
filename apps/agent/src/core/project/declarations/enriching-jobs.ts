@@ -1,7 +1,7 @@
-import { and, eq, not } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@weldr/db";
-import { declarations, nodes, projects, versionDeclarations, versions } from "@weldr/db/schema";
+import { branches, declarations, nodes, projects, snapshotDeclarations } from "@weldr/db/schema";
 import { mergeJson } from "@weldr/db/utils";
 import { Logger } from "@weldr/shared/logger";
 import type { DeclarationCodeMetadata } from "@weldr/shared/types/declarations";
@@ -94,16 +94,19 @@ export async function recoverEnrichingJobs(): Promise<void> {
 
   try {
     // Find declarations that are still in "enriching" state
-    const versionsList = await db.query.versions.findMany({
-      where: and(not(eq(versions.status, "planning")), eq(versions.projectId, project.id)),
+    // Get snapshots for this project via branches
+    const branchesList = await db.query.branches.findMany({
+      where: eq(branches.projectId, project.id),
       with: {
-        branch: true,
+        snapshot: true,
       },
     });
 
-    for (const version of versionsList) {
-      const declarationsList = await db.query.versionDeclarations.findMany({
-        where: eq(versionDeclarations.versionId, version.id),
+    for (const branch of branchesList) {
+      if (!branch.snapshot) continue;
+      const snapshotRecord = branch.snapshot;
+      const declarationsList = await db.query.snapshotDeclarations.findMany({
+        where: eq(snapshotDeclarations.snapshotId, snapshotRecord.id),
         with: {
           declaration: {
             columns: {
@@ -133,13 +136,13 @@ export async function recoverEnrichingJobs(): Promise<void> {
             continue;
           }
 
-          const branchId = version.branch.id;
+          const branchId = branch.id;
 
           try {
             const session = await getOrCreateSession({
               branchId,
               projectId: project.id,
-              versionId: version.id,
+              snapshotId: snapshotRecord.id,
             });
 
             const agentfsPath = declaration.path.startsWith("/")

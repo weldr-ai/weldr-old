@@ -177,7 +177,7 @@ const persistStateActor = fromPromise<void, { context: SessionMachineContext }>(
 
     // Use SQLite-backed AgentFS storage
     await context.storage.saveSessionState({
-      versionId: context.versionId,
+      chatId: context.chatId,
       sessionState: context.sessionState,
       awaitingUserKind: context.awaitingUserKind,
       traceId: context.traceId,
@@ -189,9 +189,9 @@ const persistStateActor = fromPromise<void, { context: SessionMachineContext }>(
       pauseReason: context.pauseReason,
     });
 
-    // Also update version metrics in SQLite
+    // Also update chat metrics in SQLite
     const metrics = context.metrics.getMetrics();
-    await context.storage.updateVersionMetrics(context.versionId, {
+    await context.storage.updateChatMetrics(context.chatId, {
       inputTokens: metrics.agent.llm.inputTokens,
       outputTokens: metrics.agent.llm.outputTokens,
       totalCost: metrics.agent.llm.totalCost,
@@ -232,7 +232,6 @@ export const sessionMachine = setup({
     // Session lifecycle events
     emitSessionStarted: emit(({ context }) => ({
       type: "session.started" as const,
-      versionId: context.versionId,
       traceId: context.traceId,
     })),
 
@@ -429,7 +428,7 @@ export const sessionMachine = setup({
 
   context: ({ input }) => ({
     // Identity
-    versionId: input.versionId,
+    chatId: input.chatId,
     traceId: input.traceId,
 
     // Domain objects
@@ -569,7 +568,7 @@ export const sessionMachine = setup({
             id: "loadMessages",
             src: "loadMessages",
             input: ({ context }) => ({
-              chatId: context.branch.headVersion.chatId,
+              chatId: context.chatId,
             }),
             onDone: {
               target: "thinking",
@@ -752,7 +751,7 @@ export const sessionMachine = setup({
             id: "saveMessages",
             src: "saveMessages",
             input: ({ context }) => ({
-              chatId: context.branch.headVersion.chatId,
+              chatId: context.chatId,
               userId: context.user.id,
               messageId: context.currentMessageId,
               assistantContent: context.assistantContent,

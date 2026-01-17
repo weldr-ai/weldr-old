@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 
-import { and, db, eq } from "@weldr/db";
-import { branches, projects } from "@weldr/db/schema";
+import { and, db, desc, eq } from "@weldr/db";
+import { branches, chats, projects } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 import { nanoid } from "@weldr/shared/nanoid";
 import type { SSEEvent } from "@weldr/shared/types";
@@ -168,7 +168,7 @@ router.openapi(route, async (c) => {
   const branch = await db.query.branches.findFirst({
     where: and(eq(branches.id, branchId), eq(branches.projectId, projectId)),
     with: {
-      headVersion: true,
+      snapshot: true,
     },
   });
 
@@ -176,23 +176,23 @@ router.openapi(route, async (c) => {
     return c.json({ error: "Branch not found" }, 404);
   }
 
-  if (!branch.headVersion) {
-    return c.json({ error: "No head version found" }, 404);
+  // Find the most recent chat for this branch
+  const chat = await db.query.chats.findFirst({
+    where: eq(chats.branchId, branchId),
+    orderBy: [desc(chats.createdAt)],
+  });
+
+  if (!chat) {
+    return c.json({ error: "No chat found for branch" }, 404);
   }
 
-  const activeVersion = branch.headVersion;
-
-  if (activeVersion.status === "completed" || activeVersion.status === "failed") {
-    return c.json({ message: "Stream is already completed" }, 422);
-  }
+  const chatId = chat.id;
 
   const logger = Logger.get({
     projectId,
     branchId,
-    chatId: activeVersion.chatId,
+    chatId,
   });
-
-  const chatId = activeVersion.chatId;
   const streamId = nanoid();
 
   // Ensure the chat context is registered for writes

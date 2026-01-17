@@ -2,7 +2,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useReactFlow } from "@xyflow/react";
 import { useCallback, useEffect, useRef } from "react";
 
-import type { RouterOutputs } from "@weldr/api";
 import type {
   AssistantMessage,
   ChatMessage,
@@ -18,7 +17,6 @@ interface UseEventStreamOptions {
   projectId: string;
   branchId: string;
   chatId: string;
-  branch: RouterOutputs["branches"]["byIdOrMain"];
   setStatus: (status: TStatus) => void;
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
 }
@@ -27,7 +25,6 @@ export function useEventStream({
   projectId,
   branchId,
   chatId,
-  branch,
   setStatus,
   setMessages,
 }: UseEventStreamOptions) {
@@ -260,21 +257,14 @@ export function useEventStream({
               trpc.branches.byIdOrMain.queryKey({ id: branchId, projectId }),
               (old) => {
                 if (!old) return old;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const updatedBranch = {
                   ...old,
-                  ...chunk.data,
-                  headVersion: {
-                    ...old.headVersion,
-                    ...chunk.data.headVersion,
-                  },
-                };
+                  ...(chunk.data as Record<string, unknown>),
+                } as typeof old;
                 // Ensure branch name is updated if provided
                 if ("name" in chunk.data && chunk.data.name !== undefined) {
                   updatedBranch.name = chunk.data.name as string;
-                }
-                // Ensure version message is updated if provided
-                if (chunk.data.headVersion?.message !== undefined) {
-                  updatedBranch.headVersion.message = chunk.data.headVersion.message;
                 }
                 return updatedBranch;
               },
@@ -287,27 +277,8 @@ export function useEventStream({
               }),
             });
 
-            // Use the status from the updated branch data if available
-            const updatedStatus = chunk.data.headVersion?.status ?? branch.headVersion.status;
-
-            switch (updatedStatus) {
-              case "planning":
-                setStatusRef.current("planning");
-                break;
-              case "coding":
-                setStatusRef.current("coding");
-                break;
-              case "finalizing":
-                setStatusRef.current("finalizing");
-                break;
-              case "completed":
-              case "failed":
-                setStatusRef.current(null);
-                break;
-              default:
-                setStatusRef.current(null);
-                break;
-            }
+            // Branch updated events don't carry status - status comes from SSE events
+            // Just invalidate the query to refetch branch data
             break;
           }
           case "node": {
@@ -370,12 +341,8 @@ export function useEventStream({
         reconnectTimeoutRef.current = null;
       }
 
-      // Only retry if workflow is still active and we haven't exceeded max attempts
-      if (
-        branch.headVersion.status !== "completed" &&
-        branch.headVersion.status !== "failed" &&
-        reconnectAttempts.current < maxReconnectAttempts
-      ) {
+      // Retry if we haven't exceeded max attempts (status tracking is done via SSE events)
+      if (reconnectAttempts.current < maxReconnectAttempts) {
         reconnectAttempts.current += 1;
         const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 10000); // Exponential backoff with max 10s
 
@@ -388,16 +355,7 @@ export function useEventStream({
     };
 
     return eventSource;
-  }, [
-    projectId,
-    branchId,
-    branch.headVersion.status,
-    getNodes,
-    setNodes,
-    updateNodeData,
-    queryClient,
-    trpc,
-  ]);
+  }, [projectId, branchId, getNodes, setNodes, updateNodeData, queryClient, trpc]);
 
   const closeEventStream = useCallback(() => {
     // Reset reconnection attempts and connecting flag
@@ -428,17 +386,13 @@ export function useEventStream({
     lastEventIdRef.current = null;
   }, [closeEventStream]);
 
-  // Auto-connect to event stream on mount if workflow is active
+  // Auto-connect to event stream on mount
   useEffect(() => {
-    // Only connect if there's no existing connection and workflow might be active
-    if (
-      !eventSourceRef.current &&
-      branch.headVersion.status !== "completed" &&
-      branch.headVersion.status !== "failed"
-    ) {
+    // Only connect if there's no existing connection
+    if (!eventSourceRef.current) {
       connectToEventStream();
     }
-  }, [branch.headVersion.status, connectToEventStream]);
+  }, [connectToEventStream]);
 
   // Cleanup on unmount
   useEffect(() => {

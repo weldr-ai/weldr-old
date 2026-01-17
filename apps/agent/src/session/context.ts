@@ -1,7 +1,7 @@
 import { nanoid } from "@weldr/shared/nanoid";
 
 import type { User } from "@/core/auth";
-import type { BranchWithVersion, ProjectWithConfig } from "@/core/types";
+import type { BranchWithSnapshot, ProjectWithConfig } from "@/core/types";
 
 export type { User };
 
@@ -15,9 +15,9 @@ export type { User };
 export type Project = ProjectWithConfig;
 
 /**
- * Branch with head version.
+ * Branch with snapshot.
  */
-export type Branch = BranchWithVersion;
+export type Branch = BranchWithSnapshot;
 
 // =============================================================================
 // Session Context
@@ -28,6 +28,7 @@ export type Branch = BranchWithVersion;
  * Contains all the data needed for a session to execute.
  */
 export type SessionContext = {
+  chatId?: string;
   project: Project;
   branch: Branch;
   user: User;
@@ -66,7 +67,7 @@ export function updateSessionContext(
 }
 
 // =============================================================================
-// Legacy Helper Functions (for backward compatibility)
+// Helper Functions
 // =============================================================================
 
 /**
@@ -87,15 +88,20 @@ export type AgentMachineInput = {
 /**
  * Creates input for initializing a session machine.
  */
-export function createSessionInput(params: { project: Project; branch: Branch; user: User }): {
-  versionId: string;
+export function createSessionInput(params: {
+  chatId: string;
+  project: Project;
+  branch: Branch;
+  user: User;
+}): {
+  chatId: string;
   traceId: string;
   project: Project;
   branch: Branch;
   user: User;
 } {
   return {
-    versionId: params.branch.headVersion.id,
+    chatId: params.chatId,
     traceId: nanoid(),
     project: params.project,
     branch: params.branch,

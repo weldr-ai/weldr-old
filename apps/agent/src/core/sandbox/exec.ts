@@ -2,7 +2,7 @@
  * AgentFS Session Management & Command Execution
  *
  * Session initialization, existence checks, and command execution using AgentFS SDK + just-bash.
- * Databases are stored in ~/.weldr/db/{versionId}.db - each version has its own isolated DB.
+ * Databases are stored in ~/.weldr/db/{snapshotId}.db - each snapshot has its own isolated DB.
  */
 
 import { existsSync, mkdirSync } from "node:fs";
@@ -26,22 +26,23 @@ export interface ExecResult {
 export interface ExecOptions {
   projectId: string;
   branchId: string;
+  snapshotId: string;
 }
 
 /**
- * Get the path to the AgentFS database for a version.
- * Each version has its own isolated DB file.
+ * Get the path to the AgentFS database for a snapshot.
+ * Each snapshot has its own isolated DB file.
  */
-export function getSessionDbPath(versionId: string): string {
-  return path.join(WELDR_DB_DIR, `${versionId}.db`);
+export function getSessionDbPath(snapshotId: string): string {
+  return path.join(WELDR_DB_DIR, `${snapshotId}.db`);
 }
 
 /**
- * Initialize an AgentFS session for a version.
- * Creates the ~/.weldr/db/{versionId}.db database if it doesn't exist.
+ * Initialize an AgentFS session for a snapshot.
+ * Creates the ~/.weldr/db/{snapshotId}.db database if it doesn't exist.
  */
-export async function initSession(versionId: string): Promise<void> {
-  const logger = Logger.get({ component: "sandbox", versionId });
+export async function initSession(snapshotId: string): Promise<void> {
+  const logger = Logger.get({ component: "sandbox", snapshotId });
 
   logger.info("Initializing AgentFS session");
 
@@ -50,7 +51,7 @@ export async function initSession(versionId: string): Promise<void> {
     mkdirSync(WELDR_DB_DIR, { recursive: true });
   }
 
-  const dbPath = getSessionDbPath(versionId);
+  const dbPath = getSessionDbPath(snapshotId);
 
   // Open (creates if doesn't exist) and close to initialize the database
   const agent = await AgentFS.open({ path: dbPath });
@@ -60,10 +61,10 @@ export async function initSession(versionId: string): Promise<void> {
 }
 
 /**
- * Check if an AgentFS session exists for a version.
+ * Check if an AgentFS session exists for a snapshot.
  */
-export function sessionExists(versionId: string): boolean {
-  return existsSync(getSessionDbPath(versionId));
+export function sessionExists(snapshotId: string): boolean {
+  return existsSync(getSessionDbPath(snapshotId));
 }
 
 /**
@@ -71,12 +72,12 @@ export function sessionExists(versionId: string): boolean {
  * Commands run in the virtual filesystem backed by AgentFS.
  */
 export async function exec(command: string, options: ExecOptions): Promise<ExecResult> {
-  const { projectId, branchId } = options;
+  const { projectId, branchId, snapshotId } = options;
 
   const session = await getOrCreateSession({
     projectId,
     branchId,
-    versionId: "exec", // Placeholder for standalone exec calls
+    snapshotId,
   });
 
   const result = await session.bash.exec(command);

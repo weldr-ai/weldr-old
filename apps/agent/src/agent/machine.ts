@@ -255,6 +255,7 @@ export const agentMachine = agentMachineSetup.createMachine({
   initial: "idle",
   context: ({ input }) => ({
     agentId: input.agentId ?? nanoid(),
+    chatId: input.chatId,
     isSubAgent: input.isSubAgent ?? false,
     parentAgentId: input.parentAgentId,
     task: input.task,
@@ -299,7 +300,7 @@ export const agentMachine = agentMachineSetup.createMachine({
         id: "loadMessages",
         src: "loadMessages",
         input: ({ context }) => ({
-          chatId: context.branch.headVersion.chatId,
+          chatId: context.chatId,
         }),
         onDone: {
           target: "thinking",
@@ -331,7 +332,7 @@ export const agentMachine = agentMachineSetup.createMachine({
           activeTools: context.activeTools,
           systemPrompt: context.systemPrompt,
           modelId: context.modelId,
-          chatId: context.branch.headVersion.chatId,
+          chatId: context.chatId,
           messageId: context.messageId,
           maxSubAgents: context.maxSubAgents,
         }),
@@ -408,7 +409,7 @@ export const agentMachine = agentMachineSetup.createMachine({
         id: "saveMessages",
         src: "saveMessages",
         input: ({ context }) => ({
-          chatId: context.branch.headVersion.chatId,
+          chatId: context.chatId,
           userId: context.user.id,
           messageId: context.messageId,
           assistantContent: context.assistantContent,

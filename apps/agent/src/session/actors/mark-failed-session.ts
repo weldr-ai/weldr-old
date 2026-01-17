@@ -1,7 +1,5 @@
 import { fromPromise } from "xstate";
 
-import { db, eq } from "@weldr/db";
-import { versions } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
 import { persistSessionMetrics } from "@/core/metrics";
@@ -10,9 +8,17 @@ import type { SessionMachineContext } from "@/session/types";
 
 export const markFailedSessionActor = fromPromise<void, { context: SessionMachineContext }>(
   async ({ input }) => {
-    const { branch } = input.context;
+    const { branch, chatId } = input.context;
+
+    const snapshotId = branch.snapshot?.id;
+    if (!snapshotId) {
+      // No snapshot to update, just log and return
+      Logger.warn("No snapshot to mark as failed");
+      return;
+    }
+
     const logger = Logger.get({
-      versionId: branch.headVersion.id,
+      snapshotId,
       actor: "mark-failed-session",
     });
 
@@ -20,7 +26,7 @@ export const markFailedSessionActor = fromPromise<void, { context: SessionMachin
     try {
       const metrics = input.context.metrics.getMetrics();
       await persistSessionMetrics({
-        versionId: branch.headVersion.id,
+        snapshotId,
         metrics,
       });
 
@@ -38,19 +44,13 @@ export const markFailedSessionActor = fromPromise<void, { context: SessionMachin
       });
     }
 
-    await db
-      .update(versions)
-      .set({ status: "failed" })
-      .where(eq(versions.id, branch.headVersion.id));
+    // Note: snapshots no longer have a status field
+    // The session failure is tracked at the chat/workflow level now
 
-    await stream(branch.headVersion.chatId, {
+    await stream(chatId, {
       type: "update_branch",
       data: {
         ...branch,
-        headVersion: {
-          ...branch.headVersion,
-          status: "failed" as const,
-        },
       },
     });
   },

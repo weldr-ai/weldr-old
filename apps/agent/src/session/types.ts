@@ -22,7 +22,7 @@ import type {
 } from "@/core/events";
 import type { MetricsCollector } from "@/core/metrics";
 import type { AgentFSSessionStorage, SessionSnapshot } from "@/core/persistence";
-import type { BranchWithVersion, ProjectWithConfig, User } from "@/core/types";
+import type { BranchWithSnapshot, ProjectWithConfig, User } from "@/core/types";
 
 // =============================================================================
 // Configuration Types
@@ -41,10 +41,10 @@ export type AgentConfig = {
 // =============================================================================
 
 export type SessionMachineInput = {
-  versionId: string;
+  chatId: string;
   traceId: string;
   project: ProjectWithConfig;
-  branch: BranchWithVersion;
+  branch: BranchWithSnapshot;
   user: User;
   storage: AgentFSSessionStorage;
   agentConfig?: AgentConfig;
@@ -57,12 +57,12 @@ export type SessionMachineInput = {
 
 export type SessionMachineContext = {
   // Identity
-  versionId: string;
+  chatId: string;
   traceId: string;
 
   // Domain objects
   project: ProjectWithConfig;
-  branch: BranchWithVersion;
+  branch: BranchWithSnapshot;
   user: User;
   storage: AgentFSSessionStorage;
 
@@ -152,4 +152,4 @@ export type SessionMachineEvents =
 // =============================================================================
 
 export type { User } from "@/core/auth";
-export type { ProjectWithConfig as Project, BranchWithVersion as Branch } from "@/core/types";
+export type { ProjectWithConfig as Project, BranchWithSnapshot as Branch } from "@/core/types";

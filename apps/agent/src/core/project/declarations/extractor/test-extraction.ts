@@ -32,7 +32,7 @@ async function loadRealContext(testContext: TestContext) {
   const branch = await db.query.branches.findFirst({
     where: eq(branches.projectId, testContext.projectId),
     with: {
-      headVersion: true,
+      snapshot: true,
     },
     orderBy: (branches, { asc }) => [asc(branches.createdAt)],
   });
@@ -56,7 +56,7 @@ function createSessionContextForTest(
   project: typeof projects.$inferSelect & {
     integrationCategories: Set<string>;
   },
-  branch: typeof branches.$inferSelect & { headVersion: unknown },
+  branch: typeof branches.$inferSelect & { snapshot: unknown },
   user: typeof users.$inferSelect,
 ): SessionContext {
   return {

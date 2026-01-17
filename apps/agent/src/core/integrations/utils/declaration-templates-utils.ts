@@ -3,7 +3,7 @@ import {
   declarations,
   declarationTemplates,
   integrationTemplates,
-  versionDeclarations,
+  snapshotDeclarations,
 } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 import { nanoid } from "@weldr/shared/nanoid";
@@ -26,8 +26,8 @@ export async function seedDeclarationTemplates({
   const branch = context.branch;
   const user = context.user;
 
-  if (!project || !branch.headVersion || !user) {
-    throw new Error("Project, version, or user not found in context");
+  if (!project || !branch.snapshot || !user) {
+    throw new Error("Project, snapshot, or user not found in context");
   }
 
   Logger.info(`Seeding declarations for ${integration.key} to project ${project.id}`);
@@ -83,7 +83,7 @@ export async function seedDeclarationTemplates({
       if (existingDeclaration) {
         declarationId = existingDeclaration.id;
       } else {
-        // Insert new declaration (declarations table has projectId and userId, no versionId)
+        // Insert new declaration (declarations table has projectId and userId, no snapshotId)
         const [newDeclaration] = await db
           .insert(declarations)
           .values({
@@ -111,21 +111,21 @@ export async function seedDeclarationTemplates({
         insertedCount++;
       }
 
-      // Link declaration to version via versionDeclarations junction table (avoid duplicates)
+      // Link declaration to snapshot via snapshotDeclarations junction table (avoid duplicates)
       const [existingLink] = await db
         .select()
-        .from(versionDeclarations)
+        .from(snapshotDeclarations)
         .where(
           and(
-            eq(versionDeclarations.versionId, branch.headVersion.id),
-            eq(versionDeclarations.declarationId, declarationId),
+            eq(snapshotDeclarations.snapshotId, branch.snapshot.id),
+            eq(snapshotDeclarations.declarationId, declarationId),
           ),
         )
         .limit(1);
 
       if (!existingLink) {
-        await db.insert(versionDeclarations).values({
-          versionId: branch.headVersion.id,
+        await db.insert(snapshotDeclarations).values({
+          snapshotId: branch.snapshot.id,
           declarationId,
         });
       }

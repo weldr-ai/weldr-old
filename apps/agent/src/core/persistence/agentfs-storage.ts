@@ -6,7 +6,7 @@ import type {
   SaveSessionStateInput,
   SessionSnapshot,
   SessionStorage,
-  VersionMetrics,
+  SnapshotMetrics,
 } from "./types";
 
 const KV_KEYS = {
@@ -32,11 +32,11 @@ const KV_KEYS = {
 export class AgentFSSessionStorage implements SessionStorage {
   private logger = Logger.get({ service: "agentfs-session-storage" });
   private agent: AgentFS;
-  private versionId: string;
+  private chatId: string;
 
-  constructor(agent: AgentFS, versionId: string) {
+  constructor(agent: AgentFS, chatId: string) {
     this.agent = agent;
-    this.versionId = versionId;
+    this.chatId = chatId;
   }
 
   async saveSessionState(input: SaveSessionStateInput): Promise<void> {
@@ -55,7 +55,7 @@ export class AgentFSSessionStorage implements SessionStorage {
 
       this.logger.debug("Session state saved to SQLite", {
         extra: {
-          versionId: input.versionId,
+          chatId: input.chatId,
           state: input.sessionState,
           iterationCount: input.iterationCount,
         },
@@ -63,13 +63,13 @@ export class AgentFSSessionStorage implements SessionStorage {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error("Failed to save session state to SQLite", {
-        extra: { versionId: input.versionId, error: message },
+        extra: { chatId: input.chatId, error: message },
       });
       throw error;
     }
   }
 
-  async loadSessionState(versionId: string): Promise<SessionSnapshot | null> {
+  async loadSessionState(chatId: string): Promise<SessionSnapshot | null> {
     try {
       const [
         sessionState,
@@ -92,11 +92,11 @@ export class AgentFSSessionStorage implements SessionStorage {
         this.agent.kv.get<string | null>(KV_KEYS.ASSISTANT_CONTENT_BUFFER),
         this.agent.kv.get<number | null>(KV_KEYS.PAUSED_AT),
         this.agent.kv.get<string | null>(KV_KEYS.PAUSE_REASON),
-        this.agent.kv.get<VersionMetrics>(KV_KEYS.METRICS),
+        this.agent.kv.get<SnapshotMetrics>(KV_KEYS.METRICS),
       ]);
 
       if (!sessionState || !traceId) {
-        this.logger.debug("No session state found in SQLite", { extra: { versionId } });
+        this.logger.debug("No session state found in SQLite", { extra: { chatId } });
         return null;
       }
 
@@ -122,7 +122,7 @@ export class AgentFSSessionStorage implements SessionStorage {
 
       this.logger.debug("Session state loaded from SQLite", {
         extra: {
-          versionId,
+          chatId,
           state: snapshot.state,
           iterationCount: snapshot.iterationCount,
         },
@@ -132,13 +132,13 @@ export class AgentFSSessionStorage implements SessionStorage {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error("Failed to load session state from SQLite", {
-        extra: { versionId, error: message },
+        extra: { chatId, error: message },
       });
       throw error;
     }
   }
 
-  async deleteSessionState(_versionId: string): Promise<void> {
+  async deleteSessionState(_chatId: string): Promise<void> {
     try {
       await Promise.all([
         this.agent.kv.delete(KV_KEYS.SESSION_STATE),
@@ -154,21 +154,21 @@ export class AgentFSSessionStorage implements SessionStorage {
       ]);
 
       this.logger.debug("Session state deleted from SQLite", {
-        extra: { versionId: this.versionId },
+        extra: { chatId: this.chatId },
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error("Failed to delete session state from SQLite", {
-        extra: { versionId: this.versionId, error: message },
+        extra: { chatId: this.chatId, error: message },
       });
       throw error;
     }
   }
 
-  async updateVersionMetrics(_versionId: string, metrics: Partial<VersionMetrics>): Promise<void> {
+  async updateChatMetrics(_chatId: string, metrics: Partial<SnapshotMetrics>): Promise<void> {
     try {
-      const existingMetrics = await this.agent.kv.get<VersionMetrics>(KV_KEYS.METRICS);
-      const updatedMetrics: VersionMetrics = {
+      const existingMetrics = await this.agent.kv.get<SnapshotMetrics>(KV_KEYS.METRICS);
+      const updatedMetrics: SnapshotMetrics = {
         inputTokens: metrics.inputTokens ?? existingMetrics?.inputTokens ?? 0,
         outputTokens: metrics.outputTokens ?? existingMetrics?.outputTokens ?? 0,
         totalCost: metrics.totalCost ?? existingMetrics?.totalCost ?? 0,
@@ -178,13 +178,13 @@ export class AgentFSSessionStorage implements SessionStorage {
 
       await this.agent.kv.set(KV_KEYS.METRICS, updatedMetrics);
 
-      this.logger.debug("Version metrics updated in SQLite", {
-        extra: { versionId: this.versionId, metrics: updatedMetrics },
+      this.logger.debug("Snapshot metrics updated in SQLite", {
+        extra: { chatId: this.chatId, metrics: updatedMetrics },
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error("Failed to update version metrics in SQLite", {
-        extra: { versionId: this.versionId, error: message },
+      this.logger.error("Failed to update snapshot metrics in SQLite", {
+        extra: { chatId: this.chatId, error: message },
       });
       throw error;
     }
@@ -201,6 +201,6 @@ export class AgentFSSessionStorage implements SessionStorage {
 /**
  * Create an AgentFS-backed session storage instance
  */
-export function createAgentFSStorage(agent: AgentFS, versionId: string): AgentFSSessionStorage {
-  return new AgentFSSessionStorage(agent, versionId);
+export function createAgentFSStorage(agent: AgentFS, chatId: string): AgentFSSessionStorage {
+  return new AgentFSSessionStorage(agent, chatId);
 }

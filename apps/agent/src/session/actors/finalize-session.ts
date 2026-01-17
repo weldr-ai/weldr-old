@@ -1,7 +1,7 @@
 import { fromPromise } from "xstate";
 
 import { db, eq } from "@weldr/db";
-import { versions } from "@weldr/db/schema";
+import { snapshots } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
 import { build } from "@/core/build";
@@ -19,12 +19,17 @@ type FinalizeResult = {
 
 export const finalizeSessionActor = fromPromise<FinalizeResult, { context: SessionMachineContext }>(
   async ({ input }) => {
-    const { project, branch, user } = input.context;
+    const { project, branch, user, chatId } = input.context;
+
+    const snapshotId = branch.snapshot?.id;
+    if (!snapshotId) {
+      throw new Error("Branch has no snapshot");
+    }
 
     const logger = Logger.get({
       projectId: project.id,
       branchId: branch.id,
-      versionId: branch.headVersion.id,
+      snapshotId,
       actor: "session-machine",
     });
 
@@ -32,7 +37,7 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
 
     // Get changed files using Git library
     logger.info("Getting changed files from git");
-    const changedFiles = await Git.getChangedFiles(project.id, branch.id);
+    const changedFiles = await Git.getChangedFiles(project.id, branch.id, snapshotId);
 
     logger.info("Changed files detected", {
       extra: {
@@ -49,9 +54,15 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
     if (changedFiles.length > 0) {
       logger.info("Creating git commit");
 
-      const commitMessage = branch.headVersion.message
-        ? `${branch.headVersion.message}${branch.headVersion.description ? `\n\n${branch.headVersion.description}` : ""}`
-        : `Version #${branch.headVersion.sequenceNumber}`;
+      if (!branch.snapshot) {
+        throw new Error("Branch has no snapshot");
+      }
+
+      // Use snapshot title/description for commit message, or fallback to generic message
+      const snapshot = branch.snapshot;
+      const commitMessage = snapshot.title
+        ? `${snapshot.title}${snapshot.description ? `\n\n${snapshot.description}` : ""}`
+        : "Session completed";
 
       const author = {
         name: user?.name ?? "Weldr",
@@ -59,7 +70,7 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
       };
 
       try {
-        commitHash = await Git.commit(commitMessage, author, project.id, branch.id);
+        commitHash = await Git.commit(commitMessage, author, project.id, branch.id, snapshotId);
         logger.info("Git commit created", { extra: { commitHash } });
       } catch (error) {
         logger.warn("Failed to create git commit", {
@@ -95,28 +106,28 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
     }
 
     logger.info("Syncing version to cloud storage");
-    await syncToCloud(branch.headVersion.id, project.id);
+    await syncToCloud(snapshotId, project.id);
 
     logger.info("Version synced to cloud");
 
     if (isCloudMode()) {
-      logger.info("Building version artifact", {
-        extra: { versionId: branch.headVersion.id },
+      logger.info("Building snapshot artifact", {
+        extra: { snapshotId },
       });
 
       const buildResult = await build({
         projectId: project.id,
         branchId: branch.id,
-        versionId: branch.headVersion.id,
+        snapshotId,
       });
 
       if (buildResult.success) {
-        logger.info("Version artifact built successfully", {
-          extra: { versionId: branch.headVersion.id },
+        logger.info("Snapshot artifact built successfully", {
+          extra: { snapshotId },
         });
       } else {
-        logger.warn("Failed to build version artifact (non-critical)", {
-          extra: { versionId: branch.headVersion.id },
+        logger.warn("Failed to build snapshot artifact (non-critical)", {
+          extra: { snapshotId },
         });
       }
     }
@@ -124,7 +135,7 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
     // Persist session metrics (cost, tokens, iterations, duration)
     const metrics = input.context.metrics.getMetrics();
     await persistSessionMetrics({
-      versionId: branch.headVersion.id,
+      snapshotId,
       metrics,
     });
 
@@ -137,27 +148,28 @@ export const finalizeSessionActor = fromPromise<FinalizeResult, { context: Sessi
       },
     });
 
-    await db
-      .update(versions)
-      .set({
-        status: "completed",
-        commitHash,
-      })
-      .where(eq(versions.id, branch.headVersion.id));
+    // Update snapshot with commit hash
+    if (commitHash) {
+      await db
+        .update(snapshots)
+        .set({
+          commitSha: commitHash,
+        })
+        .where(eq(snapshots.id, snapshotId));
+    }
 
-    logger.info("Version marked as completed");
+    logger.info("Snapshot updated");
 
-    const updatedVersion = {
-      ...branch.headVersion,
-      status: "completed" as const,
-      commitHash,
-    };
-
-    await stream(branch.headVersion.chatId, {
+    await stream(chatId, {
       type: "update_branch",
       data: {
         ...branch,
-        headVersion: updatedVersion,
+        snapshot: branch.snapshot
+          ? {
+              ...branch.snapshot,
+              commitSha: commitHash,
+            }
+          : null,
       },
     });
 

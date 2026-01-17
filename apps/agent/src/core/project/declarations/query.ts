@@ -1,7 +1,7 @@
 import { inArray } from "drizzle-orm";
 
 import { and, db, eq } from "@weldr/db";
-import { declarations, dependencies, versionDeclarations } from "@weldr/db/schema";
+import { declarations, dependencies, snapshotDeclarations } from "@weldr/db/schema";
 import { mergeJson } from "@weldr/db/utils";
 import { Logger } from "@weldr/shared/logger";
 import { nanoid } from "@weldr/shared/nanoid";
@@ -38,23 +38,23 @@ function getPathAliases(integrationCategories: Set<string>): Record<string, stri
 }
 
 /**
- * Fetches all declarations associated with a specific version.
+ * Fetches all declarations associated with a specific snapshot.
  *
- * Retrieves the version-declaration links and joins with declaration data including:
+ * Retrieves the snapshot-declaration links and joins with declaration data including:
  * - Declaration ID, file path, URI
  * - Progress status
  * - Metadata (specs, code metadata)
  *
  * @param tx - Database transaction object
- * @param versionId - ID of the version to fetch declarations for
- * @returns Array of version-declaration links with their associated declaration data
+ * @param snapshotId - ID of the snapshot to fetch declarations for
+ * @returns Array of snapshot-declaration links with their associated declaration data
  */
-async function getHeadVersionDeclarations(
+async function getSnapshotDeclarations(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-  versionId: string,
+  snapshotId: string,
 ) {
-  return await tx.query.versionDeclarations.findMany({
-    where: and(eq(versionDeclarations.versionId, versionId)),
+  return await tx.query.snapshotDeclarations.findMany({
+    where: and(eq(snapshotDeclarations.snapshotId, snapshotId)),
     with: {
       declaration: {
         columns: {
@@ -79,20 +79,20 @@ type DeclarationOperation = { type: "update"; declarationId: string } | { type: 
  * 2. **Create**: If no URI match exists, create a new declaration
  *
  * @param extractedDeclaration - The declaration extracted from source code
- * @param headVersionDeclarations - All declarations currently in the head version
+ * @param snapshotDeclarations - All declarations currently in the snapshot
  * @param existingDeclarationByUri - Result of direct URI lookup in declarations table
  * @param logger - Logger instance for tracking decision process
  * @returns Operation object indicating whether to update or create, along with relevant declaration ID
  */
 function determineDeclarationOperation(
   extractedDeclaration: DeclarationCodeMetadata,
-  headVersionDeclarations: Array<
-    NonNullable<Awaited<ReturnType<typeof getHeadVersionDeclarations>>[number]["declaration"]>
+  snapshotDeclarationsList: Array<
+    NonNullable<Awaited<ReturnType<typeof getSnapshotDeclarations>>[number]["declaration"]>
   >,
   existingDeclarationByUri: { id: string } | null | undefined,
   logger: ReturnType<typeof Logger.get>,
 ): DeclarationOperation {
-  const doesDeclarationExist = headVersionDeclarations.find(
+  const doesDeclarationExist = snapshotDeclarationsList.find(
     (d) => extractedDeclaration.uri === d.uri,
   );
 
@@ -133,14 +133,14 @@ function determineDeclarationOperation(
  * @param tx - Database transaction object
  * @param extractedDeclarations - Array of declarations extracted from source code with their dependency information
  * @param declarationUriToIdMap - Map of declaration URIs to their database IDs (for newly created/updated declarations)
- * @param headVersionDeclarations - All declarations currently in the head version (for fallback lookup)
+ * @param snapshotDeclarations - All declarations currently in the snapshot (for fallback lookup)
  * @param logger - Logger instance for tracking dependency resolution
  */
 async function resolveDependencies(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   extractedDeclarations: DeclarationCodeMetadata[],
   declarationUriToIdMap: Map<string, string>,
-  headVersionDeclarations: Awaited<ReturnType<typeof getHeadVersionDeclarations>>,
+  snapshotDeclarationsList: Awaited<ReturnType<typeof getSnapshotDeclarations>>,
   logger: ReturnType<typeof Logger.get>,
 ): Promise<void> {
   for (const data of extractedDeclarations) {
@@ -160,7 +160,7 @@ async function resolveDependencies(
           dependentUri,
           dep,
           declarationUriToIdMap,
-          headVersionDeclarations,
+          snapshotDeclarationsList,
           logger,
         );
       }
@@ -174,7 +174,7 @@ async function resolveDependencies(
  * For each dependency name in the internal dependency object:
  * 1. Constructs the dependency URI as `{filePath}:{declarationName}`
  * 2. Attempts to find the dependency ID in the new declarations map
- * 3. Falls back to searching head version declarations if not found
+ * 3. Falls back to searching snapshot declarations if not found
  * 4. Creates a dependency record linking the dependent to the dependency
  * 5. Uses onConflictDoNothing to safely handle duplicate entries
  *
@@ -187,7 +187,7 @@ async function resolveDependencies(
  * @param dependentUri - URI of the dependent declaration (for logging)
  * @param dependency - Internal dependency object containing file path and list of dependency names
  * @param declarationUriToIdMap - Map of URIs to IDs for newly processed declarations
- * @param headVersionDeclarations - All declarations in the version (for fallback lookup)
+ * @param snapshotDeclarations - All declarations in the snapshot (for fallback lookup)
  * @param logger - Logger instance for tracking resolution failures
  */
 async function resolveInternalDependencies(
@@ -196,7 +196,7 @@ async function resolveInternalDependencies(
   dependentUri: string,
   dependency: Extract<DeclarationCodeMetadata["dependencies"][number], { type: "internal" }>,
   declarationUriToIdMap: Map<string, string>,
-  headVersionDeclarations: Awaited<ReturnType<typeof getHeadVersionDeclarations>>,
+  snapshotDeclarationsList: Awaited<ReturnType<typeof getSnapshotDeclarations>>,
   logger: ReturnType<typeof Logger.get>,
 ): Promise<void> {
   for (const depName of dependency.dependsOn) {
@@ -205,7 +205,7 @@ async function resolveInternalDependencies(
     let dependencyId = declarationUriToIdMap.get(dependencyUri);
 
     if (!dependencyId) {
-      dependencyId = headVersionDeclarations.find((d) => d.declaration?.uri === dependencyUri)
+      dependencyId = snapshotDeclarationsList.find((d) => d.declaration?.uri === dependencyUri)
         ?.declaration?.id;
     }
 
@@ -336,7 +336,7 @@ async function createDeclaration(
  *    - Resolves import paths using project-specific path aliases
  *
  * 2. **Prepare for Transaction:**
- *    - Fetch all head version declarations for the current version
+ *    - Fetch all snapshot declarations for the current snapshot
  *    - Identify completed declarations for cleanup
  *
  * 3. **Process Each Declaration (in transaction):**
@@ -390,8 +390,15 @@ export async function extractAndSaveDeclarations({
 
   const logger = Logger.get({
     projectId: project.id,
-    versionId: branch.headVersion.id,
+    snapshotId: branch.snapshot?.id,
   });
+
+  if (!branch.snapshot) {
+    logger.error("Branch has no snapshot");
+    return;
+  }
+
+  const snapshotId = branch.snapshot.id;
 
   try {
     const pathAliases = getPathAliases(project.integrationCategories);
@@ -402,7 +409,7 @@ export async function extractAndSaveDeclarations({
       pathAliases,
       branchId,
       projectId: project.id,
-      versionId: branch.headVersion.id,
+      snapshotId,
     });
 
     logger.info(`Extracted ${extracted.length} declarations.`);
@@ -417,9 +424,9 @@ export async function extractAndSaveDeclarations({
       }> = [];
 
       await db.transaction(async (tx) => {
-        const headVersionDeclarations = await getHeadVersionDeclarations(tx, branch.headVersion.id);
+        const snapshotDeclarationsList = await getSnapshotDeclarations(tx, snapshotId);
 
-        const allDeclarations = headVersionDeclarations
+        const allDeclarations = snapshotDeclarationsList
           .map((d) => d.declaration)
           .filter((d): d is NonNullable<typeof d> => d !== null);
 
@@ -428,11 +435,11 @@ export async function extractAndSaveDeclarations({
         if (completedDeclarations.length > 0) {
           const idsToDelete = completedDeclarations.map((d) => d.id);
           await tx
-            .delete(versionDeclarations)
+            .delete(snapshotDeclarations)
             .where(
               and(
-                inArray(versionDeclarations.declarationId, idsToDelete),
-                eq(versionDeclarations.versionId, branch.headVersion.id),
+                inArray(snapshotDeclarations.declarationId, idsToDelete),
+                eq(snapshotDeclarations.snapshotId, snapshotId),
               ),
             );
         }
@@ -488,13 +495,13 @@ export async function extractAndSaveDeclarations({
             projectId: project.id,
           });
 
-          const existingVersionLink = headVersionDeclarations.find(
-            (vd) => vd.declarationId === declarationId,
+          const existingSnapshotLink = snapshotDeclarationsList.find(
+            (sd) => sd.declarationId === declarationId,
           );
 
-          if (!existingVersionLink) {
-            await tx.insert(versionDeclarations).values({
-              versionId: branch.headVersion.id,
+          if (!existingSnapshotLink) {
+            await tx.insert(snapshotDeclarations).values({
+              snapshotId: snapshotId,
               declarationId,
             });
           }
@@ -504,12 +511,12 @@ export async function extractAndSaveDeclarations({
           tx,
           extracted,
           newDeclarationUriToId,
-          headVersionDeclarations,
+          snapshotDeclarationsList,
           logger,
         );
       });
 
-      logger.info(`Successfully inserted ${extracted.length} declarations and linked to version.`);
+      logger.info(`Successfully inserted ${extracted.length} declarations and linked to snapshot.`);
 
       for (const job of enrichingJobs) {
         await queueEnrichingJob(job);

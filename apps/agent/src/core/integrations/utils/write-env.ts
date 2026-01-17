@@ -51,11 +51,13 @@ function parseEnvFile(content: string): Map<string, string> {
 async function writeEnvToTarget({
   branchId,
   projectId,
+  snapshotId,
   target,
   envVars,
 }: {
   branchId: string;
   projectId: string;
+  snapshotId: string;
   target: "server" | "web";
   envVars: Array<{ key: string; value: string }>;
 }): Promise<void> {
@@ -67,7 +69,7 @@ async function writeEnvToTarget({
   const session = await getOrCreateSession({
     branchId,
     projectId,
-    versionId: "env-write",
+    snapshotId,
   });
 
   let existingContent = "";
@@ -173,7 +175,13 @@ export async function writeEnvironmentVariables({
 }): Promise<void> {
   const project = context.project;
   const branch = context.branch;
+  const snapshotId = branch.snapshot?.id;
   const logger = Logger.get({ projectId: project.id });
+
+  if (!snapshotId) {
+    logger.warn("Cannot write environment variables: branch has no snapshot");
+    return;
+  }
 
   // Check if integration has environment variables
   if (
@@ -222,6 +230,7 @@ export async function writeEnvironmentVariables({
       await writeEnvToTarget({
         branchId: branch.id,
         projectId: project.id,
+        snapshotId,
         target,
         envVars: envVarValues,
       });

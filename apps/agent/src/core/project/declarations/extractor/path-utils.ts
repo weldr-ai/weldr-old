@@ -55,10 +55,10 @@ function resolveRelativePath(currentFilePath: string, importPath: string): strin
 export async function resolveFilePath(
   branchId: string,
   projectId: string,
-  versionId: string,
+  snapshotId: string,
   basePath: string,
 ): Promise<string | null> {
-  const session = await getOrCreateSession({ branchId, projectId, versionId });
+  const session = await getOrCreateSession({ branchId, projectId, snapshotId });
   const hasExtension = /\.[^/.]+$/.test(basePath);
 
   // Ensure path starts with / for agentfs
@@ -185,7 +185,7 @@ export function isExternalPackage({
 interface ResolveInternalPathOptions {
   branchId?: string;
   projectId?: string;
-  versionId?: string;
+  snapshotId?: string;
   importPath: string;
   currentFilePath: string;
   pathAliases?: Record<string, string>;
@@ -194,7 +194,7 @@ interface ResolveInternalPathOptions {
 export async function resolveInternalPathAsync(
   options: ResolveInternalPathOptions,
 ): Promise<string> {
-  const { branchId, projectId, versionId, importPath, currentFilePath, pathAliases } = options;
+  const { branchId, projectId, snapshotId, importPath, currentFilePath, pathAliases } = options;
 
   // First try to resolve using path aliases
   const aliasResolved = resolvePathAlias({ importPath, pathAliases });
@@ -211,12 +211,12 @@ export async function resolveInternalPathAsync(
 
   // If no branchId provided, skip agentfs file resolution
   // (used for internal template processing)
-  if (!branchId || !projectId || !versionId) {
+  if (!branchId || !projectId || !snapshotId) {
     return pathToCheck;
   }
 
   // Now, try to find the actual file with extension via agentfs
-  const finalPath = await resolveFilePath(branchId, projectId, versionId, pathToCheck);
+  const finalPath = await resolveFilePath(branchId, projectId, snapshotId, pathToCheck);
 
   if (!finalPath) {
     return pathToCheck;

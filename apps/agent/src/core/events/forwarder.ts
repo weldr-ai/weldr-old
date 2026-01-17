@@ -150,12 +150,12 @@ function mapStateToStatus(
  */
 export function createEventForwarder(chatId: string) {
   return async (event: WeldrEvent): Promise<void> => {
-    const { type, versionId, traceId, timestamp } = event;
+    const { type, chatId: eventChatId, traceId, timestamp } = event;
 
     // Log the event (structured logging)
     logger.debug(`Event: ${type}`, {
       extra: {
-        versionId,
+        chatId: eventChatId,
         traceId,
         eventType: type,
         timestamp,

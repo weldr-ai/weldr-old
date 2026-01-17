@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { and, db, eq } from "@weldr/db";
-import { declarations, dependencies, versionDeclarations, versions } from "@weldr/db/schema";
+import { declarations, dependencies, snapshotDeclarations, snapshots } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
 import { formatDeclarationData, formatDeclarationSpecs } from "@/core/project/declarations";
@@ -39,10 +39,18 @@ When you need to understand the relationships between declarations - what a spec
 
     const logger = Logger.get({
       projectId: project.id,
-      versionId: branch.headVersion.id,
+      snapshotId: branch.snapshot?.id,
       userId: user.id,
       input,
     });
+
+    if (!branch.snapshot) {
+      logger.error("Branch has no snapshot");
+      return {
+        success: false as const,
+        error: "Branch has no snapshot",
+      };
+    }
 
     logger.info(`Querying related declarations for: "${declarationId}"`);
 
@@ -77,13 +85,10 @@ When you need to understand the relationships between declarations - what a spec
           })
           .from(dependencies)
           .innerJoin(declarations, eq(dependencies.dependencyId, declarations.id))
-          .innerJoin(versionDeclarations, eq(versionDeclarations.declarationId, declarations.id))
-          .innerJoin(versions, eq(versions.id, versionDeclarations.versionId))
+          .innerJoin(snapshotDeclarations, eq(snapshotDeclarations.declarationId, declarations.id))
+          .innerJoin(snapshots, eq(snapshots.id, snapshotDeclarations.snapshotId))
           .where(
-            and(
-              eq(dependencies.dependentId, declarationId),
-              eq(versions.id, branch.headVersion.id),
-            ),
+            and(eq(dependencies.dependentId, declarationId), eq(snapshots.id, branch.snapshot.id)),
           );
 
         if (dependencyRows.length > 0) {
@@ -124,13 +129,10 @@ When you need to understand the relationships between declarations - what a spec
           })
           .from(dependencies)
           .innerJoin(declarations, eq(dependencies.dependentId, declarations.id))
-          .innerJoin(versionDeclarations, eq(versionDeclarations.declarationId, declarations.id))
-          .innerJoin(versions, eq(versions.id, versionDeclarations.versionId))
+          .innerJoin(snapshotDeclarations, eq(snapshotDeclarations.declarationId, declarations.id))
+          .innerJoin(snapshots, eq(snapshots.id, snapshotDeclarations.snapshotId))
           .where(
-            and(
-              eq(dependencies.dependencyId, declarationId),
-              eq(versions.id, branch.headVersion.id),
-            ),
+            and(eq(dependencies.dependencyId, declarationId), eq(snapshots.id, branch.snapshot.id)),
           );
 
         if (dependentRows.length > 0) {

@@ -33,7 +33,7 @@ import type { SessionState } from "@/core/persistence";
 
 export type BaseEvent = {
   timestamp: number;
-  versionId: string;
+  chatId: string;
   traceId: string;
 };
 
@@ -108,7 +108,6 @@ export type PendingSpawnRequest = {
 
 export type SessionStartedEvent = {
   type: "session.started";
-  versionId: string;
   traceId: string;
 };
 

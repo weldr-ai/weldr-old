@@ -10,7 +10,7 @@ import type {
   SubAgentTask,
 } from "@/core/events/types";
 import type { LLMUsage, MetricsCollector } from "@/core/metrics";
-import type { BranchWithVersion, ProjectWithConfig, User } from "@/core/types";
+import type { BranchWithSnapshot, ProjectWithConfig, User } from "@/core/types";
 
 export type { FinishReason, PendingSpawnRequest, SubAgentResult, SubAgentTask };
 
@@ -25,11 +25,12 @@ export type AssistantContentArray = Exclude<AssistantContent, string>;
 
 export type AgentContext = {
   agentId: string;
+  chatId: string;
   isSubAgent: boolean;
   parentAgentId?: string;
   task?: string;
   project: ProjectWithConfig;
-  branch: BranchWithVersion;
+  branch: BranchWithSnapshot;
   user: User;
   messages: ModelMessage[];
   assistantContent: AssistantContentArray;
@@ -55,8 +56,9 @@ export type AgentContext = {
 };
 
 export type AgentInput = {
+  chatId: string;
   project: ProjectWithConfig;
-  branch: BranchWithVersion;
+  branch: BranchWithSnapshot;
   user: User;
   tools: ToolSet;
   systemPrompt: string;

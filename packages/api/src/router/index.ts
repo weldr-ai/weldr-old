@@ -7,15 +7,15 @@ import { integrationTemplatesRouter } from "./integration-templates";
 import { integrationsRouter } from "./integrations";
 import { nodesRouter } from "./nodes";
 import { projectsRouter } from "./projects";
+import { snapshotsRouter } from "./snapshots";
 import { themesRouter } from "./themes";
-import { versionRouter } from "./versions";
 
 export const appRouter = createTRPCRouter({
   projects: projectsRouter,
   chats: chatsRouter,
   environmentVariables: environmentVariablesRouter,
   declarations: declarationsRouter,
-  versions: versionRouter,
+  snapshots: snapshotsRouter,
   integrations: integrationsRouter,
   integrationTemplates: integrationTemplatesRouter,
   themes: themesRouter,

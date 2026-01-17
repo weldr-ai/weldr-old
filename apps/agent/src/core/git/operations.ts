@@ -22,18 +22,20 @@ export namespace Git {
   interface GitExecOptions {
     projectId: string;
     branchId: string;
+    snapshotId: string;
   }
 
   async function execGit(
     args: string[],
     options: GitExecOptions,
   ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
-    const { projectId, branchId } = options;
+    const { projectId, branchId, snapshotId } = options;
     const command = `git ${args.join(" ")}`;
 
     return await exec(command, {
       projectId,
       branchId,
+      snapshotId,
     });
   }
 
@@ -42,9 +44,13 @@ export namespace Git {
     type: "added" | "modified" | "deleted";
   }
 
-  export async function initRepository(projectId: string, branchId: string): Promise<void> {
+  export async function initRepository(
+    projectId: string,
+    branchId: string,
+    snapshotId: string,
+  ): Promise<void> {
     const logger = Logger.get({ operation: "git-init" });
-    const options = { projectId, branchId };
+    const options = { projectId, branchId, snapshotId };
 
     try {
       const result = await execGit(["init", "-b", TRUNK_BRANCH], options);
@@ -65,9 +71,10 @@ export namespace Git {
     author: { name: string; email: string },
     projectId: string,
     branchId: string,
+    snapshotId: string,
   ): Promise<string> {
     const logger = Logger.get({ operation: "git-commit" });
-    const options = { projectId, branchId };
+    const options = { projectId, branchId, snapshotId };
 
     try {
       execGit(["config", "user.name", author.name], options);
@@ -99,6 +106,7 @@ export namespace Git {
     startRef: string | undefined,
     projectId: string,
     branchId: string,
+    snapshotId: string,
   ): Promise<void> {
     const logger = Logger.get({
       operation: "git-checkout-branch",
@@ -106,7 +114,7 @@ export namespace Git {
       startRef,
     });
 
-    const options = { projectId, branchId };
+    const options = { projectId, branchId, snapshotId };
 
     try {
       const branchExists = await checkBranchExists(branchName, options);
@@ -129,8 +137,12 @@ export namespace Git {
     }
   }
 
-  export async function hasGitRepository(projectId: string, branchId: string): Promise<boolean> {
-    const options = { projectId, branchId };
+  export async function hasGitRepository(
+    projectId: string,
+    branchId: string,
+    snapshotId: string,
+  ): Promise<boolean> {
+    const options = { projectId, branchId, snapshotId };
     const result = await execGit(["rev-parse", "--git-dir"], options);
     return result.exitCode === 0;
   }
@@ -138,6 +150,7 @@ export namespace Git {
   export async function getChangedFiles(
     projectId: string,
     branchId: string,
+    snapshotId: string,
     fromRef?: string,
     toRef?: string,
   ): Promise<ChangedFile[]> {
@@ -147,7 +160,7 @@ export namespace Git {
       toRef,
     });
 
-    const options = { projectId, branchId };
+    const options = { projectId, branchId, snapshotId };
     const changedFiles: ChangedFile[] = [];
 
     try {
@@ -218,18 +231,24 @@ export namespace Git {
     }
   }
 
-  export async function headCommit(projectId: string, branchId: string): Promise<string> {
-    const result = await execGit(["rev-parse", "HEAD"], { projectId, branchId });
+  export async function headCommit(
+    projectId: string,
+    branchId: string,
+    snapshotId: string,
+  ): Promise<string> {
+    const result = await execGit(["rev-parse", "HEAD"], { projectId, branchId, snapshotId });
     return result.stdout.trim();
   }
 
   export async function getParentCommit(
     projectId: string,
     branchId: string,
+    snapshotId: string,
   ): Promise<string | null> {
     const result = await execGit(["rev-parse", "HEAD~1"], {
       projectId,
       branchId,
+      snapshotId,
     });
     if (result.exitCode !== 0) {
       return null;
@@ -242,6 +261,7 @@ export namespace Git {
     newName: string,
     projectId: string,
     branchId: string,
+    snapshotId: string,
   ): Promise<void> {
     const logger = Logger.get({
       operation: "git-rename-branch",
@@ -249,7 +269,7 @@ export namespace Git {
       newName,
     });
 
-    const options = { projectId, branchId };
+    const options = { projectId, branchId, snapshotId };
 
     try {
       const result = await execGit(["branch", "-m", oldName, newName], options);
@@ -271,6 +291,7 @@ export namespace Git {
     message: string | undefined,
     projectId: string,
     branchId: string,
+    snapshotId: string,
   ): Promise<string> {
     const logger = Logger.get({
       operation: "git-revert",
@@ -278,7 +299,7 @@ export namespace Git {
       commitHash,
     });
 
-    const options = { projectId, branchId };
+    const options = { projectId, branchId, snapshotId };
 
     try {
       execGit(["checkout", targetBranch], options);

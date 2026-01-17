@@ -11,6 +11,7 @@ export async function installPackages(
   packagesSets: IntegrationPackageSets,
   sessionId: string,
   projectId: string,
+  snapshotId: string,
 ): Promise<IntegrationCallbackResult> {
   const results: IntegrationCallbackResult[] = [];
 
@@ -31,6 +32,7 @@ export async function installPackages(
     const execOptions: ExecOptions = {
       branchId: sessionId,
       projectId,
+      snapshotId,
     };
 
     if (runtimeInstallCommand.length > 0) {
@@ -73,12 +75,13 @@ export async function updatePackageJsonScripts(
   scriptSets: IntegrationScriptSets,
   sessionId: string,
   projectId: string,
+  snapshotId: string,
 ): Promise<IntegrationCallbackResult> {
   try {
     const session = await getOrCreateSession({
       branchId: sessionId,
       projectId,
-      versionId: "packages",
+      snapshotId,
     });
 
     const results: IntegrationCallbackResult[] = [];
@@ -154,10 +157,12 @@ export async function runBunScript(
   script: string,
   sessionId: string,
   projectId: string,
+  snapshotId: string,
 ): Promise<IntegrationCallbackResult> {
   const result = await exec(`bun run ${script}`, {
     branchId: sessionId,
     projectId,
+    snapshotId,
   });
 
   if (result.exitCode === 0) {

@@ -34,7 +34,7 @@ Use this tool when you need to add more integration categories to a project. It 
 
     const logger = Logger.get({
       projectId: project.id,
-      versionId: branch.headVersion?.id,
+      snapshotId: branch.snapshot?.id,
       input,
     });
 

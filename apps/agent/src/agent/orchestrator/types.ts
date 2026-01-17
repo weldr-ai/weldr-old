@@ -5,7 +5,7 @@ import type { AiModel } from "@weldr/db/schema";
 
 import type { AgentMachine } from "@/agent/machine";
 import type { SubAgentResult } from "@/core/events/types";
-import type { BranchWithVersion, ProjectWithConfig, User } from "@/core/types";
+import type { BranchWithSnapshot, ProjectWithConfig, User } from "@/core/types";
 
 export type { SubAgentResult };
 
@@ -35,7 +35,7 @@ export type OrchestratorContext = {
   agents: SubAgentState[];
   maxRetries: number;
   project: ProjectWithConfig;
-  branch: BranchWithVersion;
+  branch: BranchWithSnapshot;
   user: User;
   tools: ToolSet;
   modelId: AiModel;
@@ -48,7 +48,7 @@ export type OrchestratorInput = {
   agents: SubAgentTask[];
   maxRetries?: number;
   project: ProjectWithConfig;
-  branch: BranchWithVersion;
+  branch: BranchWithSnapshot;
   user: User;
   tools: ToolSet;
   modelId: AiModel;

@@ -1,6 +1,6 @@
 import type { AssistantContent } from "ai";
 
-export type { BranchWithVersion, ProjectWithConfig } from "@/core/types";
+export type { BranchWithSnapshot, ProjectWithConfig } from "@/core/types";
 
 export type PendingAgentTask = {
   task: string;

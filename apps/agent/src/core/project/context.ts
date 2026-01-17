@@ -1,5 +1,5 @@
-import { and, db, eq } from "@weldr/db";
-import { integrations, type projects, versions } from "@weldr/db/schema";
+import { db, eq, isNotNull } from "@weldr/db";
+import { branches, integrations, type projects } from "@weldr/db/schema";
 
 export async function getProjectContext(project: typeof projects.$inferSelect) {
   const projectIntegrationsList = await db.query.integrations.findMany({
@@ -22,13 +22,13 @@ export async function getProjectContext(project: typeof projects.$inferSelect) {
     },
   });
 
-  const projectVersionsList = await db.query.versions.findMany({
-    where: and(eq(versions.projectId, project.id), eq(versions.status, "completed")),
-    orderBy: (versions, { desc }) => [desc(versions.number)],
+  // Check if project has any branches with snapshots
+  const branchesWithSnapshots = await db.query.branches.findMany({
+    where: isNotNull(branches.snapshotId),
     limit: 1,
   });
 
-  if (projectVersionsList.length === 0) {
+  if (branchesWithSnapshots.length === 0) {
     return "This is a new project";
   }
 

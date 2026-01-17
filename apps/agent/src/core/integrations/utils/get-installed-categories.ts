@@ -1,10 +1,10 @@
 import { db } from "@weldr/db";
 
-export async function getInstalledCategories(versionId: string) {
+export async function getInstalledCategories(snapshotId: string) {
   const installedIntegrations = await db.query.integrationInstallations.findMany({
     where: (integrationInstallations, { and, eq }) =>
       and(
-        eq(integrationInstallations.versionId, versionId),
+        eq(integrationInstallations.snapshotId, snapshotId),
         eq(integrationInstallations.status, "installed"),
       ),
     with: {

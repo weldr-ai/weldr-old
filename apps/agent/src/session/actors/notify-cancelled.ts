@@ -5,9 +5,9 @@ import type { SessionMachineContext } from "@/session/types";
 
 export const notifyCancelledActor = fromPromise<void, { context: SessionMachineContext }>(
   async ({ input }) => {
-    const { branch } = input.context;
+    const { chatId } = input.context;
 
-    await stream(branch.headVersion.chatId, {
+    await stream(chatId, {
       type: "status",
       status: null,
     });

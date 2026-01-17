@@ -25,7 +25,7 @@ interface TestContext {
   session: SandboxSession;
   projectId: string;
   branchId: string;
-  versionId: string;
+  snapshotId: string;
 }
 
 interface TestResult {
@@ -355,11 +355,11 @@ async function testDeleteOperations(ctx: TestContext): Promise<void> {
 // TEST: Storage Persistence (SQLite KV)
 // =============================================================================
 async function testStoragePersistence(ctx: TestContext): Promise<void> {
-  const { session, versionId } = ctx;
+  const { session, snapshotId } = ctx;
 
   log("Saving session state to SQLite...");
   await session.storage.saveSessionState({
-    versionId,
+    chatId: snapshotId,
     sessionState: "processing",
     traceId: "test-trace-123",
     iterationCount: 5,
@@ -373,7 +373,7 @@ async function testStoragePersistence(ctx: TestContext): Promise<void> {
   log("State saved successfully");
 
   log("Loading session state from SQLite...");
-  const loadedState = await session.storage.loadSessionState(versionId);
+  const loadedState = await session.storage.loadSessionState(snapshotId);
   if (!loadedState) {
     throw new Error("State should be loaded");
   }
@@ -392,7 +392,7 @@ async function testStoragePersistence(ctx: TestContext): Promise<void> {
 
   log("Updating state...");
   await session.storage.saveSessionState({
-    versionId,
+    chatId: snapshotId,
     sessionState: "completed",
     traceId: "test-trace-123",
     iterationCount: 10,
@@ -404,7 +404,7 @@ async function testStoragePersistence(ctx: TestContext): Promise<void> {
     pauseReason: null,
   });
 
-  const updatedState = await session.storage.loadSessionState(versionId);
+  const updatedState = await session.storage.loadSessionState(snapshotId);
   if (!updatedState) {
     throw new Error("Updated state should be loaded");
   }
@@ -622,11 +622,11 @@ async function runDemoTests(): Promise<void> {
 
   const branchId = `branch-${nanoid(8)}`;
   const projectId = `demo-${nanoid(8)}`;
-  const versionId = `version-${nanoid(8)}`;
+  const snapshotId = `snapshot-${nanoid(8)}`;
 
   console.log(`Project ID: ${projectId}`);
   console.log(`Branch ID:  ${branchId}`);
-  console.log(`Version ID: ${versionId}`);
+  console.log(`Snapshot ID: ${snapshotId}`);
   console.log(`SQLite DB:  ~/.weldr/db/${branchId}.db`);
   if (shouldCleanup) {
     console.log(`Cleanup:    ENABLED (--cleanup)`);
@@ -636,7 +636,7 @@ async function runDemoTests(): Promise<void> {
   const session = await createSession({
     branchId,
     projectId,
-    versionId,
+    snapshotId,
     workdir: "/home/user/project",
   });
 
@@ -644,7 +644,7 @@ async function runDemoTests(): Promise<void> {
     session,
     projectId,
     branchId,
-    versionId,
+    snapshotId,
   };
 
   const results: TestResult[] = [];

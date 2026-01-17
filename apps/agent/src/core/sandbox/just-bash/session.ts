@@ -36,7 +36,7 @@ const sessions = new Map<string, SandboxSession>();
 export interface SandboxSession {
   branchId: string;
   projectId: string;
-  versionId: string;
+  snapshotId: string;
   agent: AgentFS;
   bash: Bash;
   tools: Awaited<ReturnType<typeof createBashTool>>["tools"];
@@ -48,7 +48,7 @@ export interface SandboxSession {
 export interface CreateSessionOptions {
   branchId: string;
   projectId: string;
-  versionId: string;
+  snapshotId: string;
   workdir?: string;
 }
 
@@ -56,7 +56,7 @@ export interface CreateSessionOptions {
  * Create a new sandbox session with AgentFS backing
  */
 export async function createSession(options: CreateSessionOptions): Promise<SandboxSession> {
-  const { branchId, projectId, versionId, workdir = "/home/user/project" } = options;
+  const { branchId, projectId, snapshotId, workdir = "/home/user/project" } = options;
   const logger = Logger.get({ component: "sandbox-session", branchId });
 
   // Check if session already exists
@@ -78,7 +78,7 @@ export async function createSession(options: CreateSessionOptions): Promise<Sand
   const agent = await AgentFS.open({ path: dbPath });
 
   // Create SQLite-backed storage and metrics
-  const storage = createAgentFSStorage(agent, versionId);
+  const storage = createAgentFSStorage(agent, snapshotId);
   const metrics = await createAgentFSMetricsCollector(agent);
   const toolTracker = createToolTracker(agent);
 
@@ -111,7 +111,7 @@ export async function createSession(options: CreateSessionOptions): Promise<Sand
   const session: SandboxSession = {
     branchId,
     projectId,
-    versionId,
+    snapshotId,
     agent,
     bash,
     tools: bashToolkit.tools,

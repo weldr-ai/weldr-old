@@ -24,6 +24,14 @@ export function defineIntegration<K extends IntegrationKey>(
       try {
         const project = context.project;
         const branch = context.branch;
+        const snapshotId = branch.snapshot?.id;
+
+        if (!snapshotId) {
+          return {
+            success: false,
+            message: "Cannot run postInstall: branch has no snapshot",
+          };
+        }
 
         const options = integration?.options as ExtractOptionsForKey<K> | undefined;
 
@@ -39,8 +47,8 @@ export function defineIntegration<K extends IntegrationKey>(
         }
 
         const results = await Promise.all([
-          updatePackageJsonScripts(scripts, branch.id, project.id),
-          installPackages(packages, branch.id, project.id),
+          updatePackageJsonScripts(scripts, branch.id, project.id, snapshotId),
+          installPackages(packages, branch.id, project.id, snapshotId),
           seedDeclarationTemplates({
             integration,
             context,

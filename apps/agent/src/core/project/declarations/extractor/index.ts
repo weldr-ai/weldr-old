@@ -10,14 +10,14 @@ export async function extractDeclarations({
   pathAliases,
   branchId,
   projectId,
-  versionId,
+  snapshotId,
 }: {
   sourceCode: string;
   filename: string;
   pathAliases?: Record<string, string>;
   branchId?: string;
   projectId?: string;
-  versionId?: string;
+  snapshotId?: string;
 }): Promise<DeclarationCodeMetadata[]> {
   try {
     // Create a TypeScript source file
@@ -43,7 +43,7 @@ export async function extractDeclarations({
       pathAliases,
       branchId,
       projectId,
-      versionId,
+      snapshotId,
       declarations,
       importedIdentifiers,
     });

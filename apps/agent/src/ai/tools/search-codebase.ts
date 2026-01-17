@@ -2,7 +2,7 @@ import { embedMany } from "ai";
 import { z } from "zod";
 
 import { and, cosineDistance, db, desc, eq, getTableColumns, gt, isNotNull, sql } from "@weldr/db";
-import { declarations, versionDeclarations, versions } from "@weldr/db/schema";
+import { declarations, snapshotDeclarations, snapshots } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
 import { registry } from "@/ai/providers";
@@ -49,10 +49,18 @@ When you need to find declarations (functions, components, models, endpoints) th
 
     const logger = Logger.get({
       projectId: project.id,
-      versionId: branch.headVersion.id,
+      snapshotId: branch.snapshot?.id,
       userId: user.id,
       input,
     });
+
+    if (!branch.snapshot) {
+      logger.error("Branch has no snapshot");
+      return {
+        success: false as const,
+        error: "Branch has no snapshot",
+      };
+    }
 
     logger.info(`Starting codebase search for query: "${query}"`);
 
@@ -96,16 +104,16 @@ When you need to find declarations (functions, components, models, endpoints) th
         })
         .from(declarations)
         .innerJoin(
-          versionDeclarations,
-          sql`${versionDeclarations.declarationId} = ${declarations.id}`,
+          snapshotDeclarations,
+          sql`${snapshotDeclarations.declarationId} = ${declarations.id}`,
         )
-        .innerJoin(versions, sql`${versions.id} = ${versionDeclarations.versionId}`)
+        .innerJoin(snapshots, sql`${snapshots.id} = ${snapshotDeclarations.snapshotId}`)
         .where(
           and(
             eq(declarations.projectId, project.id),
             isNotNull(declarations.embedding),
             gt(similarity, minSimilarity),
-            eq(versions.id, branch.headVersion.id),
+            eq(snapshots.id, branch.snapshot.id),
           ),
         )
         .orderBy(desc(similarity))

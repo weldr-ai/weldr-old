@@ -1,8 +1,8 @@
 /**
- * Represents a point-in-time snapshot of a branch's state (a commit/version)
+ * Represents a point-in-time snapshot of a branch's state
  */
-export interface VersionSnapshot {
-  versionId: string;
+export interface SnapshotRecord {
+  snapshotId: string;
   branchId: string;
   projectId: string;
   commitHash: string | null;
@@ -46,7 +46,7 @@ export interface SandboxId {
 export interface SandboxInitOptions {
   projectId: string;
   branchId: string;
-  forkedFromVersionId?: string;
+  forkedFromSnapshotId?: string;
 }
 
 /**

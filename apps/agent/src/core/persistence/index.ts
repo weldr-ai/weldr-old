@@ -15,5 +15,5 @@ export type {
   SessionSnapshot,
   SessionState,
   SessionStorage,
-  VersionMetrics,
+  SnapshotMetrics,
 } from "./types";

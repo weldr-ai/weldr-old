@@ -12,15 +12,16 @@ import {
   spawnAgentsTool,
 } from "@/ai/tools";
 import { stream } from "@/core/stream";
-import { ensureVersionSession } from "@/session/branch-state";
+import { ensureBranchSession } from "@/session/branch-state";
 import type { SessionMachineContext } from "@/session/types";
 
 const buildToolSet = async (context: SessionMachineContext): Promise<ToolSet> => {
-  const bashTools = await getOrCreateBashTool(
-    context.project.id,
-    context.branch.id,
-    context.versionId,
-  );
+  const snapshotId = context.branch.snapshot?.id;
+  if (!snapshotId) {
+    throw new Error("Branch has no snapshot");
+  }
+
+  const bashTools = await getOrCreateBashTool(context.project.id, context.branch.id, snapshotId);
 
   return {
     ...bashTools,
@@ -41,27 +42,27 @@ export const initializeSessionActor = fromPromise<
   InitializeResult,
   { context: SessionMachineContext }
 >(async ({ input }) => {
-  const { project, branch } = input.context;
+  const { project, branch, chatId } = input.context;
+
+  const snapshotId = branch.snapshot?.id;
+  if (!snapshotId) {
+    throw new Error("Branch has no snapshot");
+  }
 
   const logger = Logger.get({
     projectId: project.id,
     branchId: branch.id,
-    versionId: branch.headVersion.id,
+    snapshotId,
     actor: "session-machine",
   });
 
   logger.info("Initializing session - ensuring agentfs session exists");
 
-  const result = await ensureVersionSession(
-    branch.headVersion.id,
-    project.id,
-    branch.id,
-    branch.headVersion.parentVersionId,
-  );
+  const result = await ensureBranchSession(branch.id, project.id, snapshotId);
 
   logger.info("AgentFS session ready", { extra: { status: result.status } });
 
-  await stream(branch.headVersion.chatId, {
+  await stream(chatId, {
     type: "status",
     status: "thinking",
   });

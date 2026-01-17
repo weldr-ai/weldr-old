@@ -89,9 +89,9 @@ async function walkDirRecursive(
 async function scanWorkspace(
   branchId: string,
   projectId: string,
-  versionId: string,
+  snapshotId: string,
 ): Promise<string[]> {
-  const session = await getOrCreateSession({ branchId, projectId, versionId });
+  const session = await getOrCreateSession({ branchId, projectId, snapshotId });
   const files = await walkDirRecursive(session.agent, "/", {
     excludeDirs: EXCLUDED_DIRS,
     extensions: CODE_EXTENSIONS,
@@ -120,9 +120,15 @@ export async function extractDeclarationsFromProject({
 
   const logger = Logger.get({
     projectId: project.id,
-    versionId: branch.headVersion.id,
+    snapshotId: branch.snapshot?.id,
   });
 
+  if (!branch.snapshot) {
+    logger.error("Branch has no snapshot");
+    return { processed: 0, errors: ["Branch has no snapshot"] };
+  }
+
+  const snapshotId = branch.snapshot.id;
   const errors: string[] = [];
   let processed = 0;
 
@@ -142,7 +148,7 @@ export async function extractDeclarationsFromProject({
         .map((f) => f.path);
     } else {
       logger.info("Scanning project for code files...");
-      filesToProcess = await scanWorkspace(branchId, project.id, branch.headVersion.id);
+      filesToProcess = await scanWorkspace(branchId, project.id, snapshotId);
     }
 
     logger.info(
@@ -165,7 +171,7 @@ export async function extractDeclarationsFromProject({
     const session = await getOrCreateSession({
       branchId,
       projectId: project.id,
-      versionId: branch.headVersion.id,
+      snapshotId,
     });
 
     // Process added/modified files
@@ -214,14 +220,21 @@ export async function handleFileDeleted({
   filePath: string;
 }): Promise<void> {
   const { and, inArray } = await import("@weldr/db");
-  const { declarations, versionDeclarations } = await import("@weldr/db/schema");
+  const { declarations, snapshotDeclarations } = await import("@weldr/db/schema");
 
   const branch = context.branch;
 
   const logger = Logger.get({
     projectId: context.project.id,
-    versionId: branch.headVersion.id,
+    snapshotId: branch.snapshot?.id,
   });
+
+  if (!branch.snapshot) {
+    logger.error("Branch has no snapshot");
+    return;
+  }
+
+  const snapshotId = branch.snapshot.id;
 
   const declarationsList = await db.query.declarations.findMany({
     where: eq(declarations.path, filePath),
@@ -229,13 +242,13 @@ export async function handleFileDeleted({
   });
 
   if (declarationsList.length > 0) {
-    await db.delete(versionDeclarations).where(
+    await db.delete(snapshotDeclarations).where(
       and(
         inArray(
-          versionDeclarations.declarationId,
+          snapshotDeclarations.declarationId,
           declarationsList.map((d) => d.id),
         ),
-        eq(versionDeclarations.versionId, branch.headVersion.id),
+        eq(snapshotDeclarations.snapshotId, snapshotId),
       ),
     );
     logger.info(`Deleted ${declarationsList.length} declarations for ${filePath}`);

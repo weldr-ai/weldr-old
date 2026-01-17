@@ -50,7 +50,7 @@ export class SnapshotError extends SandboxError {
   constructor(
     message: string,
     operation: string,
-    public readonly versionId?: string,
+    public readonly snapshotId?: string,
     public readonly branchId?: string,
     cause?: Error,
   ) {

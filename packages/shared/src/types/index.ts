@@ -30,8 +30,8 @@ import type { nodeSchema, nodeTypeSchema } from "../validators/nodes";
 import type { openApiEndpointSpecSchema } from "../validators/openapi";
 import type { packageSchema } from "../validators/packages";
 import type { projectSchema } from "../validators/projects";
+import type { snapshotSchema } from "../validators/snapshots";
 import type { themeDataSchema, themeSchema } from "../validators/themes";
-import type { versionSchema } from "../validators/versions";
 import type { DeclarationMetadata, DeclarationProgress } from "./declarations";
 
 export type DataType = z.infer<typeof dataTypeSchema>;
@@ -41,8 +41,7 @@ export type JsonSchema = JSONSchema7;
 
 export type Project = z.infer<typeof projectSchema>;
 export type Branch = z.infer<typeof branchSchema>;
-
-export type Version = z.infer<typeof versionSchema>;
+export type Snapshot = z.infer<typeof snapshotSchema>;
 
 export type MessageRole = z.infer<typeof messageRoleSchema>;
 export type ChatMessage = z.infer<typeof chatMessageSchema>;

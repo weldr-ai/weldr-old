@@ -1,12 +1,12 @@
 import { db, eq } from "@weldr/db";
-import { versions } from "@weldr/db/schema";
+import { snapshots } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
 import type {
   SaveSessionStateInput,
   SessionSnapshot,
   SessionStorage,
-  VersionMetrics,
+  SnapshotMetrics,
 } from "./types";
 
 /**
@@ -24,45 +24,43 @@ export class SessionDatabaseStorage implements SessionStorage {
 
   async saveSessionState(_input: SaveSessionStateInput): Promise<void> {
     throw new Error(
-      "SessionDatabaseStorage is deprecated. The version_sessions table has been removed. " +
+      "SessionDatabaseStorage is deprecated. The snapshot_sessions table has been removed. " +
         "Use AgentFSSessionStorage (via sandbox.storage) instead.",
     );
   }
 
-  async loadSessionState(_versionId: string): Promise<SessionSnapshot | null> {
+  async loadSessionState(_snapshotId: string): Promise<SessionSnapshot | null> {
     throw new Error(
-      "SessionDatabaseStorage is deprecated. The version_sessions table has been removed. " +
+      "SessionDatabaseStorage is deprecated. The snapshot_sessions table has been removed. " +
         "Use AgentFSSessionStorage (via sandbox.storage) instead.",
     );
   }
 
-  async deleteSessionState(_versionId: string): Promise<void> {
+  async deleteSessionState(_snapshotId: string): Promise<void> {
     throw new Error(
-      "SessionDatabaseStorage is deprecated. The version_sessions table has been removed. " +
+      "SessionDatabaseStorage is deprecated. The snapshot_sessions table has been removed. " +
         "Use AgentFSSessionStorage (via sandbox.storage) instead.",
     );
   }
 
-  async updateVersionMetrics(versionId: string, metrics: Partial<VersionMetrics>): Promise<void> {
+  async updateChatMetrics(snapshotId: string, metrics: Partial<SnapshotMetrics>): Promise<void> {
     try {
       await db
-        .update(versions)
+        .update(snapshots)
         .set({
           ...(metrics.inputTokens !== undefined && { inputTokens: metrics.inputTokens }),
           ...(metrics.outputTokens !== undefined && { outputTokens: metrics.outputTokens }),
           ...(metrics.totalCost !== undefined && { totalCost: metrics.totalCost }),
-          ...(metrics.iterations !== undefined && { iterations: metrics.iterations }),
-          ...(metrics.durationMs !== undefined && { durationMs: metrics.durationMs }),
         })
-        .where(eq(versions.id, versionId));
+        .where(eq(snapshots.id, snapshotId));
 
-      this.logger.debug("Version metrics updated", {
-        extra: { versionId, metrics },
+      this.logger.debug("Snapshot metrics updated", {
+        extra: { snapshotId, metrics },
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error("Failed to update version metrics", {
-        extra: { versionId, error: message },
+      this.logger.error("Failed to update snapshot metrics", {
+        extra: { snapshotId, error: message },
       });
       throw error;
     }

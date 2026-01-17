@@ -36,9 +36,9 @@ export function createStorageBackend(): StorageBackend {
  * Running PRAGMA wal_checkpoint(TRUNCATE) merges the WAL into the main db
  * and truncates the WAL file to zero bytes.
  */
-async function checkpointWal(versionId: string): Promise<void> {
-  const logger = Logger.get({ versionId, component: "sync" });
-  const dbPath = getSessionDbPath(versionId);
+async function checkpointWal(snapshotId: string): Promise<void> {
+  const logger = Logger.get({ snapshotId, component: "sync" });
+  const dbPath = getSessionDbPath(snapshotId);
 
   try {
     const agent = await AgentFS.open({ path: dbPath });
@@ -59,19 +59,19 @@ async function checkpointWal(versionId: string): Promise<void> {
 /**
  * Sync session state to cloud storage.
  * Checkpoints the WAL first to ensure all writes are in the main .db file,
- * then uploads the AgentFS database file (~/.weldr/db/{versionId}.db) to Tigris/S3.
- * Each version has its own isolated DB file at versions/{versionId}.db.
+ * then uploads the AgentFS database file (~/.weldr/db/{snapshotId}.db) to Tigris/S3.
+ * Each snapshot has its own isolated DB file at snapshots/{snapshotId}.db.
  */
 export async function syncToCloud(
-  versionId: string,
+  snapshotId: string,
   projectId: string,
 ): Promise<{ success: boolean }> {
-  const logger = Logger.get({ versionId, projectId });
+  const logger = Logger.get({ snapshotId, projectId });
 
   logger.info("Syncing session to cloud storage");
 
   try {
-    const agentfsPath = getSessionDbPath(versionId);
+    const agentfsPath = getSessionDbPath(snapshotId);
 
     try {
       await fs.access(agentfsPath);
@@ -81,12 +81,12 @@ export async function syncToCloud(
     }
 
     // Checkpoint WAL to merge all writes into the main database file
-    await checkpointWal(versionId);
+    await checkpointWal(snapshotId);
 
     const agentfsData = await fs.readFile(agentfsPath);
 
     const backend = createStorageBackend();
-    await backend.write(`project-${projectId}/version-${versionId}.db`, agentfsData);
+    await backend.write(`project-${projectId}/snapshot-${snapshotId}.db`, agentfsData);
 
     logger.info("Session synced to cloud successfully", {
       extra: { dbSize: agentfsData.length },
@@ -102,30 +102,30 @@ export async function syncToCloud(
 
 /**
  * Sync session state from cloud storage.
- * Downloads the AgentFS database file from Tigris/S3 to ~/.weldr/db/{versionId}.db.
- * Each version has its own isolated DB file at versions/{versionId}.db.
+ * Downloads the AgentFS database file from Tigris/S3 to ~/.weldr/db/{snapshotId}.db.
+ * Each snapshot has its own isolated DB file at snapshots/{snapshotId}.db.
  */
 export async function syncFromCloud(
-  versionId: string,
+  snapshotId: string,
   projectId: string,
 ): Promise<{ success: boolean; skipped: boolean }> {
-  const logger = Logger.get({ versionId, projectId });
+  const logger = Logger.get({ snapshotId, projectId });
 
   logger.info("Syncing session from cloud storage");
 
   try {
-    const agentfsPath = getSessionDbPath(versionId);
+    const agentfsPath = getSessionDbPath(snapshotId);
     const agentfsDir = path.dirname(agentfsPath);
 
     // Ensure ~/.weldr/db directory exists
     await fs.mkdir(agentfsDir, { recursive: true });
 
     const backend = createStorageBackend();
-    const cloudPath = `project-${projectId}/version-${versionId}.db`;
+    const cloudPath = `project-${projectId}/snapshot-${snapshotId}.db`;
 
     const exists = await backend.exists(cloudPath);
     if (!exists) {
-      logger.info("No data found in cloud storage for version");
+      logger.info("No data found in cloud storage for snapshot");
       return { success: true, skipped: true };
     }
 

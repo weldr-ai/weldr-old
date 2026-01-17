@@ -26,6 +26,14 @@ export async function applyFiles({
 }): Promise<void> {
   const branch = context.branch;
   const branchId = branch.id;
+  const snapshotId = branch.snapshot?.id;
+
+  const logger = Logger.get({ projectId: integration.projectId });
+
+  if (!snapshotId) {
+    logger.warn("Cannot apply files: branch has no snapshot");
+    return;
+  }
 
   const files = await generateFiles({
     integration,
@@ -33,14 +41,12 @@ export async function applyFiles({
     categoryKey,
   });
 
-  const logger = Logger.get({ projectId: integration.projectId });
-
   logger.info(`Generated ${files.length} files for integration ${integration.key}`);
 
   const session = await getOrCreateSession({
     branchId,
     projectId: integration.projectId,
-    versionId: "apply-files",
+    snapshotId,
   });
 
   for (const file of files) {

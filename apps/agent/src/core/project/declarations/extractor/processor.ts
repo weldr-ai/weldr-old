@@ -32,7 +32,7 @@ export async function processSourceFile({
   pathAliases,
   branchId,
   projectId,
-  versionId,
+  snapshotId,
   declarations,
   importedIdentifiers,
 }: {
@@ -43,7 +43,7 @@ export async function processSourceFile({
   pathAliases?: Record<string, string>;
   branchId?: string;
   projectId?: string;
-  versionId?: string;
+  snapshotId?: string;
   declarations: DeclarationCodeMetadata[];
   importedIdentifiers: Map<string, { source: string; isExternal: boolean }>;
 }): Promise<void> {
@@ -58,7 +58,7 @@ export async function processSourceFile({
       pathAliases,
       branchId,
       projectId,
-      versionId,
+      snapshotId,
       declarations,
       importedIdentifiers,
       isExported: false,
@@ -75,7 +75,7 @@ async function processStatement({
   pathAliases,
   branchId,
   projectId,
-  versionId,
+  snapshotId,
   declarations,
   importedIdentifiers,
   isExported,
@@ -88,7 +88,7 @@ async function processStatement({
   pathAliases?: Record<string, string>;
   branchId?: string;
   projectId?: string;
-  versionId?: string;
+  snapshotId?: string;
   declarations: DeclarationCodeMetadata[];
   importedIdentifiers: Map<string, { source: string; isExternal: boolean }>;
   isExported: boolean;
@@ -102,7 +102,7 @@ async function processStatement({
       pathAliases,
       branchId,
       projectId,
-      versionId,
+      snapshotId,
     });
     return;
   }
@@ -219,7 +219,7 @@ async function processImportDeclaration({
   pathAliases,
   branchId,
   projectId,
-  versionId,
+  snapshotId,
 }: {
   importDecl: ts.ImportDeclaration;
   importedIdentifiers: Map<string, { source: string; isExternal: boolean }>;
@@ -227,7 +227,7 @@ async function processImportDeclaration({
   pathAliases?: Record<string, string>;
   branchId?: string;
   projectId?: string;
-  versionId?: string;
+  snapshotId?: string;
 }): Promise<void> {
   const moduleSpecifier = importDecl.moduleSpecifier;
   if (!ts.isStringLiteral(moduleSpecifier)) return;
@@ -242,7 +242,7 @@ async function processImportDeclaration({
         pathAliases,
         branchId,
         projectId,
-        versionId,
+        snapshotId,
       });
 
   if (importDecl.importClause) {

@@ -1,49 +1,264 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { and, desc, eq, type SQL } from "@weldr/db";
-import { branches, versions } from "@weldr/db/schema";
+import { and, desc, eq, inArray } from "@weldr/db";
+import { branches, snapshotParents, snapshots } from "@weldr/db/schema";
 import { nanoid } from "@weldr/shared/nanoid";
-import type { ChatMessage } from "@weldr/shared/types";
 
-import { protectedProcedure } from "../init";
+import { protectedProcedure, publicProcedure } from "../init";
 
 export const branchRouter = {
+  /**
+   * List branches for a project
+   */
+  list: publicProcedure.input(z.object({ projectId: z.string() })).query(async ({ ctx, input }) => {
+    return ctx.db.query.branches.findMany({
+      where: eq(branches.projectId, input.projectId),
+      with: {
+        snapshot: true,
+      },
+      orderBy: [desc(branches.updatedAt)],
+    });
+  }),
+
+  /**
+   * Get a branch by ID
+   */
+  get: publicProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+    const branch = await ctx.db.query.branches.findFirst({
+      where: eq(branches.id, input.id),
+      with: {
+        snapshot: true,
+        project: {
+          columns: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    if (!branch) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Branch not found",
+      });
+    }
+
+    return branch;
+  }),
+
+  /**
+   * Get a branch by ID or fall back to main branch
+   * This is used by the frontend to get branch data with full snapshot history
+   */
+  byIdOrMain: publicProcedure
+    .input(
+      z.object({
+        id: z.string().optional(),
+        projectId: z.string(),
+        snapshotId: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      let branch;
+
+      if (input.id) {
+        // Get by ID
+        branch = await ctx.db.query.branches.findFirst({
+          where: and(eq(branches.id, input.id), eq(branches.projectId, input.projectId)),
+          with: {
+            snapshot: {
+              with: {
+                declarations: {
+                  with: {
+                    declaration: {
+                      with: {
+                        dependencies: true,
+                        node: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            chats: {
+              orderBy: (chats, { desc }) => [desc(chats.createdAt)],
+              limit: 10,
+              with: {
+                messages: {
+                  orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+                  with: {
+                    attachments: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+      } else {
+        // Fall back to main branch
+        branch = await ctx.db.query.branches.findFirst({
+          where: and(eq(branches.projectId, input.projectId), eq(branches.name, "main")),
+          with: {
+            snapshot: {
+              with: {
+                declarations: {
+                  with: {
+                    declaration: {
+                      with: {
+                        dependencies: true,
+                        node: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            chats: {
+              orderBy: (chats, { desc }) => [desc(chats.createdAt)],
+              limit: 10,
+              with: {
+                messages: {
+                  orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+                  with: {
+                    attachments: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      if (!branch) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Branch not found",
+        });
+      }
+
+      // Get snapshot history (ancestors)
+      const snapshotHistory: (typeof snapshots.$inferSelect)[] = [];
+      if (branch.snapshot) {
+        let currentId: string | null = branch.snapshot.id;
+        const visited = new Set<string>();
+
+        while (currentId && !visited.has(currentId) && snapshotHistory.length < 50) {
+          visited.add(currentId);
+
+          // Explicitly type the result to avoid circular reference issues
+          const snapshotWithParents:
+            | (typeof snapshots.$inferSelect & {
+                parentEdges?: { snapshotId: string; parentId: string }[];
+              })
+            | undefined = await ctx.db.query.snapshots.findFirst({
+            where: eq(snapshots.id, currentId),
+            with: {
+              parentEdges: true,
+            },
+          });
+
+          if (snapshotWithParents) {
+            snapshotHistory.push(snapshotWithParents);
+            // Get first parent (linear history for now)
+            const firstParentEdge: { snapshotId: string; parentId: string } | undefined =
+              snapshotWithParents.parentEdges?.[0];
+            currentId = firstParentEdge?.parentId ?? null;
+          } else {
+            break;
+          }
+        }
+      }
+
+      return {
+        ...branch,
+        snapshotHistory,
+      };
+    }),
+
+  /**
+   * Get a branch by name within a project
+   */
+  getByName: publicProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+        name: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const branch = await ctx.db.query.branches.findFirst({
+        where: and(eq(branches.projectId, input.projectId), eq(branches.name, input.name)),
+        with: {
+          snapshot: true,
+        },
+      });
+
+      if (!branch) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Branch not found",
+        });
+      }
+
+      return branch;
+    }),
+
+  /**
+   * Get the main branch for a project
+   */
+  getMain: publicProcedure
+    .input(z.object({ projectId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const branch = await ctx.db.query.branches.findFirst({
+        where: and(eq(branches.projectId, input.projectId), eq(branches.name, "main")),
+        with: {
+          snapshot: true,
+          chats: {
+            orderBy: (chats, { desc }) => [desc(chats.createdAt)],
+            limit: 10,
+            with: {
+              messages: {
+                orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+                with: {
+                  attachments: {
+                    columns: {
+                      name: true,
+                      key: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!branch) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Main branch not found",
+        });
+      }
+
+      return branch;
+    }),
+
+  /**
+   * Create a new branch (fork from another branch or snapshot)
+   */
   create: protectedProcedure
     .input(
       z.object({
         projectId: z.string(),
         name: z.string().min(1).max(100),
-        type: z.enum(["variant", "stream"]),
-        forkedFromVersionId: z.string(),
-        description: z.string().optional(),
+        fromSnapshotId: z.string().optional(),
+        fromBranchName: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const forkedVersion = await ctx.db.query.versions.findFirst({
-        where: and(
-          eq(versions.id, input.forkedFromVersionId),
-          eq(versions.projectId, input.projectId),
-        ),
-        with: {
-          branch: true,
-        },
-      });
-
-      if (!forkedVersion) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Forked version not found",
-        });
-      }
-
-      if (forkedVersion.status !== "completed") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Can only fork from completed versions",
-        });
-      }
-
+      // Check if branch name already exists
       const existingBranch = await ctx.db.query.branches.findFirst({
         where: and(eq(branches.projectId, input.projectId), eq(branches.name, input.name)),
       });
@@ -55,35 +270,36 @@ export const branchRouter = {
         });
       }
 
-      // For variants: check if there's an existing forkset or create new one
-      let forksetId: string | null = null;
-      if (input.type === "variant") {
-        const existingVariant = await ctx.db.query.branches.findFirst({
+      let snapshotId = input.fromSnapshotId;
+
+      // If forking from branch, get its current snapshot
+      if (input.fromBranchName && !snapshotId) {
+        const sourceBranch = await ctx.db.query.branches.findFirst({
           where: and(
-            eq(branches.forkedFromVersionId, input.forkedFromVersionId),
-            eq(branches.type, "variant"),
+            eq(branches.projectId, input.projectId),
+            eq(branches.name, input.fromBranchName),
           ),
         });
-        forksetId = existingVariant?.forksetId ?? nanoid();
+
+        if (!sourceBranch) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: `Branch '${input.fromBranchName}' not found`,
+          });
+        }
+
+        snapshotId = sourceBranch.snapshotId ?? undefined;
       }
 
       const branchId = nanoid();
-
-      // Branch creation no longer needs to fork Tigris buckets
-      // The agent will handle snapshot restoration when the branch is first accessed
-
       const [branch] = await ctx.db
         .insert(branches)
         .values({
           id: branchId,
-          name: input.name,
-          description: input.description,
           projectId: input.projectId,
-          type: input.type,
-          parentBranchId: input.type === "stream" ? forkedVersion.branchId : null,
-          forkedFromVersionId: input.forkedFromVersionId,
-          forksetId,
-          userId: ctx.session.user.id,
+          name: input.name,
+          snapshotId: snapshotId ?? null,
+          createdBy: ctx.session.user.id,
         })
         .returning();
 
@@ -96,395 +312,209 @@ export const branchRouter = {
 
       return branch;
     }),
-  byIdOrMain: protectedProcedure
+
+  /**
+   * Move branch to a different snapshot
+   */
+  move: protectedProcedure
     .input(
       z.object({
-        id: z.string().optional(),
-        projectId: z.string(),
-        versionId: z.string().optional(),
+        branchId: z.string(),
+        snapshotId: z.string(),
       }),
     )
-    .query(async ({ ctx, input }) => {
-      const where: SQL[] = [
-        eq(branches.userId, ctx.session.user.id),
-        eq(branches.projectId, input.projectId),
-      ];
-
-      if (input.id) {
-        where.push(eq(branches.id, input.id));
-      } else {
-        where.push(eq(branches.isMain, true));
-      }
-
-      const branch = await ctx.db.query.branches.findFirst({
-        where: and(...where),
-        with: {
-          headVersion: {
-            columns: {
-              id: true,
-              message: true,
-              createdAt: true,
-              parentVersionId: true,
-              number: true,
-              sequenceNumber: true,
-              status: true,
-              description: true,
-              projectId: true,
-              publishedAt: true,
-            },
-            with: {
-              chat: {
-                with: {
-                  messages: {
-                    orderBy: (messages, { asc }) => [asc(messages.createdAt)],
-                    with: {
-                      attachments: {
-                        columns: {
-                          name: true,
-                          key: true,
-                        },
-                      },
-                      user: {
-                        columns: {
-                          name: true,
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-              declarations: {
-                with: {
-                  declaration: {
-                    columns: {
-                      id: true,
-                      metadata: true,
-                      nodeId: true,
-                      progress: true,
-                    },
-                    with: {
-                      node: true,
-                      dependencies: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
+    .mutation(async ({ ctx, input }) => {
+      // Verify the snapshot exists
+      const snapshot = await ctx.db.query.snapshots.findFirst({
+        where: eq(snapshots.id, input.snapshotId),
       });
 
-      if (!branch || !branch.headVersion) {
+      if (!snapshot) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Snapshot not found",
+        });
+      }
+
+      await ctx.db
+        .update(branches)
+        .set({
+          snapshotId: input.snapshotId,
+          updatedAt: new Date(),
+        })
+        .where(eq(branches.id, input.branchId));
+
+      return { success: true };
+    }),
+
+  /**
+   * Advance branch (create snapshot and move branch to it)
+   */
+  advance: protectedProcedure
+    .input(
+      z.object({
+        branchId: z.string(),
+        commitSha: z.string(),
+        title: z.string(),
+        description: z.string().optional(),
+        metrics: z
+          .object({
+            inputTokens: z.number(),
+            outputTokens: z.number(),
+            totalCost: z.number(),
+          })
+          .optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const branch = await ctx.db.query.branches.findFirst({
+        where: eq(branches.id, input.branchId),
+      });
+
+      if (!branch) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Branch not found",
         });
       }
-      const getMessagesWithAttachments = async (version: typeof branch.headVersion) => {
-        const results = [];
 
-        for (const message of version.chat.messages) {
-          // Filter assistant messages for call_coder tool calls
-          let content: unknown[] = message.content as unknown[];
+      const snapshotId = nanoid();
 
-          // Skip tool messages with call_coder results
-          if (message.role === "tool" && Array.isArray(message.content)) {
-            content = content.filter(
-              (item: unknown) =>
-                !(
-                  typeof item === "object" &&
-                  item !== null &&
-                  "type" in item &&
-                  item.type === "tool-result" &&
-                  "toolName" in item &&
-                  item.toolName === "call_coder"
-                ),
-            );
-          } else if (message.role === "assistant") {
-            content = content.filter(
-              (item: unknown) =>
-                !(
-                  typeof item === "object" &&
-                  item !== null &&
-                  "type" in item &&
-                  item.type === "tool-call" &&
-                  "toolName" in item &&
-                  item.toolName === "call_coder"
-                ),
-            );
-          }
+      await ctx.db.transaction(async (tx) => {
+        // Create new snapshot
+        await tx.insert(snapshots).values({
+          id: snapshotId,
+          projectId: branch.projectId,
+          commitSha: input.commitSha,
+          title: input.title,
+          description: input.description,
+          inputTokens: input.metrics?.inputTokens ?? 0,
+          outputTokens: input.metrics?.outputTokens ?? 0,
+          totalCost: input.metrics?.totalCost ?? 0,
+          createdBy: ctx.session.user.id,
+        });
 
-          if (content.length === 0) continue;
-
-          // Return attachment URL path - client can handle URL generation
-          const attachmentsWithUrls = message.attachments.map((attachment) => ({
-            name: attachment.name,
-            url: `/api/attachments/${attachment.key}`,
-          }));
-
-          results.push({
-            ...message,
-            content,
-            attachments: attachmentsWithUrls,
+        // Link to parent (current snapshot)
+        if (branch.snapshotId) {
+          await tx.insert(snapshotParents).values({
+            snapshotId,
+            parentId: branch.snapshotId,
           });
         }
 
-        return results;
-      };
-
-      const ancestryChain: Array<{
-        id: string;
-        name: string;
-        isMain: boolean;
-      }> = [];
-      let currentBranchId = branch.parentBranchId;
-
-      while (currentBranchId) {
-        const parentBranch = await ctx.db.query.branches.findFirst({
-          where: and(eq(branches.id, currentBranchId), eq(branches.userId, ctx.session.user.id)),
-          columns: {
-            id: true,
-            name: true,
-            isMain: true,
-            parentBranchId: true,
-          },
-        });
-
-        if (!parentBranch) break;
-
-        ancestryChain.unshift({
-          id: parentBranch.id,
-          name: parentBranch.name,
-          isMain: parentBranch.isMain,
-        });
-
-        currentBranchId = parentBranch.parentBranchId;
-      }
-
-      let siblingVariants: Array<{
-        id: string;
-        name: string;
-        status: "active" | "archived";
-      }> = [];
-      if (branch.type === "variant" && branch.forksetId) {
-        const siblings = await ctx.db.query.branches.findMany({
-          where: and(
-            eq(branches.forksetId, branch.forksetId),
-            eq(branches.userId, ctx.session.user.id),
-          ),
-          columns: {
-            id: true,
-            name: true,
-            status: true,
-          },
-        });
-
-        siblingVariants = siblings
-          .filter((s) => s.id !== branch.id)
-          .map((s) => ({ id: s.id, name: s.name, status: s.status }));
-      }
-
-      let integrationVersion: {
-        versionNumber: number;
-        parentBranchId: string;
-      } | null = null;
-      if (branch.parentBranchId) {
-        const integration = await ctx.db.query.versions.findFirst({
-          where: and(eq(versions.appliedFromBranchId, branch.id), eq(versions.kind, "integration")),
-          columns: {
-            number: true,
-            branchId: true,
-          },
-        });
-
-        if (integration) {
-          integrationVersion = {
-            versionNumber: integration.number,
-            parentBranchId: integration.branchId,
-          };
-        }
-      }
-
-      const allBranchesInProject = await ctx.db.query.branches.findMany({
-        where: and(
-          eq(branches.projectId, input.projectId),
-          eq(branches.userId, ctx.session.user.id),
-        ),
-        columns: {
-          id: true,
-          name: true,
-          type: true,
-          forkedFromVersionId: true,
-        },
+        // Move branch
+        await tx
+          .update(branches)
+          .set({
+            snapshotId,
+            updatedAt: new Date(),
+          })
+          .where(eq(branches.id, input.branchId));
       });
 
-      const branchVersions = await ctx.db.query.versions.findMany({
-        where: eq(versions.branchId, branch.id),
-        orderBy: (versions, { desc }) => [desc(versions.sequenceNumber)],
-        columns: {
-          id: true,
-          number: true,
-          sequenceNumber: true,
-          message: true,
-          description: true,
-          status: true,
-          kind: true,
-          createdAt: true,
-          publishedAt: true,
-          projectId: true,
-          appliedFromBranchId: true,
-          revertedVersionId: true,
-          branchId: true,
-          userId: true,
-        },
-        with: {
-          appliedFromBranch: {
-            columns: {
-              id: true,
-              name: true,
-            },
-          },
-          revertedVersion: {
-            columns: {
-              id: true,
-              sequenceNumber: true,
-              message: true,
-            },
-          },
-        },
-      });
-
-      const versionIds = new Set(branchVersions.map((v) => v.id));
-
-      // Create a map of versionId -> branches that forked from it
-      const versionToBranchesMap = new Map<
-        string,
-        Array<{ id: string; name: string; type: "variant" | "stream" }>
-      >();
-
-      for (const b of allBranchesInProject) {
-        if (b.forkedFromVersionId && versionIds.has(b.forkedFromVersionId)) {
-          const existing = versionToBranchesMap.get(b.forkedFromVersionId) || [];
-          existing.push({
-            id: b.id,
-            name: b.name,
-            type: b.type,
-          });
-          versionToBranchesMap.set(b.forkedFromVersionId, existing);
-        }
-      }
-
-      // Fetch selected version if versionId is provided
-      let selectedVersion = null;
-      if (input.versionId) {
-        const version = await ctx.db.query.versions.findFirst({
-          where: and(
-            eq(versions.id, input.versionId),
-            eq(versions.branchId, branch.id),
-            eq(versions.projectId, input.projectId),
-          ),
-          columns: {
-            id: true,
-            message: true,
-            createdAt: true,
-            parentVersionId: true,
-            number: true,
-            sequenceNumber: true,
-            status: true,
-            description: true,
-            projectId: true,
-            publishedAt: true,
-          },
-          with: {
-            chat: {
-              with: {
-                messages: {
-                  orderBy: (messages, { asc }) => [asc(messages.createdAt)],
-                  with: {
-                    attachments: {
-                      columns: {
-                        name: true,
-                        key: true,
-                      },
-                    },
-                    user: {
-                      columns: {
-                        name: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            declarations: {
-              with: {
-                declaration: {
-                  columns: {
-                    id: true,
-                    metadata: true,
-                    nodeId: true,
-                    progress: true,
-                  },
-                  with: {
-                    node: true,
-                    dependencies: true,
-                  },
-                },
-              },
-            },
-          },
-        });
-
-        if (version) {
-          selectedVersion = {
-            ...version,
-            chat: {
-              ...version.chat,
-              messages: (await getMessagesWithAttachments(version)) as ChatMessage[],
-            },
-          };
-        }
-      }
-
-      return {
-        ...branch,
-        headVersion: {
-          ...branch.headVersion,
-          chat: {
-            ...branch.headVersion.chat,
-            messages: (await getMessagesWithAttachments(branch.headVersion)) as ChatMessage[],
-          },
-        },
-        selectedVersion,
-        versions: branchVersions,
-        versionToBranchesMap: Object.fromEntries(versionToBranchesMap),
-        ancestryChain,
-        siblingVariants,
-        integrationVersion,
-      };
+      return { snapshotId };
     }),
-  list: protectedProcedure
-    .input(z.object({ projectId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      return ctx.db.query.branches.findMany({
-        where: and(
-          eq(branches.projectId, input.projectId),
-          eq(branches.userId, ctx.session.user.id),
-        ),
-        orderBy: desc(branches.createdAt),
-        with: {
-          versions: {
-            orderBy: desc(versions.sequenceNumber),
-            with: {
-              branch: {
-                columns: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
-        },
+
+  /**
+   * Merge multiple branches into target
+   */
+  merge: protectedProcedure
+    .input(
+      z.object({
+        targetBranchId: z.string(),
+        sourceBranchIds: z.array(z.string()),
+        commitSha: z.string(),
+        title: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Get all source snapshots
+      const sourceBranches = await ctx.db.query.branches.findMany({
+        where: inArray(branches.id, input.sourceBranchIds),
       });
+
+      const parentIds: string[] = sourceBranches
+        .map((b) => b.snapshotId)
+        .filter((id): id is string => id !== null);
+
+      // Get target branch's current snapshot too
+      const targetBranch = await ctx.db.query.branches.findFirst({
+        where: eq(branches.id, input.targetBranchId),
+      });
+
+      if (!targetBranch) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Target branch not found",
+        });
+      }
+
+      if (targetBranch.snapshotId) {
+        parentIds.push(targetBranch.snapshotId);
+      }
+
+      const snapshotId = nanoid();
+
+      await ctx.db.transaction(async (tx) => {
+        // Create merge snapshot
+        await tx.insert(snapshots).values({
+          id: snapshotId,
+          projectId: targetBranch.projectId,
+          commitSha: input.commitSha,
+          title: input.title,
+          createdBy: ctx.session.user.id,
+        });
+
+        // Link to all parents
+        if (parentIds.length > 0) {
+          await tx.insert(snapshotParents).values(
+            parentIds.map((parentId) => ({
+              snapshotId,
+              parentId,
+            })),
+          );
+        }
+
+        // Move target branch to merge snapshot
+        await tx
+          .update(branches)
+          .set({
+            snapshotId,
+            updatedAt: new Date(),
+          })
+          .where(eq(branches.id, input.targetBranchId));
+      });
+
+      return { snapshotId };
+    }),
+
+  /**
+   * Delete branch (not the snapshots - they're immutable)
+   */
+  delete: protectedProcedure
+    .input(z.object({ branchId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const branch = await ctx.db.query.branches.findFirst({
+        where: eq(branches.id, input.branchId),
+      });
+
+      if (!branch) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Branch not found",
+        });
+      }
+
+      // Don't allow deleting "main"
+      if (branch.name === "main") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Cannot delete main branch",
+        });
+      }
+
+      await ctx.db.delete(branches).where(eq(branches.id, input.branchId));
+
+      return { success: true };
     }),
 };

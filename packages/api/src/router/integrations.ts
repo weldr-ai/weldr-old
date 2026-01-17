@@ -25,24 +25,22 @@ export const integrationsRouter = createTRPCRouter({
     .input(
       z.object({
         integrationId: z.string(),
-        versionId: z.string(),
+        snapshotId: z.string(),
+        branchId: z.string(),
         triggerWorkflow: z.boolean().optional().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       await db.transaction(async (tx) => {
-        const version = await tx.query.versions.findFirst({
-          where: (versions, { eq }) =>
-            and(eq(versions.id, input.versionId), eq(versions.userId, ctx.session.user.id)),
-          with: {
-            branch: true,
-          },
+        const snapshot = await tx.query.snapshots.findFirst({
+          where: (snapshots, { eq }) =>
+            and(eq(snapshots.id, input.snapshotId), eq(snapshots.createdBy, ctx.session.user.id)),
         });
 
-        if (!version) {
+        if (!snapshot) {
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "Version not found",
+            message: "Snapshot not found",
           });
         }
 
@@ -65,33 +63,33 @@ export const integrationsRouter = createTRPCRouter({
         const existingInstallation = await tx.query.integrationInstallations.findFirst({
           where: and(
             eq(integrationInstallations.integrationId, input.integrationId),
-            eq(integrationInstallations.versionId, input.versionId),
+            eq(integrationInstallations.snapshotId, input.snapshotId),
           ),
         });
 
         if (existingInstallation) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Integration already queued or installed for this version",
+            message: "Integration already queued or installed for this snapshot",
           });
         }
 
         // Create the installation queue entry
         await tx.insert(integrationInstallations).values({
           integrationId: input.integrationId,
-          versionId: input.versionId,
+          snapshotId: input.snapshotId,
           status: "queued",
         });
 
         console.log(
-          `[integrations.install] Queued integration ${integration.key} for version ${input.versionId}`,
+          `[integrations.install] Queued integration ${integration.key} for snapshot ${input.snapshotId}`,
         );
 
         await callAgentProxy(
           "/integrations/install",
           {
-            projectId: version.projectId,
-            branchId: version.branchId,
+            projectId: snapshot.projectId,
+            branchId: input.branchId,
             triggerWorkflow: input.triggerWorkflow,
           },
           ctx.headers,
@@ -183,25 +181,25 @@ export const integrationsRouter = createTRPCRouter({
         });
       }
 
-      // If branchId is provided, queue the integration for installation on that branch's head version
+      // If branchId is provided, queue the integration for installation on that branch's snapshot
       if (input.branchId) {
         const branch = await tx.query.branches.findFirst({
           where: and(eq(branches.id, input.branchId), eq(branches.projectId, projectId)),
         });
 
-        if (branch?.headVersionId) {
+        if (branch?.snapshotId) {
           await tx.insert(integrationInstallations).values({
             integrationId: integration.id,
-            versionId: branch.headVersionId,
+            snapshotId: branch.snapshotId,
             status: "queued",
           });
 
           console.log(
-            `[integrations.create:${projectId}] Queued integration ${integration.key} for version ${branch.headVersionId}`,
+            `[integrations.create:${projectId}] Queued integration ${integration.key} for snapshot ${branch.snapshotId}`,
           );
         } else {
           console.warn(
-            `[integrations.create:${projectId}] Branch ${input.branchId} has no head version`,
+            `[integrations.create:${projectId}] Branch ${input.branchId} has no snapshot`,
           );
         }
       }
@@ -381,17 +379,17 @@ export const integrationsRouter = createTRPCRouter({
       const createdIntegrations = await db.transaction(async (tx) => {
         const results = [];
 
-        // Get branch and head version once if branchId is provided
-        let headVersionId: string | null = null;
+        // Get branch and snapshot once if branchId is provided
+        let snapshotId: string | null = null;
         if (input.branchId) {
           const branch = await tx.query.branches.findFirst({
             where: and(eq(branches.id, input.branchId), eq(branches.projectId, input.projectId)),
           });
-          headVersionId = branch?.headVersionId ?? null;
+          snapshotId = branch?.snapshotId ?? null;
 
-          if (!headVersionId) {
+          if (!snapshotId) {
             console.warn(
-              `[integrations.createBatch:${input.projectId}] Branch ${input.branchId} has no head version`,
+              `[integrations.createBatch:${input.projectId}] Branch ${input.branchId} has no snapshot`,
             );
           }
         }
@@ -478,15 +476,15 @@ export const integrationsRouter = createTRPCRouter({
           }
 
           // Queue integration for installation if branchId is provided
-          if (headVersionId) {
+          if (snapshotId) {
             await tx.insert(integrationInstallations).values({
               integrationId: integration.id,
-              versionId: headVersionId,
+              snapshotId: snapshotId,
               status: "queued",
             });
 
             console.log(
-              `[integrations.createBatch:${input.projectId}] Queued integration ${integration.key} for version ${headVersionId}`,
+              `[integrations.createBatch:${input.projectId}] Queued integration ${integration.key} for snapshot ${snapshotId}`,
             );
           }
 

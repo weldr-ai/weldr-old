@@ -32,7 +32,7 @@ export interface BashToolsWithSandbox {
 export interface CreateBashToolsOptions {
   projectId: string;
   branchId: string;
-  versionId: string;
+  snapshotId: string;
   workdir?: string;
 }
 
@@ -50,7 +50,7 @@ export interface CreateBashToolsOptions {
 export async function createBashTools(
   options: CreateBashToolsOptions,
 ): Promise<BashToolsWithSandbox> {
-  const { projectId, branchId, versionId, workdir = "/home/user/project" } = options;
+  const { projectId, branchId, snapshotId, workdir = "/home/user/project" } = options;
   const logger = Logger.get({ projectId, branchId, component: "bash-tool" });
 
   logger.debug("Creating bash tools with just-bash and AgentFS SDK");
@@ -58,7 +58,7 @@ export async function createBashTools(
   const sandbox = await getOrCreateSession({
     branchId,
     projectId,
-    versionId,
+    snapshotId,
     workdir,
   });
 
@@ -81,12 +81,12 @@ export async function createBashTools(
 export async function getOrCreateBashTool(
   projectId: string,
   branchId: string,
-  versionId?: string,
+  snapshotId?: string,
 ): Promise<BashTools> {
   const { tools } = await createBashTools({
     projectId,
     branchId,
-    versionId: versionId ?? branchId,
+    snapshotId: snapshotId ?? branchId,
   });
   return tools;
 }

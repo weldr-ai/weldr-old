@@ -2,10 +2,10 @@
  * Session Registry
  *
  * In-memory registry for managing session actors.
- * Maps versionId to ActorRef for active sessions.
+ * Maps chatId to ActorRef for active sessions.
  *
  * Key responsibilities:
- * - Get or create session actors based on versionId
+ * - Get or create session actors based on chatId
  * - Restore state from database when creating new actors
  * - Wire up event forwarding to SSE
  * - Clean up actors when they complete/fail
@@ -22,7 +22,7 @@ import { Logger } from "@weldr/shared/logger";
 import { createEventForwarder } from "@/core/events";
 import { createAgentFSStorage } from "@/core/persistence";
 import { registerChatContext, unregisterChatContext } from "@/core/stream";
-import type { BranchWithVersion, ProjectWithConfig, User } from "@/core/types";
+import type { BranchWithSnapshot, ProjectWithConfig, User } from "@/core/types";
 import { sessionMachine, type SessionMachine } from "./machine";
 
 type SessionActorRef = ActorRefFrom<SessionMachine>;
@@ -31,15 +31,15 @@ export type SessionRegistryEntry = {
   actor: SessionActorRef;
   agent: AgentFS;
   createdAt: number;
-  versionId: string;
   chatId: string;
+  branchId: string;
 };
 
 export type GetOrCreateOptions = {
-  versionId: string;
+  chatId: string;
   traceId: string;
   project: ProjectWithConfig;
-  branch: BranchWithVersion;
+  branch: BranchWithSnapshot;
   user: User;
 };
 
@@ -55,33 +55,34 @@ class SessionRegistry {
    * Otherwise, opens AgentFS, loads state from SQLite, and creates actor.
    */
   async getOrCreate(options: GetOrCreateOptions): Promise<SessionActorRef> {
-    const { versionId, traceId, project, branch, user } = options;
+    const { chatId, traceId, project, branch, user } = options;
 
     // Check for existing active session
-    const existing = this.sessions.get(versionId);
+    const existing = this.sessions.get(chatId);
     if (existing && this.isActorActive(existing.actor)) {
-      logger.debug("Returning existing session", { extra: { versionId } });
+      logger.debug("Returning existing session", { extra: { chatId } });
       return existing.actor;
     }
 
     // Clean up stale entry if exists
     if (existing) {
-      this.cleanupSession(versionId);
+      this.cleanupSession(chatId);
     }
 
-    // Open AgentFS SQLite database
+    // Open AgentFS SQLite database (keyed by branch for isolation)
     const dbPath = path.join(os.homedir(), ".weldr", "db", `${branch.id}.db`);
     const agent = await AgentFS.open({ path: dbPath });
 
-    // Create storage interface for this version
-    const storage = createAgentFSStorage(agent, versionId);
+    // Create storage interface for this chat
+    const storage = createAgentFSStorage(agent, chatId);
 
     // Load workflow state from SQLite
-    const snapshot = await storage.loadSessionState(versionId);
+    const snapshot = await storage.loadSessionState(chatId);
 
     logger.info("Creating new session actor", {
       extra: {
-        versionId,
+        chatId,
+        branchId: branch.id,
         traceId,
         restoredState: snapshot?.state ?? "fresh",
         restoredIterations: snapshot?.iterationCount ?? 0,
@@ -91,7 +92,7 @@ class SessionRegistry {
     // Create the actor with AgentFS storage
     const actor = createActor(sessionMachine, {
       input: {
-        versionId,
+        chatId,
         traceId,
         project,
         branch,
@@ -101,9 +102,6 @@ class SessionRegistry {
       },
     });
 
-    // Wire up event forwarding to SSE
-    const chatId = branch.headVersion.chatId;
-
     // Register chat context for durable streams
     registerChatContext(chatId, project.id, branch.id);
 
@@ -112,40 +110,40 @@ class SessionRegistry {
       eventForwarder({
         ...event,
         timestamp: Date.now(),
-        versionId,
+        chatId,
         traceId,
       }).catch((error: Error) => {
         logger.error("Failed to forward event", {
-          extra: { versionId, eventType: event.type, error: error.message },
+          extra: { chatId, eventType: event.type, error: error.message },
         });
       });
     });
 
     // Register cleanup when actor finishes
     const statusSubscription = actor.subscribe({
-      complete: () => this.cleanupSession(versionId),
-      error: () => this.cleanupSession(versionId),
+      complete: () => this.cleanupSession(chatId),
+      error: () => this.cleanupSession(chatId),
     });
 
     // Store cleanup handles
-    this.cleanupHandles.set(versionId, () => {
+    this.cleanupHandles.set(chatId, () => {
       subscription.unsubscribe();
       statusSubscription.unsubscribe();
     });
 
     // Register the session
-    this.sessions.set(versionId, {
+    this.sessions.set(chatId, {
       actor,
       agent,
       createdAt: Date.now(),
-      versionId,
       chatId,
+      branchId: branch.id,
     });
 
     // Start the actor
     actor.start();
 
-    logger.info("Session actor started", { extra: { versionId } });
+    logger.info("Session actor started", { extra: { chatId } });
 
     return actor;
   }
@@ -153,8 +151,8 @@ class SessionRegistry {
   /**
    * Get a session if it exists and is active.
    */
-  get(versionId: string): SessionActorRef | undefined {
-    const entry = this.sessions.get(versionId);
+  get(chatId: string): SessionActorRef | undefined {
+    const entry = this.sessions.get(chatId);
     if (entry && this.isActorActive(entry.actor)) {
       return entry.actor;
     }
@@ -164,24 +162,24 @@ class SessionRegistry {
   /**
    * Check if a session exists and is active.
    */
-  has(versionId: string): boolean {
-    return this.get(versionId) !== undefined;
+  has(chatId: string): boolean {
+    return this.get(chatId) !== undefined;
   }
 
   /**
    * Clean up a session and remove it from the registry.
    */
-  private cleanupSession(versionId: string): void {
-    const entry = this.sessions.get(versionId);
+  private cleanupSession(chatId: string): void {
+    const entry = this.sessions.get(chatId);
     if (!entry) {
       return;
     }
 
     // Run cleanup handles
-    const cleanup = this.cleanupHandles.get(versionId);
+    const cleanup = this.cleanupHandles.get(chatId);
     if (cleanup) {
       cleanup();
-      this.cleanupHandles.delete(versionId);
+      this.cleanupHandles.delete(chatId);
     }
 
     // Unregister chat context for durable streams
@@ -196,9 +194,9 @@ class SessionRegistry {
       // Ignore errors when stopping
     }
 
-    this.sessions.delete(versionId);
+    this.sessions.delete(chatId);
 
-    logger.debug("Session cleaned up", { extra: { versionId } });
+    logger.debug("Session cleaned up", { extra: { chatId } });
   }
 
   /**
@@ -218,9 +216,9 @@ class SessionRegistry {
    */
   getStats(): { activeSessions: number; sessions: string[] } {
     const activeSessions: string[] = [];
-    for (const [versionId, entry] of this.sessions) {
+    for (const [chatId, entry] of this.sessions) {
       if (this.isActorActive(entry.actor)) {
-        activeSessions.push(versionId);
+        activeSessions.push(chatId);
       }
     }
 
@@ -238,8 +236,8 @@ class SessionRegistry {
       extra: { activeSessions: this.sessions.size },
     });
 
-    for (const versionId of this.sessions.keys()) {
-      this.cleanupSession(versionId);
+    for (const chatId of this.sessions.keys()) {
+      this.cleanupSession(chatId);
     }
   }
 }

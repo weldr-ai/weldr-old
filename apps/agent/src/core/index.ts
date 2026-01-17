@@ -8,7 +8,7 @@ export type {
   SaveSessionStateInput,
   SessionSnapshot,
   SessionStorage,
-  VersionMetrics,
+  SnapshotMetrics,
 } from "./persistence";
 export * from "./project";
 export * from "./integrations";

@@ -17,7 +17,7 @@ async function checkDirExists(session: SandboxSession, dirPath: string): Promise
 interface BuildOptions {
   projectId: string;
   branchId: string;
-  versionId: string;
+  snapshotId: string;
 }
 
 interface BuildResult {
@@ -33,21 +33,22 @@ interface BuildResult {
 export async function build({
   projectId,
   branchId,
-  versionId,
+  snapshotId,
 }: BuildOptions): Promise<BuildResult> {
-  const logger = Logger.get({ projectId, versionId });
+  const logger = Logger.get({ projectId, snapshotId });
 
   try {
     logger.info("Starting build process");
 
     // Get or create sandbox session
-    const session = await getOrCreateSession({ branchId, projectId, versionId });
+    const session = await getOrCreateSession({ branchId, projectId, snapshotId });
 
     // Install dependencies
     logger.info("Installing dependencies");
     const installResult = await exec("bun install --no-verify --no-progress --silent", {
       projectId,
       branchId,
+      snapshotId,
     });
 
     if (installResult.exitCode !== 0) {
@@ -56,7 +57,7 @@ export async function build({
 
     // Run build
     logger.info("Running build");
-    const buildResult = await exec("bun run build", { projectId, branchId });
+    const buildResult = await exec("bun run build", { projectId, branchId, snapshotId });
 
     if (buildResult.exitCode !== 0) {
       throw new Error(`Build failed: ${buildResult.stderr}`);
@@ -68,7 +69,7 @@ export async function build({
     logger.info("Installing production dependencies");
     const prodInstallResult = await exec(
       "bun install --production --no-verify --no-progress --silent",
-      { projectId, branchId },
+      { projectId, branchId, snapshotId },
     );
 
     if (prodInstallResult.exitCode !== 0) {
@@ -99,13 +100,14 @@ export async function build({
     }
 
     // Create zip artifact in sandbox
-    const artifactName = `build-${versionId}.zip`;
+    const artifactName = `build-${snapshotId}.zip`;
 
     logger.info("Creating build artifact", { artifactName, buildDir });
 
     const zipResult = await exec(`zip -r ${artifactName} ${filesToZip.join(" ")} -q`, {
       projectId,
       branchId,
+      snapshotId,
     });
 
     if (zipResult.exitCode !== 0) {
@@ -119,7 +121,7 @@ export async function build({
 
     // Upload to Tigris
     const bucketName = "weldr-build-artifacts";
-    const objectKey = `project-${projectId}-version-${versionId}.zip`;
+    const objectKey = `project-${projectId}-snapshot-${snapshotId}.zip`;
 
     logger.info("Uploading build artifact to Tigris", {
       bucketName,

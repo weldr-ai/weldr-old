@@ -52,23 +52,23 @@ export function SitePreviewDialog({
     branchId?: string;
   }>();
   const searchParams = useSearchParams();
-  const versionId = searchParams.get("versionId") ?? undefined;
+  const snapshotId = searchParams.get("snapshotId") ?? undefined;
 
   const branch = queryClient.getQueryData(
     trpc.branches.byIdOrMain.queryKey({
       id: branchId,
       projectId,
-      versionId,
+      snapshotId,
     }),
   );
 
-  const versionToUse = branch?.selectedVersion ?? branch?.headVersion;
+  const snapshot = branch?.snapshot;
   const [currentPath, setCurrentPath] = useState("");
 
   const baseUrl = url
     ? url
-    : versionToUse?.id && projectId && branch?.id
-      ? getPreviewUrl(versionToUse.id, projectId, branch.id)
+    : snapshot?.id && projectId && branch?.id
+      ? getPreviewUrl(snapshot.id, projectId, branch.id)
       : "";
 
   useEffect(() => {

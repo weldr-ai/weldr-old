@@ -1,7 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 
 import { and, db, eq } from "@weldr/db";
-import { branches, projects, versions } from "@weldr/db/schema";
+import { branches, projects, snapshots } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
 import { auth } from "@/core/auth";
@@ -12,9 +12,9 @@ import { createRouter } from "@/http/utils";
 const route = createRoute({
   method: "post",
   path: "/revert",
-  summary: "Revert to a previous version",
+  summary: "Revert to a previous snapshot",
   description:
-    "Revert to a previous version by copying its DB to a new version and creating a revert commit",
+    "Revert to a previous snapshot by copying its DB to a new snapshot and creating a revert commit",
   tags: ["Agent"],
   request: {
     body: {
@@ -22,12 +22,12 @@ const route = createRoute({
         "application/json": {
           schema: z.object({
             projectId: z.string().openapi({ description: "Project ID", example: "123abc" }),
-            sourceVersionId: z.string().openapi({
-              description: "Version ID to revert to (source)",
+            sourceSnapshotId: z.string().openapi({
+              description: "Snapshot ID to revert to (source)",
               example: "456def",
             }),
-            targetVersionId: z.string().openapi({
-              description: "New version ID for the revert (target)",
+            targetSnapshotId: z.string().openapi({
+              description: "New snapshot ID for the revert (target)",
               example: "789ghi",
             }),
             branchId: z.string().openapi({ description: "Branch ID", example: "abc123" }),
@@ -38,7 +38,7 @@ const route = createRoute({
   },
   responses: {
     200: {
-      description: "Version reverted successfully",
+      description: "Snapshot reverted successfully",
       content: {
         "application/json": {
           schema: z.object({
@@ -63,7 +63,7 @@ const route = createRoute({
 const router = createRouter();
 
 router.openapi(route, async (c) => {
-  const { projectId, sourceVersionId, targetVersionId, branchId } = c.req.valid("json");
+  const { projectId, sourceSnapshotId, targetSnapshotId, branchId } = c.req.valid("json");
 
   const session = await auth.api.getSession({
     headers: c.req.raw.headers,
@@ -73,15 +73,15 @@ router.openapi(route, async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const [project, branch, sourceVersion] = await Promise.all([
+  const [project, branch, sourceSnapshot] = await Promise.all([
     db.query.projects.findFirst({
       where: and(eq(projects.id, projectId), eq(projects.userId, session.user.id)),
     }),
     db.query.branches.findFirst({
       where: and(eq(branches.id, branchId), eq(branches.projectId, projectId)),
     }),
-    db.query.versions.findFirst({
-      where: and(eq(versions.id, sourceVersionId), eq(versions.projectId, projectId)),
+    db.query.snapshots.findFirst({
+      where: and(eq(snapshots.id, sourceSnapshotId), eq(snapshots.projectId, projectId)),
     }),
   ]);
 
@@ -93,42 +93,42 @@ router.openapi(route, async (c) => {
     return c.json({ error: "Branch not found" }, 404);
   }
 
-  if (!sourceVersion) {
-    return c.json({ error: "Source version not found" }, 404);
+  if (!sourceSnapshot) {
+    return c.json({ error: "Source snapshot not found" }, 404);
   }
 
   const logger = Logger.get({
     projectId,
     branchId,
-    sourceVersionId,
-    targetVersionId,
+    sourceSnapshotId,
+    targetSnapshotId,
   });
 
   try {
     const snapshotService = createSnapshotService(projectId);
 
-    // 1. Check if source version exists in cloud storage
-    const sourceExists = await snapshotService.versionExists(sourceVersionId);
+    // 1. Check if source snapshot exists in cloud storage
+    const sourceExists = await snapshotService.snapshotExists(sourceSnapshotId);
     if (!sourceExists) {
-      return c.json({ error: "Source version does not have a snapshot in cloud storage" }, 400);
+      return c.json({ error: "Source snapshot does not exist in cloud storage" }, 400);
     }
 
-    // 2. Copy source version's DB to target version
-    logger.info("Copying source version to target version", {
-      extra: { sourceVersionId, targetVersionId },
+    // 2. Copy source snapshot's DB to target snapshot
+    logger.info("Copying source snapshot to target snapshot", {
+      extra: { sourceSnapshotId, targetSnapshotId },
     });
 
-    await snapshotService.copyVersion(sourceVersionId, targetVersionId);
+    await snapshotService.copySnapshot(sourceSnapshotId, targetSnapshotId);
 
-    // 3. Sync target version to local
-    const syncResult = await syncFromCloud(targetVersionId, projectId);
+    // 3. Sync target snapshot to local
+    const syncResult = await syncFromCloud(targetSnapshotId, projectId);
     if (!syncResult.success) {
-      throw new Error("Failed to sync target version from cloud");
+      throw new Error("Failed to sync target snapshot from cloud");
     }
 
     // 4. Create revert commit using Git
-    const revertMessage = `revert: Revert to version #${sourceVersion.sequenceNumber}${
-      sourceVersion.message ? ` - ${sourceVersion.message}` : ""
+    const revertMessage = `revert: Revert to snapshot${
+      sourceSnapshot.title ? ` - ${sourceSnapshot.title}` : ` ${sourceSnapshot.id.slice(0, 8)}`
     }`;
 
     let commitHash: string;
@@ -141,6 +141,7 @@ router.openapi(route, async (c) => {
         },
         projectId,
         branchId,
+        targetSnapshotId,
       );
 
       logger.info("Revert commit created", { extra: { commitHash } });
@@ -152,9 +153,9 @@ router.openapi(route, async (c) => {
       });
 
       // Initialize git and try again
-      const hasRepo = await Git.hasGitRepository(projectId, branchId);
+      const hasRepo = await Git.hasGitRepository(projectId, branchId, targetSnapshotId);
       if (!hasRepo) {
-        await Git.initRepository(projectId, branchId);
+        await Git.initRepository(projectId, branchId, targetSnapshotId);
         commitHash = await Git.commit(
           revertMessage,
           {
@@ -163,6 +164,7 @@ router.openapi(route, async (c) => {
           },
           projectId,
           branchId,
+          targetSnapshotId,
         );
       } else {
         throw error;
@@ -179,8 +181,8 @@ router.openapi(route, async (c) => {
         error: error instanceof Error ? error.message : String(error),
         projectId,
         branchId,
-        sourceVersionId,
-        targetVersionId,
+        sourceSnapshotId,
+        targetSnapshotId,
       },
     });
     return c.json({ error: error instanceof Error ? error.message : "Revert failed" }, 500);
