@@ -9,7 +9,7 @@ import type { DeclarationCodeMetadata } from "@weldr/shared/types/declarations";
 import { embedDeclaration } from "@/core/project/declarations/embed";
 import { enrichDeclaration } from "@/core/project/declarations/enrich";
 import { findNodePosition, type NODE_DIMENSIONS } from "@/core/project/node-placement";
-import { getOrCreateSession } from "@/core/sandbox/just-bash/session";
+import { getOrCreateWorkspace } from "@/core/workspace/just-bash/session";
 import { type ExtractedSpecs, extractSpecsFromCode, type SpecType } from "./extract-specs";
 
 export interface EnrichingJobData {
@@ -137,7 +137,7 @@ export async function recoverEnrichingJobs(): Promise<void> {
           }
 
           try {
-            const session = await getOrCreateSession({
+            const session = await getOrCreateWorkspace({
               projectId: project.id,
               snapshotId: snapshotRecord.id,
             });

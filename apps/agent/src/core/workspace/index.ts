@@ -1,17 +1,17 @@
 /**
- * Sandbox Module
+ * Workspace Module
  *
  * Provides isolated virtual filesystem environments for AI agents.
- * Each agent works in its own sandbox backed by AgentFS SDK.
+ * Each agent works in its own workspace backed by AgentFS SDK.
  *
  * Architecture:
- * - Each snapshot has its own isolated agentfs session (database stored in ~/.weldr/db/{snapshotId}.db)
- * - Sessions are synced to cloud storage (Tigris/S3) at project-{projectId}/snapshot-{snapshotId}.db
+ * - Each snapshot has its own isolated agentfs workspace (database stored in ~/.weldr/db/{snapshotId}.db)
+ * - Workspaces are synced to cloud storage (Tigris/S3) at project-{projectId}/snapshot-{snapshotId}.db
  * - Multiple agents can work on different snapshots without conflicts
  *
  * Key concepts:
- * - Session: An isolated virtual filesystem for a snapshot (via AgentFS SDK + just-bash)
- * - Cloud Storage: Where session state is persisted between runs
+ * - Workspace: An isolated virtual filesystem for a snapshot (via AgentFS SDK + just-bash)
+ * - Cloud Storage: Where workspace state is persisted between runs
  * - just-bash: Provides 80+ built-in commands with custom git/bun support
  */
 

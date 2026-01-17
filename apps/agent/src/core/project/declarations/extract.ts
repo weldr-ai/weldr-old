@@ -5,8 +5,8 @@ import type { AgentFS } from "agentfs-sdk";
 import { db, eq } from "@weldr/db";
 import { Logger } from "@weldr/shared/logger";
 
-import { getOrCreateSession } from "@/core/sandbox/just-bash/session";
-import type { SessionContext } from "@/session";
+import { getOrCreateWorkspace } from "@/core/workspace/just-bash/session";
+import type { ExecutionContext } from "@/session";
 import { extractAndSaveDeclarations } from "./query";
 
 /**
@@ -86,11 +86,8 @@ async function walkDirRecursive(
 /**
  * Scan workspace for code files using agentfs
  */
-async function scanWorkspace(
-  projectId: string,
-  snapshotId: string,
-): Promise<string[]> {
-  const session = await getOrCreateSession({ projectId, snapshotId });
+async function scanWorkspace(projectId: string, snapshotId: string): Promise<string[]> {
+  const session = await getOrCreateWorkspace({ projectId, snapshotId });
   const files = await walkDirRecursive(session.agent, "/", {
     excludeDirs: EXCLUDED_DIRS,
     extensions: CODE_EXTENSIONS,
@@ -110,7 +107,7 @@ export async function extractDeclarationsFromProject({
   context,
   changedFiles,
 }: {
-  context: SessionContext;
+  context: ExecutionContext;
   changedFiles?: ChangedFile[];
 }): Promise<{ processed: number; errors: string[] }> {
   const project = context.project;
@@ -167,7 +164,7 @@ export async function extractDeclarationsFromProject({
     }
 
     // Get session for reading files
-    const session = await getOrCreateSession({
+    const session = await getOrCreateWorkspace({
       projectId: project.id,
       snapshotId,
     });
@@ -214,7 +211,7 @@ export async function handleFileDeleted({
   context,
   filePath,
 }: {
-  context: SessionContext;
+  context: ExecutionContext;
   filePath: string;
 }): Promise<void> {
   const { and, inArray } = await import("@weldr/db");

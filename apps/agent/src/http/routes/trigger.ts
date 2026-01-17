@@ -9,7 +9,7 @@ import { insertMessages } from "@/ai/messages";
 import { auth } from "@/core/auth";
 import { getInstalledCategories } from "@/core/integrations/utils/get-installed-categories";
 import { initChat } from "@/core/project";
-import { exec } from "@/core/sandbox";
+import { exec } from "@/core/workspace";
 import { createRouter } from "@/http/utils";
 import { sessionRegistry } from "@/session";
 

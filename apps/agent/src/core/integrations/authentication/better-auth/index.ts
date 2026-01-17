@@ -4,8 +4,8 @@ import { db } from "@weldr/db";
 import { environmentVariables, integrationEnvironmentVariables, secrets } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
-import { exec } from "@/core/sandbox/exec";
-import { getOrCreateSession } from "@/core/sandbox/just-bash/session";
+import { exec } from "@/core/workspace/exec";
+import { getOrCreateWorkspace } from "@/core/workspace/just-bash/session";
 import type { IntegrationPackageSets } from "../../types";
 import { defineIntegration } from "../../utils/define-integration";
 
@@ -76,7 +76,7 @@ export const betterAuthIntegration = defineIntegration<"better-auth">({
     }
 
     try {
-      const session = await getOrCreateSession({
+      const session = await getOrCreateWorkspace({
         projectId: project.id,
         snapshotId,
       });

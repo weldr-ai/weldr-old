@@ -1,5 +1,5 @@
-import { exec, type ExecOptions } from "@/core/sandbox/exec";
-import { getOrCreateSession } from "@/core/sandbox/just-bash/session";
+import { exec, type ExecOptions } from "@/core/workspace/exec";
+import { getOrCreateWorkspace } from "@/core/workspace/just-bash/session";
 import type {
   IntegrationCallbackResult,
   IntegrationPackageSets,
@@ -75,7 +75,7 @@ export async function updatePackageJsonScripts(
   snapshotId: string,
 ): Promise<IntegrationCallbackResult> {
   try {
-    const session = await getOrCreateSession({
+    const session = await getOrCreateWorkspace({
       projectId,
       snapshotId,
     });

@@ -20,14 +20,14 @@ export type Project = ProjectWithConfig;
 export type Branch = BranchWithSnapshot;
 
 // =============================================================================
-// Session Context
+// Execution Context
 // =============================================================================
 
 /**
- * The session context - a simple immutable object.
+ * The execution context - a simple immutable object.
  * Contains all the data needed for a session to execute.
  */
-export type SessionContext = {
+export type ExecutionContext = {
   chatId?: string;
   project: Project;
   branch: Branch;
@@ -42,13 +42,13 @@ export type SessionContext = {
 // =============================================================================
 
 /**
- * Creates a new session context.
+ * Creates a new execution context.
  */
-export function createSessionContext(params: {
+export function createExecutionContext(params: {
   project: Project;
   branch: Branch;
   user: User;
-}): SessionContext {
+}): ExecutionContext {
   return {
     project: params.project,
     branch: params.branch,
@@ -59,10 +59,10 @@ export function createSessionContext(params: {
 /**
  * Updates context immutably.
  */
-export function updateSessionContext(
-  context: SessionContext,
-  updates: Partial<SessionContext>,
-): SessionContext {
+export function updateExecutionContext(
+  context: ExecutionContext,
+  updates: Partial<ExecutionContext>,
+): ExecutionContext {
   return { ...context, ...updates };
 }
 

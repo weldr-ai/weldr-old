@@ -2,7 +2,11 @@ import type { Tool } from "ai";
 
 import { Logger } from "@weldr/shared/logger";
 
-import { type SandboxSession, getOrCreateSession, closeSession } from "@/core/sandbox/just-bash";
+import {
+  type WorkspaceSession,
+  getOrCreateWorkspace,
+  closeWorkspace,
+} from "@/core/workspace/just-bash";
 
 /**
  * Result of a bash command execution
@@ -19,11 +23,11 @@ export interface BashResult {
 export type BashTools = Record<string, Tool>;
 
 /**
- * Extended bash tools with access to sandbox and AgentFS SDK features
+ * Extended bash tools with access to workspace and AgentFS SDK features
  */
-export interface BashToolsWithSandbox {
+export interface BashToolsWithWorkspace {
   tools: BashTools;
-  sandbox: SandboxSession;
+  workspace: WorkspaceSession;
 }
 
 /**
@@ -48,25 +52,25 @@ export interface CreateBashToolsOptions {
  */
 export async function createBashTools(
   options: CreateBashToolsOptions,
-): Promise<BashToolsWithSandbox> {
+): Promise<BashToolsWithWorkspace> {
   const { projectId, snapshotId, workdir = "/home/user/project" } = options;
   const logger = Logger.get({ projectId, snapshotId, component: "bash-tool" });
 
   logger.debug("Creating bash tools with just-bash and AgentFS SDK");
 
-  const sandbox = await getOrCreateSession({
+  const workspace = await getOrCreateWorkspace({
     snapshotId,
     projectId,
     workdir,
   });
 
-  logger.debug("Sandbox session ready", {
-    extra: { hasStorage: !!sandbox.storage, hasMetrics: !!sandbox.metrics },
+  logger.debug("Workspace ready", {
+    extra: { hasStorage: !!workspace.storage, hasMetrics: !!workspace.metrics },
   });
 
   return {
-    tools: sandbox.tools,
-    sandbox,
+    tools: workspace.tools,
+    workspace,
   };
 }
 
@@ -86,9 +90,9 @@ export async function getOrCreateBashTool(
 }
 
 /**
- * Close a sandbox session and cleanup resources.
- * Should be called when the sandbox is no longer needed.
+ * Close a workspace and cleanup resources.
+ * Should be called when the workspace is no longer needed.
  */
 export async function closeBashTools(snapshotId: string): Promise<void> {
-  await closeSession(snapshotId);
+  await closeWorkspace(snapshotId);
 }

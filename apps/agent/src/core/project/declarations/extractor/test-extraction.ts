@@ -3,7 +3,7 @@ import { branches, declarations, projects, users } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
 import { getInstalledCategories } from "@/core/integrations/utils/get-installed-categories";
-import type { SessionContext } from "@/session";
+import type { ExecutionContext } from "@/session";
 import { extractAndSaveDeclarations } from "../query";
 import { fixtures } from "./test-fixtures";
 
@@ -52,18 +52,18 @@ async function loadRealContext(testContext: TestContext) {
   return { project: projectWithCategories, branch, user };
 }
 
-function createSessionContextForTest(
+function createExecutionContextForTest(
   project: typeof projects.$inferSelect & {
     integrationCategories: Set<string>;
   },
   branch: typeof branches.$inferSelect & { snapshot: unknown },
   user: typeof users.$inferSelect,
-): SessionContext {
+): ExecutionContext {
   return {
     project,
     branch,
     user,
-  } as SessionContext;
+  } as ExecutionContext;
 }
 
 /**
@@ -84,7 +84,7 @@ async function cleanupTestData(projectId: string, declarationIdsBefore: string[]
 }
 
 async function testExtractionAndDependencies(
-  context: SessionContext,
+  context: ExecutionContext,
   filePath: string,
   sourceCode: string,
   expectedDeclarations?: string[],
@@ -186,7 +186,7 @@ async function main() {
       projectId,
     });
 
-    const context = createSessionContextForTest(project, branch, user);
+    const context = createExecutionContextForTest(project, branch, user);
 
     const fixturesToTest = fixtureFilter
       ? fixtures.filter((f) => f.name === fixtureFilter)
@@ -258,4 +258,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     });
 }
 
-export { testExtractionAndDependencies, loadRealContext, createSessionContextForTest };
+export { testExtractionAndDependencies, loadRealContext, createExecutionContextForTest };

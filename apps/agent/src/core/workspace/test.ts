@@ -1,12 +1,12 @@
 /**
  * Sandbox Demo Tests
  *
- * Demonstrates how the SandboxSession works for AI coding agents.
+ * Demonstrates how the WorkspaceSession works for AI coding agents.
  * All tests run on a single session, simulating a real AI agent workflow.
  *
  * Run with: bun run apps/agent/src/core/sandbox/test.ts
  *
- * How SandboxSession Works:
+ * How WorkspaceSession Works:
  * - Uses just-bash for in-memory bash execution (80+ commands)
  * - Uses AgentFS SDK for persistent virtual filesystem and KV store
  * - Custom git and bun commands sync to temp dir, execute, sync back
@@ -19,10 +19,10 @@ import * as path from "node:path";
 
 import { nanoid } from "@weldr/shared/nanoid";
 
-import { closeSession, createSession, type SandboxSession } from "./just-bash/session";
+import { closeWorkspace, createWorkspace, type WorkspaceSession } from "./just-bash/session";
 
 interface TestContext {
-  session: SandboxSession;
+  session: WorkspaceSession;
   projectId: string;
   branchId: string;
   snapshotId: string;
@@ -597,7 +597,7 @@ export function truncate(str: string, maxLength: number): string {
 // CLEANUP
 // =============================================================================
 async function cleanup(branchId: string): Promise<void> {
-  await closeSession(branchId);
+  await closeWorkspace(branchId);
 
   const dbPath = path.join(os.homedir(), ".weldr", "db", `${branchId}.db`);
   try {
@@ -616,9 +616,9 @@ async function runDemoTests(): Promise<void> {
   const shouldCleanup = process.argv.includes("--cleanup");
 
   console.log("=".repeat(60));
-  console.log("SANDBOX DEMO TESTS - SandboxSession");
+  console.log("SANDBOX DEMO TESTS - WorkspaceSession");
   console.log("=".repeat(60));
-  console.log("\nDemonstrating SandboxSession for AI coding agents.\n");
+  console.log("\nDemonstrating WorkspaceSession for AI coding agents.\n");
 
   const branchId = `branch-${nanoid(8)}`;
   const projectId = `demo-${nanoid(8)}`;
@@ -633,7 +633,7 @@ async function runDemoTests(): Promise<void> {
   }
 
   // Create the session
-  const session = await createSession({
+  const session = await createWorkspace({
     projectId,
     snapshotId,
     workdir: "/home/user/project",
@@ -669,7 +669,7 @@ async function runDemoTests(): Promise<void> {
       await cleanup(branchId);
     } else {
       console.log(`\nDatabase preserved at: ~/.weldr/db/${branchId}.db`);
-      await closeSession(branchId);
+      await closeWorkspace(branchId);
     }
   }
 

@@ -2,10 +2,10 @@ import { put as tigrisPut } from "@tigrisdata/storage";
 
 import { Logger } from "@weldr/shared/logger";
 
-import { exec } from "@/core/sandbox";
-import { getOrCreateSession, type SandboxSession } from "@/core/sandbox/just-bash/session";
+import { exec } from "@/core/workspace";
+import { getOrCreateWorkspace, type WorkspaceSession } from "@/core/workspace/just-bash/session";
 
-async function checkDirExists(session: SandboxSession, dirPath: string): Promise<boolean> {
+async function checkDirExists(session: WorkspaceSession, dirPath: string): Promise<boolean> {
   try {
     const stat = await session.agent.fs.stat(dirPath);
     return stat.isDirectory();
@@ -29,17 +29,14 @@ interface BuildResult {
  * Build an application and upload the artifact to Tigris.
  * All commands run inside the agentfs virtual directory.
  */
-export async function build({
-  projectId,
-  snapshotId,
-}: BuildOptions): Promise<BuildResult> {
+export async function build({ projectId, snapshotId }: BuildOptions): Promise<BuildResult> {
   const logger = Logger.get({ projectId, snapshotId });
 
   try {
     logger.info("Starting build process");
 
-    // Get or create sandbox session
-    const session = await getOrCreateSession({ projectId, snapshotId });
+    // Get or create workspace
+    const session = await getOrCreateWorkspace({ projectId, snapshotId });
 
     // Install dependencies
     logger.info("Installing dependencies");
@@ -96,7 +93,7 @@ export async function build({
       throw new Error("No build output directory found (.output/, dist/, or build/)");
     }
 
-    // Create zip artifact in sandbox
+    // Create zip artifact in workspace
     const artifactName = `build-${snapshotId}.zip`;
 
     logger.info("Creating build artifact", { artifactName, buildDir });
@@ -124,7 +121,7 @@ export async function build({
       objectKey,
     });
 
-    // Read the artifact from the sandbox filesystem
+    // Read the artifact from the workspace filesystem
     const fileBuffer = await session.agent.fs.readFile(`/${artifactName}`);
 
     const uploadResult = await tigrisPut(objectKey, fileBuffer, {
@@ -143,7 +140,7 @@ export async function build({
       objectKey,
     });
 
-    // Clean up temporary artifact from sandbox filesystem
+    // Clean up temporary artifact from workspace filesystem
     await session.agent.fs.unlink(`/${artifactName}`);
     logger.info("Cleaned up temporary artifact");
 

@@ -25,21 +25,21 @@ export class SessionDatabaseStorage implements SessionStorage {
   async saveSessionState(_input: SaveSessionStateInput): Promise<void> {
     throw new Error(
       "SessionDatabaseStorage is deprecated. The snapshot_sessions table has been removed. " +
-        "Use AgentFSSessionStorage (via sandbox.storage) instead.",
+        "Use AgentFSSessionStorage (via workspace.storage) instead.",
     );
   }
 
   async loadSessionState(_snapshotId: string): Promise<SessionSnapshot | null> {
     throw new Error(
       "SessionDatabaseStorage is deprecated. The snapshot_sessions table has been removed. " +
-        "Use AgentFSSessionStorage (via sandbox.storage) instead.",
+        "Use AgentFSSessionStorage (via workspace.storage) instead.",
     );
   }
 
   async deleteSessionState(_snapshotId: string): Promise<void> {
     throw new Error(
       "SessionDatabaseStorage is deprecated. The snapshot_sessions table has been removed. " +
-        "Use AgentFSSessionStorage (via sandbox.storage) instead.",
+        "Use AgentFSSessionStorage (via workspace.storage) instead.",
     );
   }
 

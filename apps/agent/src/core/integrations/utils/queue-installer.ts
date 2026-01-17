@@ -11,7 +11,7 @@ import type {
 } from "@weldr/shared/types";
 
 import { stream } from "@/core/stream";
-import type { SessionContext } from "@/session";
+import type { ExecutionContext } from "@/session";
 import {
   getQueuedIntegrations,
   unblockIntegrations,
@@ -24,7 +24,7 @@ async function streamToolMessageUpdate({
   integrationKey,
   status,
 }: {
-  context: SessionContext;
+  context: ExecutionContext;
   integrationKey: IntegrationKey;
   status: IntegrationInstallationStatus;
 }) {
@@ -106,7 +106,7 @@ async function streamToolMessageUpdate({
   });
 }
 
-export async function installQueuedIntegrations(context: SessionContext): Promise<
+export async function installQueuedIntegrations(context: ExecutionContext): Promise<
   | {
       status: "completed";
       installedIntegrations: {

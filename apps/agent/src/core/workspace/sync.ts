@@ -6,7 +6,7 @@ import { AgentFS } from "agentfs-sdk";
 import { Logger } from "@weldr/shared/logger";
 
 import { CloudStorageBackend, type CloudStorageConfig } from "./cloud-storage";
-import { getSessionDbPath } from "./exec";
+import { getWorkspaceDbPath } from "./exec";
 import type { StorageBackend } from "./types";
 
 /**
@@ -38,7 +38,7 @@ export function createStorageBackend(): StorageBackend {
  */
 async function checkpointWal(snapshotId: string): Promise<void> {
   const logger = Logger.get({ snapshotId, component: "sync" });
-  const dbPath = getSessionDbPath(snapshotId);
+  const dbPath = getWorkspaceDbPath(snapshotId);
 
   try {
     const agent = await AgentFS.open({ path: dbPath });
@@ -71,7 +71,7 @@ export async function syncToCloud(
   logger.info("Syncing session to cloud storage");
 
   try {
-    const agentfsPath = getSessionDbPath(snapshotId);
+    const agentfsPath = getWorkspaceDbPath(snapshotId);
 
     try {
       await fs.access(agentfsPath);
@@ -114,7 +114,7 @@ export async function syncFromCloud(
   logger.info("Syncing session from cloud storage");
 
   try {
-    const agentfsPath = getSessionDbPath(snapshotId);
+    const agentfsPath = getWorkspaceDbPath(snapshotId);
     const agentfsDir = path.dirname(agentfsPath);
 
     // Ensure ~/.weldr/db directory exists

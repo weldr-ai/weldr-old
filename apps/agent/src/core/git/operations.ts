@@ -1,6 +1,6 @@
 import { Logger } from "@weldr/shared/logger";
 
-import { exec } from "@/core/sandbox";
+import { exec } from "@/core/workspace";
 
 const TRUNK_BRANCH = "main";
 
@@ -42,10 +42,7 @@ export namespace Git {
     type: "added" | "modified" | "deleted";
   }
 
-  export async function initRepository(
-    projectId: string,
-    snapshotId: string,
-  ): Promise<void> {
+  export async function initRepository(projectId: string, snapshotId: string): Promise<void> {
     const logger = Logger.get({ operation: "git-init" });
     const options = { projectId, snapshotId };
 
@@ -132,10 +129,7 @@ export namespace Git {
     }
   }
 
-  export async function hasGitRepository(
-    projectId: string,
-    snapshotId: string,
-  ): Promise<boolean> {
+  export async function hasGitRepository(projectId: string, snapshotId: string): Promise<boolean> {
     const options = { projectId, snapshotId };
     const result = await execGit(["rev-parse", "--git-dir"], options);
     return result.exitCode === 0;
@@ -224,10 +218,7 @@ export namespace Git {
     }
   }
 
-  export async function headCommit(
-    projectId: string,
-    snapshotId: string,
-  ): Promise<string> {
+  export async function headCommit(projectId: string, snapshotId: string): Promise<string> {
     const result = await execGit(["rev-parse", "HEAD"], { projectId, snapshotId });
     return result.stdout.trim();
   }

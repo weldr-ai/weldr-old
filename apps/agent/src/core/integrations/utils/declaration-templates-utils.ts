@@ -9,7 +9,7 @@ import { Logger } from "@weldr/shared/logger";
 import { nanoid } from "@weldr/shared/nanoid";
 import type { Integration, IntegrationKey } from "@weldr/shared/types";
 
-import type { SessionContext } from "@/session";
+import type { ExecutionContext } from "@/session";
 
 /**
  * Seed declaration templates to a user's project based on their selected integration options
@@ -20,7 +20,7 @@ export async function seedDeclarationTemplates({
   context,
 }: {
   integration: Integration;
-  context: SessionContext;
+  context: ExecutionContext;
 }) {
   const project = context.project;
   const branch = context.branch;

@@ -6,7 +6,7 @@ import type {
   IntegrationTemplate,
 } from "@weldr/shared/types";
 
-import type { SessionContext } from "@/session";
+import type { ExecutionContext } from "@/session";
 
 export interface IntegrationCallbackResult {
   success: boolean;
@@ -31,7 +31,7 @@ export type FileItem =
     };
 
 export type IntegrationCallback = (params: {
-  context: SessionContext;
+  context: ExecutionContext;
   integration: Integration;
 }) => Promise<IntegrationCallbackResult>;
 
@@ -59,11 +59,11 @@ export type IntegrationScriptSets = {
 interface IntegrationDefinitionExtension<K extends IntegrationKey> {
   category: IntegrationCategoryKey;
   packages?: (
-    context: SessionContext,
+    context: ExecutionContext,
     options?: ExtractOptionsForKey<K>,
   ) => Promise<IntegrationPackageSets>;
   scripts?: (
-    context: SessionContext,
+    context: ExecutionContext,
     options?: ExtractOptionsForKey<K>,
   ) => Promise<IntegrationScriptSets>;
   preInstall?: IntegrationCallback;

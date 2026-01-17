@@ -6,7 +6,7 @@ import { Logger } from "@weldr/shared/logger";
 
 import { auth } from "@/core/auth";
 import { Git } from "@/core/git";
-import { createSnapshotService, syncFromCloud } from "@/core/sandbox";
+import { createSnapshotService, syncFromCloud } from "@/core/workspace";
 import { createRouter } from "@/http/utils";
 
 const route = createRoute({

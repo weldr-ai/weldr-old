@@ -13,7 +13,7 @@ export interface SnapshotRecord {
 }
 
 /**
- * Abstract storage backend interface for persisting sandbox state
+ * Abstract storage backend interface for persisting workspace state
  */
 export interface StorageBackend {
   copy(source: string, dest: string): Promise<void>;
@@ -33,26 +33,26 @@ export interface SyncResult {
 }
 
 /**
- * Sandbox identifier
+ * Workspace identifier
  */
-export interface SandboxId {
+export interface WorkspaceId {
   projectId: string;
   branchId: string;
 }
 
 /**
- * Sandbox initialization options
+ * Workspace initialization options
  */
-export interface SandboxInitOptions {
+export interface WorkspaceInitOptions {
   projectId: string;
   branchId: string;
   forkedFromSnapshotId?: string;
 }
 
 /**
- * Sandbox state after initialization
+ * Workspace state after initialization
  */
-export interface SandboxState {
+export interface WorkspaceState {
   branchDir: string;
   status: "created" | "reused" | "forked";
 }

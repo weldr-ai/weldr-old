@@ -8,7 +8,7 @@ import { nanoid } from "@weldr/shared/nanoid";
 import type { DeclarationCodeMetadata } from "@weldr/shared/types/declarations";
 
 import { extractDeclarations } from "@/core/project/declarations/extractor";
-import type { SessionContext } from "@/session";
+import type { ExecutionContext } from "@/session";
 import { queueEnrichingJob } from "./enriching-jobs";
 
 /**
@@ -381,7 +381,7 @@ export async function extractAndSaveDeclarations({
   sourceCode,
   branchId,
 }: {
-  context: SessionContext;
+  context: ExecutionContext;
   filePath: string;
   sourceCode: string;
   branchId: string;

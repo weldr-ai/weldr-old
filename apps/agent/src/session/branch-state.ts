@@ -1,17 +1,17 @@
 import { Logger } from "@weldr/shared/logger";
 
 import { Git } from "@/core/git";
-import { createSnapshotService, syncFromCloud } from "@/core/sandbox";
-import { initSession, sessionExists } from "@/core/sandbox/exec";
+import { createSnapshotService, syncFromCloud } from "@/core/workspace";
+import { initWorkspace, workspaceExists } from "@/core/workspace/exec";
 
 /**
- * Ensure agentfs session exists for a snapshot.
+ * Ensure agentfs workspace exists for a snapshot.
  * Each snapshot has its own isolated DB file.
  *
  * - Files are stored in the AgentFS SQLite database (~/.weldr/db/{snapshotId}.db)
  * - All commands run through just-bash with the AgentFS virtual filesystem
  */
-export async function ensureSnapshotSession(
+export async function ensureSnapshotWorkspace(
   snapshotId: string,
   projectId: string,
   parentSnapshotId?: string | null,
@@ -20,13 +20,13 @@ export async function ensureSnapshotSession(
 }> {
   const logger = Logger.get({ snapshotId, projectId });
 
-  logger.info("Ensuring agentfs session exists for snapshot");
+  logger.info("Ensuring agentfs workspace exists for snapshot");
 
-  // Check if agentfs session already exists locally
-  const hasSession = sessionExists(snapshotId);
+  // Check if agentfs workspace already exists locally
+  const hasSession = workspaceExists(snapshotId);
 
   if (hasSession) {
-    logger.info("AgentFS session already exists", { extra: { snapshotId } });
+    logger.info("AgentFS workspace already exists", { extra: { snapshotId } });
 
     // Sync from cloud to get latest state
     const syncResult = await syncFromCloud(snapshotId, projectId);
@@ -47,20 +47,20 @@ export async function ensureSnapshotSession(
     return await createSnapshotFromParent(projectId, snapshotId, parentSnapshotId);
   }
 
-  logger.info("Initializing new snapshot session");
+  logger.info("Initializing new snapshot workspace");
 
   // Try to sync from cloud first (in case session exists in cloud but not locally)
   const syncResult = await syncFromCloud(snapshotId, projectId);
 
   if (syncResult.skipped || !syncResult.success) {
     if (!syncResult.success) {
-      logger.warn("Failed to sync from cloud, initializing empty session");
+      logger.warn("Failed to sync from cloud, initializing empty workspace");
     }
-    // Initialize a new agentfs session
+    // Initialize a new agentfs workspace
     try {
-      await initSession(snapshotId);
+      await initWorkspace(snapshotId);
     } catch (error) {
-      logger.error("Failed to initialize agentfs session", {
+      logger.error("Failed to initialize agentfs workspace", {
         error: error instanceof Error ? error.message : String(error),
       });
     }
@@ -114,21 +114,21 @@ async function createSnapshotFromParent(
 
       logger.info("Snapshot created from parent successfully");
     } else {
-      logger.info("Parent snapshot not found in cloud, initializing empty session");
-      await initSession(snapshotId);
+      logger.info("Parent snapshot not found in cloud, initializing empty workspace");
+      await initWorkspace(snapshotId);
     }
   } catch (error) {
-    logger.warn("Failed to copy from parent snapshot, initializing empty session", {
+    logger.warn("Failed to copy from parent snapshot, initializing empty workspace", {
       extra: {
         error: error instanceof Error ? error.message : String(error),
       },
     });
 
-    // Initialize a new agentfs session as fallback
+    // Initialize a new agentfs workspace as fallback
     try {
-      await initSession(snapshotId);
+      await initWorkspace(snapshotId);
     } catch (initError) {
-      logger.error("Failed to initialize agentfs session", {
+      logger.error("Failed to initialize agentfs workspace", {
         error: initError instanceof Error ? initError.message : String(initError),
       });
     }

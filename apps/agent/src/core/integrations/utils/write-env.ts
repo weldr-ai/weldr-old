@@ -16,8 +16,8 @@ import { secrets } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 import type { Integration } from "@weldr/shared/types";
 
-import { getOrCreateSession } from "@/core/sandbox/just-bash/session";
-import type { SessionContext } from "@/session";
+import { getOrCreateWorkspace } from "@/core/workspace/just-bash/session";
+import type { ExecutionContext } from "@/session";
 
 /**
  * Parse a .env file content into a Map
@@ -64,7 +64,7 @@ async function writeEnvToTarget({
   Logger.info(`Writing ${envVars.length} environment variables to ${target}/.env`);
 
   // Get or create session for filesystem operations
-  const session = await getOrCreateSession({
+  const session = await getOrCreateWorkspace({
     projectId,
     snapshotId,
   });
@@ -167,7 +167,7 @@ export async function writeEnvironmentVariables({
   context,
   integration,
 }: {
-  context: SessionContext;
+  context: ExecutionContext;
   integration: Integration;
 }): Promise<void> {
   const project = context.project;

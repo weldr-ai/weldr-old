@@ -12,7 +12,7 @@ export type {
 } from "./persistence";
 export * from "./project";
 export * from "./integrations";
-export * from "./sandbox";
+export * from "./workspace";
 export * from "./git";
 export * from "./stream";
 export * from "./utils";

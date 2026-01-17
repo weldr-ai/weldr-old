@@ -2,7 +2,7 @@ import { Logger } from "@weldr/shared/logger";
 import type { Integration, IntegrationKey } from "@weldr/shared/types";
 
 import { isLocalMode } from "@/core/utils/mode";
-import type { SessionContext } from "@/session";
+import type { ExecutionContext } from "@/session";
 import type { ExtractOptionsForKey, IntegrationDefinition } from "../types";
 import { combineResults } from "./combine-results";
 import { seedDeclarationTemplates } from "./declaration-templates-utils";
@@ -18,7 +18,7 @@ export function defineIntegration<K extends IntegrationKey>(
       context,
       integration,
     }: {
-      context: SessionContext;
+      context: ExecutionContext;
       integration: Integration;
     }) => {
       try {

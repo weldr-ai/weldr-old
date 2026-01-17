@@ -9,7 +9,7 @@ import { getInstalledCategories } from "@/core/integrations/utils/get-installed-
 import { installQueuedIntegrations } from "@/core/integrations/utils/queue-installer";
 import { processIntegrationQueue } from "@/core/integrations/utils/queue-manager";
 import { createRouter } from "@/http/utils";
-import type { SessionContext } from "@/session";
+import { type ExecutionContext } from "@/session";
 
 const route = createRoute({
   method: "post",
@@ -121,7 +121,7 @@ router.openapi(route, async (c) => {
 
     const installedCategories = await getInstalledCategories(branch.snapshot.id);
 
-    const sessionContext: SessionContext = {
+    const sessionContext: ExecutionContext = {
       project: {
         ...project,
         integrationCategories: new Set(installedCategories),
@@ -150,6 +150,7 @@ router.openapi(route, async (c) => {
       );
     }
 
+    // FIXME: this is a HUGE problem here is whole thing does not work now
     if (triggerWorkflow) {
       // Note: triggerWorkflow requires a chatId to create a session
       // This route currently doesn't have chatId context, so we skip session creation

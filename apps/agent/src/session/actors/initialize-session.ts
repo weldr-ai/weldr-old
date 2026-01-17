@@ -12,7 +12,7 @@ import {
   spawnAgentsTool,
 } from "@/ai/tools";
 import { stream } from "@/core/stream";
-import { ensureSnapshotSession } from "@/session/branch-state";
+import { ensureSnapshotWorkspace } from "@/session/branch-state";
 import type { SessionMachineContext } from "@/session/types";
 
 const buildToolSet = async (context: SessionMachineContext): Promise<ToolSet> => {
@@ -55,11 +55,11 @@ export const initializeSessionActor = fromPromise<
     actor: "session-machine",
   });
 
-  logger.info("Initializing session - ensuring agentfs session exists");
+  logger.info("Initializing session - ensuring agentfs workspace exists");
 
-  const result = await ensureSnapshotSession(snapshotId, project.id);
+  const result = await ensureSnapshotWorkspace(snapshotId, project.id);
 
-  logger.info("AgentFS session ready", { extra: { status: result.status } });
+  logger.info("AgentFS workspace ready", { extra: { status: result.status } });
 
   await stream(chatId, {
     type: "status",

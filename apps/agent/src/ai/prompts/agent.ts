@@ -144,7 +144,7 @@ ${projectContext}
   - Helpful for finding all files that need to be updated
 
 **Bash (Primary tool for all file operations):**
-- **\`bash\`**: Execute any bash command in the project's sandboxed environment
+- **\`bash\`**: Execute any bash command in the project's workspace environment
   - Full bash support with pipes, redirections, variables, and command chaining
   - Use for reading files, writing files, searching, navigating, and any shell operation
 

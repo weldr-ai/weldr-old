@@ -8,9 +8,9 @@ import { build } from "@/core/build";
 import { Git } from "@/core/git";
 import { persistSessionMetrics } from "@/core/metrics";
 import { extractDeclarationsFromProject } from "@/core/project/declarations";
-import { syncToCloud } from "@/core/sandbox";
 import { stream } from "@/core/stream";
 import { isCloudMode } from "@/core/utils";
+import { syncToCloud } from "@/core/workspace";
 import type { SessionMachineContext } from "@/session/types";
 
 type FinalizeResult = {

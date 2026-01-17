@@ -20,11 +20,11 @@ import {
 import { createToolTracker, type ToolTracker } from "../../persistence/tool-tracker";
 import { createBunCommand, createGitCommand } from "./commands";
 
-// Sandbox session storage
-const sessions = new Map<string, SandboxSession>();
+// Workspace storage - keyed by snapshotId for snapshot-based isolation
+const workspaces = new Map<string, WorkspaceSession>();
 
 /**
- * Sandbox session with AgentFS backing.
+ * Workspace with AgentFS backing.
  *
  * Provides:
  * - Virtual filesystem with 80+ bash commands (cat, ls, grep, etc.)
@@ -33,7 +33,7 @@ const sessions = new Map<string, SandboxSession>();
  * - Tool call tracking
  * - Metrics collection
  */
-export interface SandboxSession {
+export interface WorkspaceSession {
   snapshotId: string;
   projectId: string;
   agent: AgentFS;
@@ -44,27 +44,27 @@ export interface SandboxSession {
   toolTracker: ToolTracker;
 }
 
-export interface CreateSessionOptions {
+export interface CreateWorkspaceOptions {
   snapshotId: string;
   projectId: string;
   workdir?: string;
 }
 
 /**
- * Create a new sandbox session with AgentFS backing
+ * Create a new workspace with AgentFS backing
  */
-export async function createSession(options: CreateSessionOptions): Promise<SandboxSession> {
+export async function createWorkspace(options: CreateWorkspaceOptions): Promise<WorkspaceSession> {
   const { snapshotId, projectId, workdir = "/home/user/project" } = options;
-  const logger = Logger.get({ component: "sandbox-session", snapshotId });
+  const logger = Logger.get({ component: "workspace", snapshotId });
 
-  // Check if session already exists
-  const existing = sessions.get(snapshotId);
+  // Check if session already exists (keyed by snapshotId for snapshot-based isolation)
+  const existing = workspaces.get(snapshotId);
   if (existing) {
-    logger.debug("Reusing existing sandbox session");
+    logger.debug("Reusing existing workspace");
     return existing;
   }
 
-  logger.info("Creating new sandbox session");
+  logger.info("Creating new workspace");
 
   // Ensure db directory exists and open AgentFS database
   const dbDir = path.join(os.homedir(), ".weldr", "db");
@@ -106,7 +106,7 @@ export async function createSession(options: CreateSessionOptions): Promise<Sand
     destination: workdir,
   });
 
-  const session: SandboxSession = {
+  const session: WorkspaceSession = {
     snapshotId,
     projectId,
     agent,
@@ -117,32 +117,32 @@ export async function createSession(options: CreateSessionOptions): Promise<Sand
     toolTracker,
   };
 
-  sessions.set(snapshotId, session);
-  logger.info("Sandbox session created successfully");
+  workspaces.set(snapshotId, session);
+  logger.info("Workspace created successfully");
 
   return session;
 }
 
 /**
- * Get an existing sandbox session by snapshotId
+ * Get an existing workspace by snapshotId
  */
-export function getSession(snapshotId: string): SandboxSession | undefined {
-  return sessions.get(snapshotId);
+export function getWorkspace(snapshotId: string): WorkspaceSession | undefined {
+  return workspaces.get(snapshotId);
 }
 
 /**
- * Close a sandbox session and cleanup resources
+ * Close a workspace and cleanup resources
  */
-export async function closeSession(snapshotId: string): Promise<void> {
-  const logger = Logger.get({ component: "sandbox-session", snapshotId });
-  const session = sessions.get(snapshotId);
+export async function closeWorkspace(snapshotId: string): Promise<void> {
+  const logger = Logger.get({ component: "workspace", snapshotId });
+  const session = workspaces.get(snapshotId);
 
   if (!session) {
-    logger.debug("No sandbox session to close");
+    logger.debug("No workspace to close");
     return;
   }
 
-  logger.info("Closing sandbox session");
+  logger.info("Closing workspace");
 
   try {
     await session.agent.close();
@@ -150,17 +150,19 @@ export async function closeSession(snapshotId: string): Promise<void> {
     logger.error("Error closing AgentFS", { error: String(error) });
   }
 
-  sessions.delete(snapshotId);
-  logger.info("Sandbox session closed");
+  workspaces.delete(snapshotId);
+  logger.info("Workspace closed");
 }
 
 /**
- * Get or create a sandbox session
+ * Get or create a workspace
  */
-export async function getOrCreateSession(options: CreateSessionOptions): Promise<SandboxSession> {
-  const existing = getSession(options.snapshotId);
+export async function getOrCreateWorkspace(
+  options: CreateWorkspaceOptions,
+): Promise<WorkspaceSession> {
+  const existing = getWorkspace(options.snapshotId);
   if (existing) {
     return existing;
   }
-  return createSession(options);
+  return createWorkspace(options);
 }

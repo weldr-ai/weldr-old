@@ -1,6 +1,6 @@
 import type { Integration, IntegrationCategoryKey, IntegrationKey } from "@weldr/shared/types";
 
-import type { SessionContext } from "@/session";
+import type { ExecutionContext } from "@/session";
 import { authenticationIntegrationCategory } from "../authentication";
 import { backendIntegrationCategory } from "../backend";
 import { databaseIntegrationCategory } from "../database";
@@ -56,7 +56,7 @@ class IntegrationRegistry {
     context,
   }: {
     integration: Integration;
-    context: SessionContext;
+    context: ExecutionContext;
   }): Promise<void> {
     const integrationDefinition = this.getIntegration(integration.key);
 

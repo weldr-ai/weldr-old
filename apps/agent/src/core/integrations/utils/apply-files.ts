@@ -8,8 +8,8 @@ import { Logger } from "@weldr/shared/logger";
 import type { Integration, IntegrationCategoryKey } from "@weldr/shared/types";
 
 import { applyEdit } from "@/ai/utils/apply-edit";
-import { getOrCreateSession } from "@/core/sandbox/just-bash/session";
-import type { SessionContext } from "@/session";
+import { getOrCreateWorkspace } from "@/core/workspace/just-bash/session";
+import type { ExecutionContext } from "@/session";
 import type { FileItem } from "../types";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,7 +21,7 @@ export async function applyFiles({
   categoryKey,
 }: {
   integration: Integration;
-  context: SessionContext;
+  context: ExecutionContext;
   categoryKey: IntegrationCategoryKey;
 }): Promise<void> {
   const branch = context.branch;
@@ -42,7 +42,7 @@ export async function applyFiles({
 
   logger.info(`Generated ${files.length} files for integration ${integration.key}`);
 
-  const session = await getOrCreateSession({
+  const session = await getOrCreateWorkspace({
     projectId: integration.projectId,
     snapshotId,
   });
@@ -107,7 +107,7 @@ async function generateFiles({
   categoryKey,
 }: {
   integration: Integration;
-  context: SessionContext;
+  context: ExecutionContext;
   categoryKey: IntegrationCategoryKey;
 }): Promise<FileItem[]> {
   const project = context.project;

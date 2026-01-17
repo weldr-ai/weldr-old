@@ -1,4 +1,4 @@
-import { getOrCreateSession } from "@/core/sandbox/just-bash/session";
+import { getOrCreateWorkspace } from "@/core/workspace/just-bash/session";
 
 function resolveRelativePath(currentFilePath: string, importPath: string): string {
   // Pure string-based path resolution without filesystem dependencies
@@ -57,7 +57,7 @@ export async function resolveFilePath(
   snapshotId: string,
   basePath: string,
 ): Promise<string | null> {
-  const session = await getOrCreateSession({ projectId, snapshotId });
+  const session = await getOrCreateWorkspace({ projectId, snapshotId });
   const hasExtension = /\.[^/.]+$/.test(basePath);
 
   // Ensure path starts with / for agentfs

@@ -3,10 +3,10 @@ import { integrationInstallations } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 import type { Integration, IntegrationInstallationStatus } from "@weldr/shared/types";
 
-import type { SessionContext } from "@/session";
+import type { ExecutionContext } from "@/session";
 import { integrationRegistry } from "./registry";
 
-export async function processIntegrationQueue(context: SessionContext): Promise<void> {
+export async function processIntegrationQueue(context: ExecutionContext): Promise<void> {
   const project = context.project;
   const branch = context.branch;
   const snapshotId = branch.snapshotId;
@@ -103,7 +103,7 @@ export async function processIntegrationQueue(context: SessionContext): Promise<
   logger.info("Queue processing completed");
 }
 
-export async function unblockIntegrations(context: SessionContext): Promise<void> {
+export async function unblockIntegrations(context: ExecutionContext): Promise<void> {
   const project = context.project;
   const branch = context.branch;
   const snapshotId = branch.snapshotId;
@@ -159,7 +159,7 @@ export async function unblockIntegrations(context: SessionContext): Promise<void
   }
 }
 
-export async function getQueuedIntegrations(context: SessionContext): Promise<Integration[]> {
+export async function getQueuedIntegrations(context: ExecutionContext): Promise<Integration[]> {
   const branch = context.branch;
   const snapshotId = branch.snapshotId;
 

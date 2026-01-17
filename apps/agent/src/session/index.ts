@@ -1,14 +1,14 @@
 export {
   createAgentInput,
-  createSessionContext,
+  createExecutionContext,
   createSessionInput,
-  updateSessionContext,
+  updateExecutionContext,
 } from "./context";
 export { sessionMachine } from "./machine";
 export { recoverSessions } from "./recovery";
 export { sessionRegistry, type SessionRegistryEntry, type GetOrCreateOptions } from "./registry";
 
-export type { AgentMachineInput, Branch, Project, SessionContext, User } from "./context";
+export type { AgentMachineInput, Branch, ExecutionContext, Project, User } from "./context";
 export type { SessionMachine, SessionSnapshot } from "./machine";
 export type {
   AgentConfig,
