@@ -29,13 +29,16 @@ function CommandDialog({
   title = "Command Palette",
   description = "Search for a command to run...",
   children,
-  className,
+  dialogClassName,
+  commandClassName,
   showCloseButton = false,
   ...props
 }: Omit<React.ComponentProps<typeof Dialog>, "children"> & {
   title?: string;
   description?: string;
   className?: string;
+  dialogClassName?: string;
+  commandClassName?: string;
   showCloseButton?: boolean;
   children: React.ReactNode;
 }) {
@@ -46,10 +49,17 @@ function CommandDialog({
         <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
       <DialogContent
-        className={cn("overflow-hidden rounded-xl! p-0", className)}
+        className={cn("overflow-hidden rounded-xl! p-0", dialogClassName)}
         showCloseButton={showCloseButton}
       >
-        {children}
+        <Command
+          className={cn(
+            "**:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground **:[[cmdk-group]]:px-2 **:[[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 **:[[cmdk-input-wrapper]_svg]:size-5 **:[[cmdk-input]]:h-12 **:[[cmdk-item]_svg]:size-5 **:[[cmdk-item]]:px-2 **:[[cmdk-item]]:py-3",
+            commandClassName,
+          )}
+        >
+          {children}
+        </Command>
       </DialogContent>
     </Dialog>
   );

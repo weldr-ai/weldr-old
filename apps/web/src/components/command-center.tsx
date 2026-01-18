@@ -53,8 +53,8 @@ export function CommandCenter({ session }: { session: Session | null }) {
     <CommandDialog
       open={commandCenterOpen}
       onOpenChange={setCommandCenterOpen}
-      // dialogClassName="min-h-[600px] min-w-[896px] max-w-4xl"
-      // commandClassName="size-full [&_[cmdk-group-heading]]:px-0 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-0"
+      dialogClassName="min-h-[600px] min-w-[896px] max-w-4xl"
+      commandClassName="size-full [&_[cmdk-group-heading]]:px-0 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-0"
     >
       <CommandCenterContent view={commandCenterView} session={session} />
     </CommandDialog>
