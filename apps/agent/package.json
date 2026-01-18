@@ -29,7 +29,6 @@
     "just-bash": "^2.5.2",
     "openai": "^5.5.1",
     "pluralize": "^8.0.0",
-    "redis": "^5.5.5",
     "xstate": "^5",
     "zod": "^4.3.5"
   },

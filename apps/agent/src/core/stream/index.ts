@@ -1,4 +1,3 @@
-// Durable Streams - reliable streaming implementation
 export {
   appendToStream,
   buildStreamPath,
@@ -14,6 +13,3 @@ export {
   stream,
   unregisterChatContext,
 } from "./durable";
-
-// Legacy Redis-based streaming (deprecated, kept for graceful shutdown only)
-export { closeRedisConnections } from "./utils";

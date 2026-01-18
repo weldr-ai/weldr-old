@@ -86,7 +86,6 @@ Weldr is a chat-native AI coding platform. You talk; agents produce a working co
 - Node.js >= 22
 - bun >= 10.20.0
 - PostgreSQL
-- Redis
 - Docker (for MinIO local storage)
 - Git
 
@@ -132,9 +131,6 @@ S3_REGION=us-east-1
 
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/weldr
-
-# Redis
-REDIS_URL=redis://localhost:6379
 
 # Authentication
 BETTER_AUTH_SECRET=your-secret-key

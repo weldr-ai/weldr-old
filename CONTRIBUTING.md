@@ -9,7 +9,6 @@ Thank you for your interest in contributing to Weldr! This document provides gui
 - Node.js >= 22
 - bun >= 10.20.0
 - PostgreSQL
-- Redis
 - Git
 
 ### Development Setup
@@ -36,9 +35,6 @@ Create a `.env` file in the root directory with the following variables:
 ```env
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/weldr
-
-# Redis
-REDIS_URL=redis://localhost:6379
 
 # Authentication
 BETTER_AUTH_SECRET=your-secret-key
