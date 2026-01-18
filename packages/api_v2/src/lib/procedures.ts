@@ -1,7 +1,10 @@
 import { useAuth } from "@/middlewares/auth";
+import { retry } from "@/middlewares/retry";
 import { useSentry } from "@/middlewares/sentry";
 import { base } from "./context";
 
-export const publicProcedure = base.use(useSentry);
+const _base = base.use(retry({ times: 3 })).use(useSentry);
 
-export const protectedProcedure = base.use(useAuth);
+export const publicProcedure = _base;
+
+export const protectedProcedure = _base.use(useAuth);
