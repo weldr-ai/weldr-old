@@ -20,8 +20,8 @@ export function UpgradeButton({
       onClick={async () =>
         await authClient.subscription.upgrade({
           plan: "pro",
-          successUrl: "/",
-          cancelUrl: "/billing",
+          successUrl: import.meta.env.VITE_WEB_URL,
+          cancelUrl: import.meta.env.VITE_WEB_URL + "/billing",
           fetchOptions: {
             onError: (_: unknown) => {
               toast.error("Error upgrading subscription", {
