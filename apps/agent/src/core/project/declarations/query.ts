@@ -1,6 +1,4 @@
-import { inArray } from "drizzle-orm";
-
-import { and, db, eq } from "@weldr/db";
+import { and, db, eq, inArray } from "@weldr/db";
 import { declarations, dependencies, snapshotDeclarations } from "@weldr/db/schema";
 import { mergeJson } from "@weldr/db/utils";
 import { Logger } from "@weldr/shared/logger";

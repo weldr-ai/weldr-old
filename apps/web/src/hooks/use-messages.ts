@@ -1,19 +1,13 @@
 import { useEffect, useState } from "react";
 
+import type { Session } from "@weldr/auth";
 import { nanoid } from "@weldr/shared/nanoid";
 import type { Attachment, ChatMessage, UserMessage } from "@weldr/shared/types";
 
 interface UseMessagesOptions {
   initialMessages: ChatMessage[];
   chatId: string;
-  session: {
-    user: {
-      id: string;
-      name: string;
-      email: string;
-      image?: string | null;
-    };
-  } | null;
+  session: Session | null;
 }
 
 export function useMessages({ initialMessages, chatId, session }: UseMessagesOptions) {

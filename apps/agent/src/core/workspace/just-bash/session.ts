@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { AgentFS } from "agentfs-sdk";
 import { agentfs } from "agentfs-sdk/just-bash";
-import { createBashTool } from "bash-tool";
+import { createBashTool, type BashToolkit } from "bash-tool";
 import { Bash } from "just-bash";
 
 import { Logger } from "@weldr/shared/logger";
@@ -12,12 +12,12 @@ import { Logger } from "@weldr/shared/logger";
 import {
   type AgentFSMetricsCollector,
   createAgentFSMetricsCollector,
-} from "../../metrics/agentfs-collector";
+} from "@/core/metrics/agentfs-collector";
 import {
   createAgentFSStorage,
   type AgentFSSessionStorage,
-} from "../../persistence/agentfs-storage";
-import { createToolTracker, type ToolTracker } from "../../persistence/tool-tracker";
+} from "@/core/persistence/agentfs-storage";
+import { createToolTracker, type ToolTracker } from "@/core/persistence/tool-tracker";
 import { createBunCommand, createGitCommand } from "./commands";
 
 // Workspace storage - keyed by snapshotId for snapshot-based isolation
@@ -38,7 +38,7 @@ export interface WorkspaceSession {
   projectId: string;
   agent: AgentFS;
   bash: Bash;
-  tools: Awaited<ReturnType<typeof createBashTool>>["tools"];
+  tools: BashToolkit;
   storage: AgentFSSessionStorage;
   metrics: AgentFSMetricsCollector;
   toolTracker: ToolTracker;
@@ -54,7 +54,7 @@ export interface CreateWorkspaceOptions {
  * Create a new workspace with AgentFS backing
  */
 export async function createWorkspace(options: CreateWorkspaceOptions): Promise<WorkspaceSession> {
-  const { snapshotId, projectId, workdir = "/home/user/project" } = options;
+  const { snapshotId, projectId, workdir = "/workspace" } = options;
   const logger = Logger.get({ component: "workspace", snapshotId });
 
   // Check if session already exists (keyed by snapshotId for snapshot-based isolation)
@@ -111,7 +111,7 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
     projectId,
     agent,
     bash,
-    tools: bashToolkit.tools,
+    tools: bashToolkit,
     storage,
     metrics,
     toolTracker,

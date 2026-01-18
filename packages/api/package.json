@@ -19,6 +19,7 @@
     "@orpc/server": "^1.13.4",
     "@orpc/zod": "^1.13.4",
     "@sentry/bun": "^10.34.0",
+    "@tigrisdata/storage": "^2.10.2",
     "@weldr/auth": "workspace:*",
     "@weldr/db": "workspace:*",
     "@weldr/shared": "workspace:*",

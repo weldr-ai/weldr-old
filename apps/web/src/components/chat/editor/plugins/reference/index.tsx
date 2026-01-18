@@ -1,5 +1,3 @@
-"use client";
-
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   LexicalTypeaheadMenuPlugin,
@@ -164,7 +162,7 @@ export function ReferencesPlugin({
                     <div
                       id={`menu-item-${i}`}
                       className={cn(
-                        "flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-xs outline-none transition-colors focus:bg-accent focus:text-accent-foreground",
+                        "flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-xs transition-colors outline-none select-none focus:bg-accent focus:text-accent-foreground",
                         {
                           "bg-accent": selectedIndex === i,
                         },

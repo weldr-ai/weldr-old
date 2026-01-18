@@ -7,7 +7,7 @@ export async function callAgentProxy<T = unknown>(
   body: { projectId: string } & Record<string, unknown>,
   requestHeaders?: Headers,
 ): Promise<T> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl = process.env.WEB_APP_URL || "http://localhost:3000";
   const proxyUrl = `${baseUrl}/api/proxy`;
 
   const proxyHeaders = new Headers();

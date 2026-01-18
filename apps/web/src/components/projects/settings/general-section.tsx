@@ -1,13 +1,12 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { DownloadIcon, LoaderIcon, TrashIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import type { z } from "zod";
+import { toast } from "sonner";
+import { z } from "zod";
 
 import type { RouterOutputs } from "@weldr/api";
-import { updateProjectSchema } from "@weldr/shared/validators/projects";
 import { Button } from "@weldr/ui/components/button";
 import {
   Card,
@@ -16,22 +15,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@weldr/ui/components/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@weldr/ui/components/form";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@weldr/ui/components/field";
 import { Input } from "@weldr/ui/components/input";
-import { toast } from "@weldr/ui/hooks/use-toast";
 
 import { DeleteAlertDialog } from "@/components/delete-alert-dialog";
-import { orpc } from "@/lib/orpc/client";
+import { orpc } from "@/lib/orpc";
 
 export function GeneralSection({ project }: { project: RouterOutputs["projects"]["get"] }) {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const queryClient = useQueryClient();
@@ -44,12 +35,7 @@ export function GeneralSection({ project }: { project: RouterOutputs["projects"]
         });
       },
       onError: (error) => {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-          duration: 2000,
-        });
+        toast.error(error.message);
       },
     }),
   );
@@ -57,43 +43,60 @@ export function GeneralSection({ project }: { project: RouterOutputs["projects"]
   const deleteProject = useMutation(
     orpc.projects.delete.mutationOptions({
       onSuccess: () => {
-        router.push("/");
+        navigate({ to: "/" });
       },
       onError: (error) => {
-        toast({
-          title: "Error",
-          description: error.message,
-        });
+        toast.error(error.message);
       },
     }),
   );
 
-  const form = useForm<z.infer<typeof updateProjectSchema>>({
-    mode: "onChange",
-    resolver: zodResolver(updateProjectSchema),
+  const form = useForm({
     defaultValues: {
       where: {
         id: project.id,
       },
       payload: {
         title: project.title ?? "",
-        subdomain: project.subdomain,
+        subdomain: project.subdomain ?? "",
       },
     },
+    validators: {
+      onChange: z.object({
+        where: z.object({
+          id: z.string(),
+        }),
+        payload: z.object({
+          title: z.string(),
+          subdomain: z
+            .string()
+            .min(1, { message: "Subdomain is required" })
+            .regex(/^[a-z0-9-]+$/, {
+              message: "Must contain only lowercase letters, numbers, and hyphens",
+            }),
+        }),
+      }),
+    },
+    onSubmit: async ({ value }) => {
+      const normalizedValue = {
+        ...value,
+        payload: {
+          ...value.payload,
+          title: value.payload.title?.replace(/\s+/g, " ").trim(),
+        },
+      };
+      const result = await updateProject.mutateAsync(normalizedValue);
+      form.reset({
+        where: {
+          id: result.id,
+        },
+        payload: {
+          title: result.title ?? "",
+          subdomain: result.subdomain ?? "",
+        },
+      });
+    },
   });
-
-  async function onSubmit(data: z.infer<typeof updateProjectSchema>) {
-    const result = await updateProject.mutateAsync(data);
-    form.reset({
-      where: {
-        id: result.id,
-      },
-      payload: {
-        title: result.title ?? "",
-        subdomain: result.subdomain,
-      },
-    });
-  }
 
   return (
     <Card>
@@ -108,60 +111,78 @@ export function GeneralSection({ project }: { project: RouterOutputs["projects"]
         <div className="flex flex-col gap-2 rounded-lg border p-4">
           <div className="flex flex-col">
             <h3 className="font-medium">General</h3>
-            <p className="text-muted-foreground text-sm">General project settings</p>
+            <p className="text-sm text-muted-foreground">General project settings</p>
           </div>
-          <Form {...form}>
-            <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-              <FormField
-                control={form.control}
-                name="payload.title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Enter name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="payload.subdomain"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subdomain</FormLabel>
-                    <FormControl>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              form.handleSubmit();
+            }}
+          >
+            <FieldGroup>
+              <form.Field name="payload.title">
+                {(field) => {
+                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  return (
+                    <Field data-invalid={isInvalid}>
+                      <FieldLabel htmlFor={field.name}>Project Name</FieldLabel>
+                      <Input
+                        id={field.name}
+                        name={field.name}
+                        placeholder="Enter name"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        aria-invalid={isInvalid}
+                      />
+                      {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                    </Field>
+                  );
+                }}
+              </form.Field>
+              <form.Field name="payload.subdomain">
+                {(field) => {
+                  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+                  return (
+                    <Field data-invalid={isInvalid}>
+                      <FieldLabel htmlFor={field.name}>Subdomain</FieldLabel>
                       <div className="relative">
-                        <Input placeholder="Enter subdomain" {...field} />
-                        <span className="absolute top-[9px] right-2.5 text-muted-foreground text-xs">
+                        <Input
+                          id={field.name}
+                          name={field.name}
+                          placeholder="Enter subdomain"
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          aria-invalid={isInvalid}
+                        />
+                        <span className="absolute top-[9px] right-2.5 text-xs text-muted-foreground">
                           .weldr.app
                         </span>
                       </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={
-                    updateProject.isPending || !form.formState.isValid || !form.formState.isDirty
-                  }
-                >
-                  {updateProject.isPending && <LoaderIcon className="mr-2 size-3.5 animate-spin" />}
-                  Update
-                </Button>
-              </div>
-            </form>
-          </Form>
+                      {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                    </Field>
+                  );
+                }}
+              </form.Field>
+            </FieldGroup>
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={updateProject.isPending || !form.state.isFormValid || !form.state.isDirty}
+              >
+                {updateProject.isPending && <LoaderIcon className="mr-2 size-3.5 animate-spin" />}
+                Update
+              </Button>
+            </div>
+          </form>
         </div>
         <div className="flex items-center justify-between gap-2 rounded-lg border p-4">
           <div className="flex flex-col">
             <h3 className="font-medium">Download Project</h3>
-            <p className="text-muted-foreground text-sm">Download your project code.</p>
+            <p className="text-sm text-muted-foreground">Download your project code.</p>
           </div>
           {/* FIXME: Implement download */}
           <Button size="sm" variant="outline">
@@ -172,7 +193,7 @@ export function GeneralSection({ project }: { project: RouterOutputs["projects"]
         <div className="flex items-center justify-between gap-2 rounded-lg border p-4">
           <div className="flex flex-col">
             <h3 className="font-medium">Delete Project</h3>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-muted-foreground">
               Permanently delete your project and all associated data.
             </p>
           </div>

@@ -37,8 +37,6 @@ function Button({
 ### Radix Component Wrapping
 
 ```typescript
-"use client";
-
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 
 // Wrap Radix primitives with proper typing
@@ -101,7 +99,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 const buttonVariants = cva(
   // Base styles
-  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
@@ -276,17 +274,6 @@ export function GithubIcon({
 }
 ```
 
-### Icon Export Pattern
-
-```typescript
-// src/icons/index.ts
-export { GithubIcon } from "./github-icon";
-export { GoogleIcon } from "./google-icon";
-export { LogoIcon } from "./logo-icon";
-export { TypescriptIcon } from "./typescript-icon";
-// ... all icons exported from barrel file
-```
-
 ## Hooks
 
 ### useIsMobile
@@ -345,7 +332,7 @@ import { Dialog, DialogContent } from "@weldr/ui/components/dialog";
 import { useIsMobile } from "@weldr/ui/hooks/use-mobile";
 
 // Icons
-import { GithubIcon, LogoIcon } from "@weldr/ui/icons";
+import { GithubIcon, WeldrIcon } from "@weldr/ui/icons";
 
 // Utilities
 import { cn } from "@weldr/ui/lib/utils";
@@ -402,7 +389,7 @@ tooltip, tree-view, visually-hidden
 
 Brand icons (GitHub, Google, Slack, Discord, Linear, etc.),
 Technology icons (TypeScript, JavaScript, Tailwind, Postgres),
-Custom icons (LogoIcon, GradientSparklesIcon, etc.)
+Custom icons (GradientSparklesIcon, etc.)
 
 ## Dependencies
 
@@ -425,7 +412,7 @@ Custom icons (LogoIcon, GradientSparklesIcon, etc.)
 
 - `sonner` - Toast notifications
 - `recharts` - Charts
-- `next-themes` - Theme switching
+- `better-themes` - Theme switching
 - `embla-carousel-react` - Carousel utilities
 - `input-otp` - OTP inputs
 - `react-resizable-panels` - Resizable layout panels

@@ -636,7 +636,6 @@ async function runDemoTests(): Promise<void> {
   const session = await createWorkspace({
     projectId,
     snapshotId,
-    workdir: "/home/user/project",
   });
 
   const ctx: TestContext = {

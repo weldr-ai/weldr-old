@@ -15,7 +15,6 @@ const envSchema = z.object({
   OTEL_SERVICE_NAME: z.string().default("weldr-server"),
   OTEL_SERVICE_VERSION: z.string().default("1.0.0"),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
-  CORS_HOST: z.string().default("http://localhost:3000"),
   API_URL: z.url().default("http://localhost:8080"),
   WEB_APP_URL: z.url().default("http://localhost:3000"),
 });

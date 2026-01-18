@@ -1,9 +1,8 @@
-"use client";
-
 import { useMutation } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { LoaderIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import type { Session } from "@weldr/auth";
 import { nanoid } from "@weldr/shared/nanoid";
@@ -16,10 +15,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@weldr/ui/components/dialog";
-import { toast } from "@weldr/ui/hooks/use-toast";
 
 import { useUIStore } from "@/lib/context/ui-store";
-import { orpc } from "@/lib/orpc/client";
+import { orpc } from "@/lib/orpc";
 import { MultimodalInput } from "../chat/multimodal-input/multimodal-input";
 
 const placeholders = [
@@ -48,8 +46,8 @@ const quickStartTemplates = [
 ];
 
 export function CreateProjectForm({ session }: { session: Session | null }) {
-  const router = useRouter();
-  const { setCommandCenterOpen } = useUIStore();
+  const navigate = useNavigate();
+  const { setCommandCenterOpen, setAuthDialogOpen } = useUIStore();
   const projectChatId = nanoid();
   const [loadingDialogOpen, setLoadingDialogOpen] = useState(false);
 
@@ -59,22 +57,13 @@ export function CreateProjectForm({ session }: { session: Session | null }) {
   const createProjectMutation = useMutation(
     orpc.projects.create.mutationOptions({
       onSuccess: async (data) => {
-        toast({
-          title: "Success",
-          description: "Project created successfully.",
-          duration: 2000,
-        });
+        toast.success("Project created successfully.");
         setCommandCenterOpen(false);
         setLoadingDialogOpen(false);
-        router.push(`/projects/${data.id}`);
+        navigate({ to: "/projects/$projectId", params: { projectId: data.id } });
       },
       onError: (error) => {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-          duration: 2000,
-        });
+        toast.error(error.message);
         setLoadingDialogOpen(false);
       },
     }),
@@ -82,7 +71,7 @@ export function CreateProjectForm({ session }: { session: Session | null }) {
 
   const handleSubmit = () => {
     if (!session) {
-      router.push("/auth/sign-in");
+      setAuthDialogOpen(true);
       return;
     }
 
@@ -104,11 +93,12 @@ export function CreateProjectForm({ session }: { session: Session | null }) {
     <>
       <div className="flex size-full flex-col items-center justify-center gap-10">
         <div className="flex flex-col items-center gap-2">
-          <div className="font-semibold text-3xl">What can I build for you today?</div>
+          <div className="text-3xl font-semibold">What can I build for you today?</div>
           <p className="text-muted-foreground">Turn your ideas into reality with Weldr.</p>
         </div>
         <div className="relative w-full max-w-3xl">
           <MultimodalInput
+            session={session}
             type="textarea"
             chatId={projectChatId}
             handleSubmit={handleSubmit}
@@ -135,16 +125,19 @@ export function CreateProjectForm({ session }: { session: Session | null }) {
           ))}
         </div>
       </div>
-      <Dialog open={loadingDialogOpen} onOpenChange={setLoadingDialogOpen}>
+      <Dialog
+        disablePointerDismissal={true}
+        open={loadingDialogOpen}
+        onOpenChange={setLoadingDialogOpen}
+      >
         <DialogContent
           className="w-[350px] items-center justify-center gap-4"
-          withCloseButton={false}
-          onInteractOutside={(e) => e.preventDefault()}
+          showCloseButton={false}
         >
           <div className="flex flex-col items-center justify-center gap-6">
             <DialogHeader className="flex flex-col items-center justify-center gap-1">
-              <DialogTitle className="font-medium text-lg">Initializing your project</DialogTitle>
-              <DialogDescription className="text-muted-foreground text-xs">
+              <DialogTitle className="text-lg font-medium">Initializing your project</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
                 This will only take a moment
               </DialogDescription>
             </DialogHeader>

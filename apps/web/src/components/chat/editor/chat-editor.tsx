@@ -1,5 +1,3 @@
-"use client";
-
 import { LexicalComposer, type InitialConfigType } from "@lexical/react/LexicalComposer";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { EditorRefPlugin } from "@lexical/react/LexicalEditorRefPlugin";
@@ -79,7 +77,7 @@ export function ChatEditor({ ...props }: ChatEditorProps) {
             </div>
           }
           placeholder={
-            <div className="pointer-events-none absolute px-3 py-2 text-muted-foreground text-sm">
+            <div className="pointer-events-none absolute px-3 py-2 text-sm text-muted-foreground">
               {props.placeholder ?? "Start typing..."}
             </div>
           }

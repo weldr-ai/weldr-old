@@ -1,5 +1,5 @@
-"use client";
-
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useTheme } from "better-themes";
 import {
   BoxesIcon,
   ExternalLinkIcon,
@@ -15,15 +15,13 @@ import {
   SettingsIcon,
   SunIcon,
 } from "lucide-react";
-import { useTheme } from "next-themes";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 
-import { authClient } from "@weldr/auth/client";
+import type { Session } from "@weldr/auth";
 import { Button } from "@weldr/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
@@ -34,89 +32,95 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@weldr/ui/components/dropdown-menu";
-import { LogoIcon } from "@weldr/ui/icons";
 import { cn } from "@weldr/ui/lib/utils";
+import { WeldrLogo } from "@weldr/ui/logos/weldr";
 
+import { authClient } from "@/lib/auth/client";
 import { useUIStore } from "@/lib/context/ui-store";
 
 export function MainDropdownMenu({
   side = "bottom",
   className,
+  session,
 }: {
   side?: "bottom" | "top" | "left" | "right";
   className?: string;
+  session: Session | null;
 }) {
-  const router = useRouter();
-  const { data: session } = authClient.useSession();
+  const navigate = useNavigate();
   const { setCommandCenterView, setCommandCenterOpen, setAccountSettingsOpen } = useUIStore();
   const { theme, setTheme } = useTheme();
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className={cn("size-8", className)}>
-          <LogoIcon className="size-6" />
-          <span className="sr-only">Weldr</span>
-        </Button>
-      </DropdownMenuTrigger>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="ghost" size="icon" className={cn("size-8", className)}>
+            <WeldrLogo className="size-6" />
+            <span className="sr-only">Weldr</span>
+          </Button>
+        }
+      />
       <DropdownMenuContent className="w-56" align="start" side={side}>
         {session && (
           <>
-            <DropdownMenuLabel>Projects</DropdownMenuLabel>
-            <Link href="/">
-              <DropdownMenuItem>
-                <LayoutDashboardIcon className="mr-2 size-3.5 text-muted-foreground" />
-                Home
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Projects</DropdownMenuLabel>
+              <Link to="/">
+                <DropdownMenuItem>
+                  <LayoutDashboardIcon className="mr-2 size-3.5 text-muted-foreground" />
+                  Home
+                </DropdownMenuItem>
+              </Link>
+              <DropdownMenuItem
+                onClick={() => {
+                  setCommandCenterView("create");
+                  setCommandCenterOpen(true);
+                }}
+              >
+                <PlusIcon className="mr-2 size-3.5 text-muted-foreground" />
+                Create Project
+                <kbd className="pointer-events-none ml-auto inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 select-none">
+                  <span className="text-xs">
+                    {typeof window !== "undefined" &&
+                    window.navigator?.userAgent.toLowerCase().includes("mac")
+                      ? "⌘"
+                      : "Ctrl"}
+                  </span>
+                  <span className="text-xs">
+                    {typeof window !== "undefined" &&
+                    window.navigator?.userAgent.toLowerCase().includes("mac")
+                      ? "⌥"
+                      : "Alt"}
+                  </span>
+                  <span className="text-xs">n</span>
+                </kbd>
               </DropdownMenuItem>
-            </Link>
-            <DropdownMenuItem
-              onClick={() => {
-                setCommandCenterView("create");
-                setCommandCenterOpen(true);
-              }}
-            >
-              <PlusIcon className="mr-2 size-3.5 text-muted-foreground" />
-              Create Project
-              <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] text-muted-foreground opacity-100">
-                <span className="text-xs">
-                  {typeof window !== "undefined" &&
-                  window.navigator?.userAgent.toLowerCase().includes("mac")
-                    ? "⌘"
-                    : "Ctrl"}
-                </span>
-                <span className="text-xs">
-                  {typeof window !== "undefined" &&
-                  window.navigator?.userAgent.toLowerCase().includes("mac")
-                    ? "⌥"
-                    : "Alt"}
-                </span>
-                <span className="text-xs">n</span>
-              </kbd>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                setCommandCenterView("projects");
-                setCommandCenterOpen(true);
-              }}
-            >
-              <BoxesIcon className="mr-2 size-3.5 text-muted-foreground" />
-              View All Projects
-              <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium font-mono text-[10px] text-muted-foreground opacity-100">
-                <span className="text-xs">
-                  {typeof window !== "undefined" &&
-                  window.navigator?.userAgent.toLowerCase().includes("mac")
-                    ? "⌘"
-                    : "Ctrl"}
-                </span>
-                k
-              </kbd>
-            </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setCommandCenterView("projects");
+                  setCommandCenterOpen(true);
+                }}
+              >
+                <BoxesIcon className="mr-2 size-3.5 text-muted-foreground" />
+                View All Projects
+                <kbd className="pointer-events-none ml-auto inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 select-none">
+                  <span className="text-xs">
+                    {typeof window !== "undefined" &&
+                    window.navigator?.userAgent.toLowerCase().includes("mac")
+                      ? "⌘"
+                      : "Ctrl"}
+                  </span>
+                  k
+                </kbd>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
           </>
         )}
 
         {session && (
-          <>
+          <DropdownMenuGroup>
             <DropdownMenuLabel>Settings</DropdownMenuLabel>
             <DropdownMenuItem
               onClick={() => {
@@ -126,7 +130,7 @@ export function MainDropdownMenu({
               <SettingsIcon className="mr-2 size-4 text-muted-foreground" />
               Account Settings
             </DropdownMenuItem>
-          </>
+          </DropdownMenuGroup>
         )}
 
         <DropdownMenuSub>
@@ -153,30 +157,32 @@ export function MainDropdownMenu({
         </DropdownMenuSub>
         <DropdownMenuSeparator />
 
-        <DropdownMenuLabel>Support</DropdownMenuLabel>
-        <Link href="https://weldr.ai/support" target="_blank">
-          <DropdownMenuItem>
-            <HelpCircleIcon className="mr-2 size-3.5 text-muted-foreground" />
-            Help
-            <ExternalLinkIcon className="ml-auto size-3 text-muted-foreground" />
-          </DropdownMenuItem>
-        </Link>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Support</DropdownMenuLabel>
+          <a href="https://weldr.ai/support" target="_blank" rel="noopener noreferrer">
+            <DropdownMenuItem>
+              <HelpCircleIcon className="mr-2 size-3.5 text-muted-foreground" />
+              Help
+              <ExternalLinkIcon className="ml-auto size-3 text-muted-foreground" />
+            </DropdownMenuItem>
+          </a>
 
-        <Link href="https://blog.weldr.ai" target="_blank">
-          <DropdownMenuItem>
-            <RssIcon className="mr-2 size-3.5 text-muted-foreground" />
-            Blog
-            <ExternalLinkIcon className="ml-auto size-3 text-muted-foreground" />
-          </DropdownMenuItem>
-        </Link>
+          <a href="https://blog.weldr.ai" target="_blank" rel="noopener noreferrer">
+            <DropdownMenuItem>
+              <RssIcon className="mr-2 size-3.5 text-muted-foreground" />
+              Blog
+              <ExternalLinkIcon className="ml-auto size-3 text-muted-foreground" />
+            </DropdownMenuItem>
+          </a>
 
-        <Link href="https://docs.weldr.ai" target="_blank">
-          <DropdownMenuItem>
-            <FileTextIcon className="mr-2 size-3.5 text-muted-foreground" />
-            Docs
-            <ExternalLinkIcon className="ml-auto size-3 text-muted-foreground" />
-          </DropdownMenuItem>
-        </Link>
+          <a href="https://docs.weldr.ai" target="_blank" rel="noopener noreferrer">
+            <DropdownMenuItem>
+              <FileTextIcon className="mr-2 size-3.5 text-muted-foreground" />
+              Docs
+              <ExternalLinkIcon className="ml-auto size-3 text-muted-foreground" />
+            </DropdownMenuItem>
+          </a>
+        </DropdownMenuGroup>
 
         {session && (
           <>
@@ -186,7 +192,7 @@ export function MainDropdownMenu({
                 await authClient.signOut({
                   fetchOptions: {
                     onSuccess: () => {
-                      router.push("/auth/sign-in");
+                      navigate({ to: "/auth/sign-in" });
                     },
                   },
                 })

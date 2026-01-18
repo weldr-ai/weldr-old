@@ -34,16 +34,7 @@ export function ResetPasswordEmail({ firstName, resetPasswordLink }: ResetPasswo
       >
         <Body>
           <Container className="mx-auto px-4 py-8">
-            <Img
-              src={
-                process.env.APP_ENV === "development"
-                  ? "http://localhost:3000/logo.svg"
-                  : "https://weldr.com/logo.svg"
-              }
-              width="32"
-              height="32"
-              alt="Weldr"
-            />
+            <Img src={process.env.WEB_URL + "/logo.svg"} width="32" height="32" alt="Weldr" />
             <Section>
               <Text>Hi {firstName},</Text>
               <Text>Click below to reset your Weldr password:</Text>

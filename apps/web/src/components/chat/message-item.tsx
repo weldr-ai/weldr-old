@@ -1,5 +1,3 @@
-"use client";
-
 import fastDeepEqual from "fast-deep-equal";
 import { type Dispatch, memo, type SetStateAction } from "react";
 
@@ -7,7 +5,7 @@ import type { RouterOutputs } from "@weldr/api";
 import { nanoid } from "@weldr/shared/nanoid";
 import { preprocessReferences } from "@weldr/shared/process-text";
 import type { ChatMessage, TStatus } from "@weldr/shared/types";
-import { LogoIcon } from "@weldr/ui/icons";
+import { WeldrLogo } from "@weldr/ui/components/logos/weldr";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { ConfigureIntegrationsPrompt } from "@/components/integrations/configure-integrations-prompt";
@@ -43,8 +41,8 @@ const PureMessageItem = ({
     >
       {message.role === "assistant" && (
         <div className="flex items-center gap-1 pb-2">
-          <LogoIcon className="size-5" />
-          <span className="text-muted-foreground text-xs">Weldr</span>
+          <WeldrLogo className="size-5" />
+          <span className="text-xs text-muted-foreground">Weldr</span>
         </div>
       )}
 

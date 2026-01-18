@@ -1,3 +1,4 @@
+import attachments from "./attachments";
 import branches from "./branches";
 import chats from "./chats";
 import declarations from "./declarations";
@@ -22,4 +23,5 @@ export const router = {
   integrationTemplates,
   nodes,
   branches,
+  attachments,
 };

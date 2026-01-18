@@ -53,7 +53,7 @@ app.onError((err: Error, c: Context) => {
   );
 });
 
-const port = process.env.PORT ? Number.parseInt(process.env.PORT) : 8080;
+const port = process.env.PORT ? Number.parseInt(process.env.PORT) : 8081;
 
 // Graceful shutdown
 async function gracefulShutdown(signal: string) {

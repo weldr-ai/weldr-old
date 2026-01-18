@@ -1,5 +1,3 @@
-"use client";
-
 import { CheckIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -20,6 +18,7 @@ import { CreateEnvironmentVariableDialog } from "@/components/create-environment
 import type { IntegrationConfigurationProps } from "./types";
 
 export function IntegrationConfigurationFields({
+  projectId,
   integrationTemplate,
   environmentVariables,
   environmentVariableMappings,
@@ -43,7 +42,7 @@ export function IntegrationConfigurationFields({
     <div className="flex flex-col gap-4">
       {showNameField && onNameChange && (
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="integration-name" className="font-medium text-xs">
+          <label htmlFor="integration-name" className="text-xs font-medium">
             Name
           </label>
           <Input
@@ -61,7 +60,7 @@ export function IntegrationConfigurationFields({
           {requiredVariables.map((variable) => (
             <div
               key={variable.name}
-              className="grid grid-cols-2 items-center gap-0 gap-y-2 space-y-0 text-xs"
+              className="grid grid-cols-2 items-center gap-0 space-y-0 gap-y-2 text-xs"
             >
               <div className="flex h-9 items-center rounded-l-md border-y border-l px-3">
                 {variable.name}
@@ -71,18 +70,20 @@ export function IntegrationConfigurationFields({
                   open={envVarPopoverStates[variable.name] || false}
                   onOpenChange={(isOpen) => toggleEnvVarPopover(variable.name, isOpen)}
                 >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-between rounded-l-none text-xs"
-                    >
-                      {environmentVariableMappings[variable.name]
-                        ? environmentVariables.find(
-                            (env) => env.id === environmentVariableMappings[variable.name],
-                          )?.key
-                        : "Select environment variable"}
-                    </Button>
-                  </PopoverTrigger>
+                  <PopoverTrigger
+                    render={
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between rounded-l-none text-xs"
+                      >
+                        {environmentVariableMappings[variable.name]
+                          ? environmentVariables.find(
+                              (env) => env.id === environmentVariableMappings[variable.name],
+                            )?.key
+                          : "Select environment variable"}
+                      </Button>
+                    }
+                  />
                   <PopoverContent className="w-[230px] p-0">
                     <Command>
                       <CommandInput
@@ -117,7 +118,7 @@ export function IntegrationConfigurationFields({
                         </CommandGroup>
                       </CommandList>
                     </Command>
-                    <CreateEnvironmentVariableDialog>
+                    <CreateEnvironmentVariableDialog projectId={projectId}>
                       <Button
                         variant="outline"
                         size="sm"

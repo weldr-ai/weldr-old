@@ -1,6 +1,4 @@
-import { eq } from "drizzle-orm";
-
-import { db } from "@weldr/db";
+import { db, eq } from "@weldr/db";
 import { branches, declarations, nodes, projects, snapshotDeclarations } from "@weldr/db/schema";
 import { mergeJson } from "@weldr/db/utils";
 import { Logger } from "@weldr/shared/logger";

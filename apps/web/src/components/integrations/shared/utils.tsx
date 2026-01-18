@@ -1,15 +1,18 @@
-import { BetterAuthIcon, ORPCIcon, PostgresIcon, TanstackIcon } from "@weldr/ui/icons";
+import { BetterAuthLogo } from "@weldr/ui/logos/better-auth";
+import { ORPCLogo } from "@weldr/ui/logos/orpc";
+import { PostgresLogo } from "@weldr/ui/logos/postgres";
+import { TanstackLogo } from "@weldr/ui/logos/tanstack";
 
 export const getIntegrationIcon = (key: string, size: number = 5) => {
   switch (key) {
     case "postgresql":
-      return <PostgresIcon className={`size-${size}`} />;
+      return <PostgresLogo className={`size-${size}`} />;
     case "better-auth":
-      return <BetterAuthIcon className={`size-${size}`} />;
+      return <BetterAuthLogo className={`size-${size}`} />;
     case "tanstack-start":
-      return <TanstackIcon className={`size-${size}`} />;
+      return <TanstackLogo className={`size-${size}`} />;
     case "orpc":
-      return <ORPCIcon className={`size-${size}`} />;
+      return <ORPCLogo className={`size-${size}`} />;
     default:
       return null;
   }

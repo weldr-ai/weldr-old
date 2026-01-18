@@ -1,8 +1,8 @@
 import { stripe } from "@better-auth/stripe";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { nextCookies } from "better-auth/next-js";
 import { admin, oAuthProxy, openAPI, organization } from "better-auth/plugins";
+import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { Resend } from "resend";
 import { Stripe } from "stripe";
 
@@ -79,7 +79,6 @@ export const auth = betterAuth({
   },
   plugins: [
     oAuthProxy(),
-    nextCookies(),
     admin(),
     openAPI(),
     organization(),
@@ -100,33 +99,9 @@ export const auth = betterAuth({
         ],
       },
     }),
+    tanstackStartCookies(), // must be last plugin
   ],
 });
 
 export type Session = typeof auth.$Infer.Session;
 export type User = typeof auth.$Infer.Session.user;
-export type Subscription = {
-  limits: Record<string, unknown> | undefined;
-  id: string;
-  plan: string;
-  stripeCustomerId?: string;
-  stripeSubscriptionId?: string;
-  trialStart?: Date;
-  trialEnd?: Date;
-  priceId?: string;
-  referenceId: string;
-  status:
-    | "active"
-    | "canceled"
-    | "incomplete"
-    | "incomplete_expired"
-    | "past_due"
-    | "paused"
-    | "trialing"
-    | "unpaid";
-  periodStart?: Date;
-  periodEnd?: Date;
-  cancelAtPeriodEnd?: boolean;
-  groupId?: string;
-  seats?: number;
-};

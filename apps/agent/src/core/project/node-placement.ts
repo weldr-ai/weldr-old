@@ -1,5 +1,4 @@
-import { eq } from "drizzle-orm";
-
+import { eq } from "@weldr/db";
 import { nodes } from "@weldr/db/schema";
 import type { Tx } from "@weldr/db/types";
 

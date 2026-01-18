@@ -59,6 +59,7 @@ export type IntegrationToolMessage = ChatMessage & {
 };
 
 export interface IntegrationConfigurationProps {
+  projectId: string;
   integrationTemplate: IntegrationTemplate;
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
   environmentVariableMappings: Record<string, string>;

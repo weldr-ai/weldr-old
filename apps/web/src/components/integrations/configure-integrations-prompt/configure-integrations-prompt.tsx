@@ -1,17 +1,17 @@
 import { useMutation } from "@tanstack/react-query";
+import { useParams } from "@tanstack/react-router";
 import type { AssistantContent } from "ai";
 import fastDeepEqual from "fast-deep-equal";
 import { CheckIcon, LoaderIcon, PenIcon } from "lucide-react";
-import { useParams } from "next/navigation";
 import { type Dispatch, memo, type SetStateAction, useCallback, useState } from "react";
+import { toast } from "sonner";
 
 import type { RouterOutputs } from "@weldr/api";
 import { nanoid } from "@weldr/shared/nanoid";
 import type { ChatMessage, IntegrationCategoryKey, TStatus } from "@weldr/shared/types";
 import { Button } from "@weldr/ui/components/button";
-import { toast } from "@weldr/ui/hooks/use-toast";
 
-import { orpc } from "@/lib/orpc/client";
+import { orpc } from "@/lib/orpc";
 import type { IntegrationToolCall } from "../shared/types";
 import { ConfigureIntegrationDialog } from "./configure-integration-dialog";
 import { IntegrationsCombobox } from "./integrations-combobox";
@@ -35,7 +35,7 @@ const PureConfigureIntegrationsPrompt = ({
   setStatus: Dispatch<SetStateAction<TStatus>>;
   branchId: string;
 }) => {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { projectId } = useParams({ strict: false }) as { projectId: string };
 
   const messageContent = message.content as Exclude<AssistantContent, string>;
 
@@ -229,11 +229,7 @@ const PureConfigureIntegrationsPrompt = ({
         setStatus("thinking");
       },
       onError: (error) => {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
+        toast.error(error.message);
       },
     }),
   );
@@ -247,11 +243,7 @@ const PureConfigureIntegrationsPrompt = ({
         });
       },
       onError: (error) => {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
+        toast.error(error.message);
       },
     }),
   );
@@ -380,7 +372,7 @@ const PureConfigureIntegrationsPrompt = ({
     <div className="rounded-md border">
       <div className="flex flex-col items-center border-b p-1.5">
         <h3 className="font-medium">Setup Integrations</h3>
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-muted-foreground">
           Select and configure integrations for your project
         </p>
       </div>
@@ -395,7 +387,7 @@ const PureConfigureIntegrationsPrompt = ({
           })
           .map(([categoryKey, { category, templates }]) => (
             <div key={categoryKey} className="flex flex-col gap-1">
-              <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
+              <h4 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                 {category.key}
               </h4>
               <div className="flex w-full items-center gap-1.5">

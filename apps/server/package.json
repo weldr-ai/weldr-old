@@ -25,6 +25,7 @@
     "@orpc/otel": "^1.13.4",
     "@sentry/bun": "^10.30.0",
     "@weldr/api": "workspace:*",
+    "@weldr/auth": "workspace:*",
     "pino": "^10.1.0",
     "zod": "^4.1.13"
   },

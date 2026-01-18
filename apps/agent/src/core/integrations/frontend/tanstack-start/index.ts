@@ -32,7 +32,7 @@ export const tanstackStartIntegration = defineIntegration<"tanstack-start">({
         "embla-carousel-react": "^8.6.0",
         "input-otp": "^1.4.2",
         "lucide-react": "^0.525.0",
-        "next-themes": "^0.4.6",
+        "better-themes": "^1.1.0",
         "radix-ui": "^1.4.2",
         react: "^19.1.0",
         "react-day-picker": "^9.8.0",

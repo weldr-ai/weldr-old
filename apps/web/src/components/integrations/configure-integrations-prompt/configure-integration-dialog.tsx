@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 
 import type { RouterOutputs } from "@weldr/api";
@@ -52,30 +50,32 @@ export function ConfigureIntegrationDialog({
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogTrigger asChild>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={disabled}
-          className="flex-1 justify-between gap-2 pr-1 focus:ring-0 focus:ring-offset-0"
-        >
-          <div className="flex min-w-0 items-center gap-2">
-            {getIntegrationIcon(integrationTemplate.key, 4)}
-            {integrationTemplate.name}
-          </div>
-          <div
-            className={cn(
-              "flex items-center gap-1 rounded-sm border bg-background px-1.5 py-0.5",
-              "shrink-0 font-medium text-[0.65rem] text-muted-foreground",
-            )}
+      <DialogTrigger
+        render={
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={disabled}
+            className="flex-1 justify-between gap-2 pr-1 focus:ring-0 focus:ring-offset-0"
           >
+            <div className="flex min-w-0 items-center gap-2">
+              {getIntegrationIcon(integrationTemplate.key, 4)}
+              {integrationTemplate.name}
+            </div>
             <div
-              className={cn("size-1.5 rounded-full", isConfigured ? "bg-success" : "bg-warning")}
-            />
-            {isConfigured ? "Configured" : "Awaiting Config"}
-          </div>
-        </Button>
-      </DialogTrigger>
+              className={cn(
+                "flex items-center gap-1 rounded-sm border bg-background px-1.5 py-0.5",
+                "shrink-0 text-[0.65rem] font-medium text-muted-foreground",
+              )}
+            >
+              <div
+                className={cn("size-1.5 rounded-full", isConfigured ? "bg-success" : "bg-warning")}
+              />
+              {isConfigured ? "Configured" : "Awaiting Config"}
+            </div>
+          </Button>
+        }
+      />
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -85,6 +85,7 @@ export function ConfigureIntegrationDialog({
           <DialogDescription>{integrationTemplate.description}</DialogDescription>
         </DialogHeader>
         <IntegrationConfigurationFields
+          projectId={project.id}
           integrationTemplate={integrationTemplate}
           environmentVariables={environmentVariables}
           environmentVariableMappings={environmentVariableMappings}

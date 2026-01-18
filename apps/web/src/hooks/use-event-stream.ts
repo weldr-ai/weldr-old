@@ -10,12 +10,15 @@ import type {
   TStatus,
 } from "@weldr/shared/types";
 
-import { orpc } from "@/lib/orpc/client";
+import { orpc } from "@/lib/orpc";
 import type { CanvasNode } from "@/types";
+
+const AGENT_URL = import.meta.env.VITE_AGENT_URL ?? "http://localhost:8081";
 
 interface UseEventStreamOptions {
   projectId: string;
   branchId: string;
+  snapshotId: string | null;
   chatId: string;
   setStatus: (status: TStatus) => void;
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
@@ -24,6 +27,7 @@ interface UseEventStreamOptions {
 export function useEventStream({
   projectId,
   branchId,
+  snapshotId,
   chatId,
   setStatus,
   setMessages,
@@ -65,6 +69,11 @@ export function useEventStream({
       return eventSourceRef.current;
     }
 
+    // Don't connect if there's no snapshot
+    if (!snapshotId) {
+      return null;
+    }
+
     // Mark as connecting to prevent race conditions
     isConnectingRef.current = true;
 
@@ -74,8 +83,8 @@ export function useEventStream({
       reconnectTimeoutRef.current = null;
     }
 
-    // Build URL with branchId in path and offset for Durable Streams resumption
-    let url = `/api/chat/${projectId}/${branchId}/stream`;
+    // Build URL with snapshotId in path and offset for Durable Streams resumption
+    let url = `${AGENT_URL}/stream/${projectId}/${snapshotId}`;
     if (streamOffsetRef.current) {
       url += `?offset=${encodeURIComponent(streamOffsetRef.current)}`;
     }
@@ -362,7 +371,7 @@ export function useEventStream({
     });
 
     return eventSource;
-  }, [projectId, branchId, getNodes, setNodes, updateNodeData, queryClient]);
+  }, [projectId, snapshotId, getNodes, setNodes, updateNodeData, queryClient]);
 
   const closeEventStream = useCallback(() => {
     // Reset reconnection attempts and connecting flag

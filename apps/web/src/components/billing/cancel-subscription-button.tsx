@@ -1,9 +1,9 @@
-"use client";
+import { toast } from "sonner";
 
-import { authClient } from "@weldr/auth/client";
 import { Button } from "@weldr/ui/components/button";
-import { toast } from "@weldr/ui/hooks/use-toast";
 import { cn } from "@weldr/ui/lib/utils";
+
+import { authClient } from "@/lib/auth/client";
 
 export function CancelSubscriptionButton({ className }: { className?: string }) {
   return (
@@ -16,9 +16,7 @@ export function CancelSubscriptionButton({ className }: { className?: string }) 
           returnUrl: "/",
           fetchOptions: {
             onError: (_error) => {
-              toast({
-                variant: "destructive",
-                title: "Error cancelling subscription",
+              toast.error("Error cancelling subscription", {
                 description: "An unknown error occurred",
               });
             },

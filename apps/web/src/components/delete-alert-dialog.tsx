@@ -1,5 +1,3 @@
-"use client";
-
 import { LoaderIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -44,7 +42,7 @@ export function DeleteAlertDialog({
               onChange={(e) => setTypedText(e.target.value)}
               placeholder={confirmText}
             />
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               Type <span className="font-bold">{confirmText}</span> to confirm
             </p>
           </div>

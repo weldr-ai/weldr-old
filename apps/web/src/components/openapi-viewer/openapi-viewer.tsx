@@ -1,5 +1,3 @@
-"use client";
-
 import { MinusIcon, PlusIcon } from "lucide-react";
 import type { OpenAPIV3 } from "openapi-types";
 import { useState } from "react";
@@ -51,12 +49,12 @@ function SchemaField({
         <div className="flex flex-col gap-1">
           <div>
             <div className="flex items-baseline gap-1">
-              <span className="font-medium text-xs">{name}</span>
-              <span className="text-muted-foreground text-xs">{renderType()}</span>
-              {required && <span className="text-destructive text-xs">required</span>}
+              <span className="text-xs font-medium">{name}</span>
+              <span className="text-xs text-muted-foreground">{renderType()}</span>
+              {required && <span className="text-xs text-destructive">required</span>}
             </div>
             {schema.description && (
-              <p className="text-muted-foreground text-xs">{schema.description}</p>
+              <p className="text-xs text-muted-foreground">{schema.description}</p>
             )}
           </div>
           {hasChildren && (
@@ -65,7 +63,7 @@ function SchemaField({
                 variant="outline"
                 size="sm"
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="h-6 rounded-full px-2 text-muted-foreground text-xs hover:text-foreground"
+                className="h-6 rounded-full px-2 text-xs text-muted-foreground hover:text-foreground"
               >
                 {isExpanded ? (
                   <MinusIcon className="mr-1 size-3" />
@@ -111,7 +109,7 @@ function SchemaField({
 export function OpenApiViewer({ spec }: OpenApiViewerProps) {
   if (!spec) {
     return (
-      <div className="flex h-32 items-center justify-center text-center text-muted-foreground text-xs">
+      <div className="flex h-32 items-center justify-center text-center text-xs text-muted-foreground">
         Chat with Weldr to generate the endpoint
       </div>
     );
@@ -173,7 +171,7 @@ export function OpenApiViewer({ spec }: OpenApiViewerProps) {
           </div>
         </div>
         {operation.description && (
-          <p className="whitespace-pre-wrap text-muted-foreground text-xs">
+          <p className="text-xs whitespace-pre-wrap text-muted-foreground">
             {operation.description}
           </p>
         )}
@@ -193,8 +191,8 @@ export function OpenApiViewer({ spec }: OpenApiViewerProps) {
           {/* Parameters */}
           {hasParameters && (
             <div>
-              <span className="font-semibold text-xs">Parameters</span>
-              <Accordion type="multiple" className="w-full">
+              <span className="text-xs font-semibold">Parameters</span>
+              <Accordion multiple className="w-full">
                 {Object.entries(groupedParameters || {}).map(([location, params]) => (
                   <AccordionItem key={location} value={location} className="border-b-0">
                     <AccordionTrigger className="py-1 text-xs hover:no-underline">
@@ -209,16 +207,16 @@ export function OpenApiViewer({ spec }: OpenApiViewerProps) {
                           >
                             <div className="flex-1">
                               <div className="flex items-baseline gap-1">
-                                <span className="font-medium text-xs">{parameter.name}</span>
-                                <span className="text-muted-foreground text-xs">
+                                <span className="text-xs font-medium">{parameter.name}</span>
+                                <span className="text-xs text-muted-foreground">
                                   {(parameter.schema as OpenAPIV3.SchemaObject)?.type}
                                 </span>
                                 {parameter.required && (
-                                  <span className="text-destructive text-xs">required</span>
+                                  <span className="text-xs text-destructive">required</span>
                                 )}
                               </div>
                               {parameter.description && (
-                                <p className="text-muted-foreground text-xs">
+                                <p className="text-xs text-muted-foreground">
                                   {parameter.description}
                                 </p>
                               )}
@@ -237,7 +235,7 @@ export function OpenApiViewer({ spec }: OpenApiViewerProps) {
           {parsedRequestBody && (
             <div>
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-xs">Body</span>
+                <span className="text-xs font-semibold">Body</span>
                 <span className="items-center justify-center rounded-full border px-1 py-0.5 text-xs">
                   application/json
                 </span>
@@ -252,7 +250,7 @@ export function OpenApiViewer({ spec }: OpenApiViewerProps) {
               ))}
               {requestBodyExample && (
                 <div className="mt-1">
-                  <span className="font-semibold text-xs">Example:</span>
+                  <span className="text-xs font-semibold">Example:</span>
                   <pre className="mt-1 rounded-lg bg-muted p-2 text-xs">
                     {JSON.stringify(requestBodyExample, null, 2)}
                   </pre>
@@ -264,8 +262,8 @@ export function OpenApiViewer({ spec }: OpenApiViewerProps) {
           {/* Responses */}
           {hasResponses && (
             <div>
-              <span className="font-semibold text-xs">Responses</span>
-              <Accordion type="multiple">
+              <span className="text-xs font-semibold">Responses</span>
+              <Accordion multiple>
                 {Object.entries(operation.responses).map(([code, response]) => {
                   const responseSchema = getResponseSchema(operation, code);
                   const parsedSchema = responseSchema
@@ -283,7 +281,7 @@ export function OpenApiViewer({ spec }: OpenApiViewerProps) {
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="p-0 pb-1">
-                        <p className="text-muted-foreground text-xs">{responseObj.description}</p>
+                        <p className="text-xs text-muted-foreground">{responseObj.description}</p>
                         <div>
                           {parsedSchema?.properties &&
                             Object.entries(parsedSchema.properties).map(([key, value]) => (
@@ -297,7 +295,7 @@ export function OpenApiViewer({ spec }: OpenApiViewerProps) {
                         </div>
                         {example && (
                           <div>
-                            <span className="font-semibold text-xs">Example:</span>
+                            <span className="text-xs font-semibold">Example:</span>
                             <pre className="mt-1 rounded-lg bg-muted p-2 text-xs">
                               {JSON.stringify(example, null, 2)}
                             </pre>
@@ -314,7 +312,7 @@ export function OpenApiViewer({ spec }: OpenApiViewerProps) {
           {/* Security */}
           {hasSecurity && (
             <div>
-              <span className="font-semibold text-xs">Security</span>
+              <span className="text-xs font-semibold">Security</span>
               <div className="mt-1 flex flex-col gap-1">
                 {operation.security?.map((security) => (
                   <div
@@ -325,7 +323,7 @@ export function OpenApiViewer({ spec }: OpenApiViewerProps) {
                       <div key={scheme} className="space-y-1">
                         <div className="flex items-center gap-1">
                           <Badge variant="outline">{scheme}</Badge>
-                          <span className="text-muted-foreground text-xs">
+                          <span className="text-xs text-muted-foreground">
                             {scheme === "bearerAuth" ? "Bearer Token Authentication" : scheme}
                           </span>
                         </div>
@@ -347,7 +345,7 @@ export function OpenApiViewer({ spec }: OpenApiViewerProps) {
           )}
         </div>
       ) : (
-        <div className="py-4 text-center text-muted-foreground text-xs">
+        <div className="py-4 text-center text-xs text-muted-foreground">
           This endpoint has not been fully defined yet
         </div>
       )}

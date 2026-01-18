@@ -51,7 +51,7 @@ await auth.api.signUpEmail({
 ### Client-Side
 
 ```typescript
-import { AuthClient } from "@weldr/auth/client";
+import { AuthClient } from "@/lib/auth/client";
 
 const authClient = new AuthClient({
   baseURL: "http://localhost:3000",

@@ -1,13 +1,10 @@
-"use client";
-
 import { StandardRPCJsonSerializer } from "@orpc/client/standard";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
 
 const serializer = new StandardRPCJsonSerializer();
 
-function makeQueryClient() {
-  return new QueryClient({
+export function getContext() {
+  const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
         queryKeyHashFn(queryKey) {
@@ -29,24 +26,18 @@ function makeQueryClient() {
       },
     },
   });
+
+  return {
+    queryClient,
+  };
 }
 
-let browserQueryClient: QueryClient | undefined;
-
-export function getQueryClient() {
-  if (typeof window === "undefined") {
-    // Server: always make a new query client
-    return makeQueryClient();
-  }
-  // Browser: make a new query client if we don't already have one
-  if (!browserQueryClient) {
-    browserQueryClient = makeQueryClient();
-  }
-
-  return browserQueryClient;
-}
-
-export function Provider({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => getQueryClient());
+export function Provider({
+  children,
+  queryClient,
+}: {
+  children: React.ReactNode;
+  queryClient: QueryClient;
+}) {
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }

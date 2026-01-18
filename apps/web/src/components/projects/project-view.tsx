@@ -1,12 +1,11 @@
-"use client";
-
 import { useQuery } from "@tanstack/react-query";
+import { useParams, useSearch } from "@tanstack/react-router";
 import type { Edge } from "@xyflow/react";
-import { useParams, useSearchParams } from "next/navigation";
 
 import type { RouterOutputs } from "@weldr/api";
+import type { Session } from "@weldr/auth";
 
-import { orpc } from "@/lib/orpc/client";
+import { orpc } from "@/lib/orpc";
 import type { CanvasNode } from "@/types";
 import { Editor } from "../editor";
 import { MainDropdownMenu } from "../main-dropdown-menu";
@@ -19,6 +18,7 @@ export function ProjectView({
   initialNodes,
   initialEdges,
   integrationTemplates,
+  session,
 }: {
   project: RouterOutputs["projects"]["get"];
   branch: RouterOutputs["branches"]["getByIdOrMain"];
@@ -26,10 +26,10 @@ export function ProjectView({
   initialNodes: CanvasNode[];
   initialEdges: Edge[];
   integrationTemplates: RouterOutputs["integrationTemplates"]["list"];
+  session: Session | null;
 }) {
-  const { branchId } = useParams<{ branchId?: string }>();
-  const searchParams = useSearchParams();
-  const snapshotId = searchParams.get("snapshotId") ?? undefined;
+  const { branchId } = useParams({ strict: false }) as { branchId?: string };
+  const { snapshotId } = useSearch({ strict: false }) as { snapshotId?: string };
 
   const { data: project } = useQuery(
     orpc.projects.get.queryOptions({
@@ -63,8 +63,8 @@ export function ProjectView({
   return (
     <div className="flex size-full flex-col">
       <div className="flex h-10 items-center justify-between border-b p-1.5">
-        <MainDropdownMenu />
-        <span className="font-medium text-sm">{project.title ?? "Untitled Project"}</span>
+        <MainDropdownMenu session={session} />
+        <span className="text-sm font-medium">{project.title ?? "Untitled Project"}</span>
         <ProjectSettings
           project={project}
           integrationTemplates={integrationTemplates}
@@ -72,6 +72,7 @@ export function ProjectView({
         />
       </div>
       <Editor
+        session={session}
         project={project}
         branch={currentBranch}
         initialNodes={initialNodes}

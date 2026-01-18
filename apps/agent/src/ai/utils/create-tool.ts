@@ -21,7 +21,7 @@ type ToolConfig<TInput extends z.ZodSchema, TOutput extends z.ZodSchema> = {
  */
 export function createTool<TInput extends z.ZodSchema, TOutput extends z.ZodSchema>(
   config: ToolConfig<TInput, TOutput>,
-) {
+): (context: SessionMachineContext) => Tool<TInput, TOutput> {
   const aiSDKTool = (context: SessionMachineContext): Tool => ({
     description: config.description,
     inputSchema: config.inputSchema,

@@ -18,11 +18,11 @@
   },
   "scripts": {
     "clean": "git clean -xdf .turbo node_modules dist .tsbuildinfo",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@aws-sdk/client-iam": "^3.828.0",
-    "@tigrisdata/storage": "^2.4.0",
+    "@tigrisdata/storage": "^2.10.2",
     "json-schema": "^0.4.0",
     "nanoid": "^5.1.5",
     "ofetch": "^1.4.1",
@@ -32,7 +32,7 @@
   "devDependencies": {
     "@types/json-schema": "^7.0.15",
     "@weldr/tsconfig": "workspace:*",
-    "ai": "^6.0.31",
+    "ai": "6.0.39",
     "pino-pretty": "^13.0.0",
     "typescript": "^5.9.3"
   }

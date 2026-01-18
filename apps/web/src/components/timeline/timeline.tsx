@@ -1,18 +1,12 @@
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { ExpandIcon, ExternalLinkIcon, GitBranchIcon } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import type { RouterOutputs } from "@weldr/api";
 import { Button, buttonVariants } from "@weldr/ui/components/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@weldr/ui/components/hover-card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@weldr/ui/components/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@weldr/ui/components/tooltip";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { getPreviewUrl } from "@/lib/preview-url";
@@ -43,24 +37,24 @@ export function TimelineTrigger() {
   const isMain = branch.name === "main";
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
+    <Tooltip>
+      <TooltipTrigger
+        render={
           <Button
             className={cn("h-5 max-w-[60px] px-2 text-xs", {
               "bg-success/30 text-success hover:bg-success/40": isMain,
               "bg-purple-500/30 text-purple-500 hover:bg-purple-500/40": !isMain,
             })}
             onClick={() => onOpenChange(!open)}
-          >
-            <span className="truncate">{branch.name}</span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="max-w-xs border bg-muted text-xs">
-          {branch.name}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+          />
+        }
+      >
+        <span className="truncate">{branch.name}</span>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="max-w-xs border bg-muted text-xs">
+        {branch.name}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -92,7 +86,7 @@ type Snapshot = RouterOutputs["branches"]["getByIdOrMain"]["snapshotHistory"][nu
 
 export function TimelineContent({ className }: { className?: string }) {
   const { open, branch } = useTimelineContext();
-  const router = useRouter();
+  const navigate = useNavigate();
   const [highlightedSnapshotId, setHighlightedSnapshotId] = useState<string | null>(null);
   const snapshotRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -126,7 +120,7 @@ export function TimelineContent({ className }: { className?: string }) {
 
   if (snapshots.length === 0) {
     return (
-      <div className="border-b p-4 text-center text-muted-foreground text-xs">
+      <div className="border-b p-4 text-center text-xs text-muted-foreground">
         No snapshots found
       </div>
     );
@@ -134,7 +128,7 @@ export function TimelineContent({ className }: { className?: string }) {
 
   return (
     <div className={cn("rounded-t-lg transition-all duration-300 ease-in-out", className)}>
-      <div className="scrollbar-thin scrollbar-thumb-rounded-full scrollbar-thumb-muted-foreground scrollbar-track-transparent max-h-[150px] overflow-y-auto">
+      <div className="scrollbar-thumb-rounded-full scrollbar-thin max-h-[150px] overflow-y-auto scrollbar-thumb-muted-foreground scrollbar-track-transparent">
         <div className="flex flex-col p-3">
           {snapshots.map((snapshot, index) => {
             const parsed = parseConventionalCommit(snapshot.title || "");
@@ -155,8 +149,10 @@ export function TimelineContent({ className }: { className?: string }) {
                     },
                   )}
                 >
-                  <HoverCard openDelay={0} closeDelay={0}>
+                  <HoverCard>
                     <HoverCardTrigger
+                      delay={0}
+                      closeDelay={0}
                       className={cn(
                         "grid cursor-pointer grid-cols-[auto_3rem_1fr] items-center gap-2 rounded-md px-2 py-1 hover:bg-accent",
                         {
@@ -164,17 +160,26 @@ export function TimelineContent({ className }: { className?: string }) {
                         },
                       )}
                       onClick={() => {
-                        const url = isMain
-                          ? `/projects/${snapshot.projectId}?snapshotId=${snapshot.id}`
-                          : `/projects/${snapshot.projectId}/branches/${branch.id}?snapshotId=${snapshot.id}`;
-                        router.push(url);
+                        if (isMain) {
+                          navigate({
+                            to: "/projects/$projectId",
+                            params: { projectId: snapshot.projectId },
+                            search: { snapshotId: snapshot.id },
+                          });
+                        } else {
+                          navigate({
+                            to: "/projects/$projectId/branches/$branchId",
+                            params: { projectId: snapshot.projectId, branchId: branch.id },
+                            search: { snapshotId: snapshot.id },
+                          });
+                        }
                       }}
                     >
                       <div className="relative flex h-full items-center justify-center">
                         <div className="relative z-10 size-2 shrink-0 rounded-full bg-primary" />
                         {!isLast && (
                           <div
-                            className="-translate-x-1/2 absolute top-[calc(50%+4px)] bottom-0 left-1/2 z-10 w-px bg-border"
+                            className="absolute top-[calc(50%+4px)] bottom-0 left-1/2 z-10 w-px -translate-x-1/2 bg-border"
                             style={{ height: "calc(100% + 0.5rem)" }}
                           />
                         )}
@@ -253,11 +258,9 @@ function TimelineItem({
         </div>
         <div className="flex items-center gap-0.5">
           <Link
-            href={
-              isMain
-                ? `/projects/${projectId}?snapshotId=${snapshot.id}`
-                : `/projects/${projectId}/branches/${branchId}?snapshotId=${snapshot.id}`
-            }
+            to={isMain ? "/projects/$projectId" : "/projects/$projectId/branches/$branchId"}
+            params={isMain ? { projectId } : { projectId, branchId }}
+            search={{ snapshotId: snapshot.id }}
             className={cn(
               buttonVariants({
                 variant: "ghost",
@@ -269,16 +272,18 @@ function TimelineItem({
             <ExpandIcon className="size-3" />
           </Link>
           <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-5 rounded-sm text-muted-foreground hover:text-foreground"
-                onClick={() => window.open(previewUrl, "_blank")}
-              >
-                <ExternalLinkIcon className="size-3" />
-                <span className="sr-only">Open Preview</span>
-              </Button>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-5 rounded-sm text-muted-foreground hover:text-foreground"
+                  onClick={() => window.open(previewUrl, "_blank")}
+                />
+              }
+            >
+              <ExternalLinkIcon className="size-3" />
+              <span className="sr-only">Open Preview</span>
             </TooltipTrigger>
             <TooltipContent className="border bg-muted text-xs">
               <p>Open Preview</p>
@@ -288,7 +293,7 @@ function TimelineItem({
       </div>
 
       <div className="flex flex-col gap-1">
-        <span className="font-medium text-xs">
+        <span className="text-xs font-medium">
           {parsed.message || snapshot.title || "Untitled Snapshot"}
         </span>
         {snapshot.description && (
@@ -298,16 +303,18 @@ function TimelineItem({
 
       <div className="mt-2 flex gap-2 border-t pt-2">
         <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 flex-1 gap-1.5 text-[11px] text-purple-500 hover:text-purple-600"
-              onClick={() => handleCreateBranch("stream")}
-            >
-              <GitBranchIcon className="size-3" />
-              Create Branch
-            </Button>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 flex-1 gap-1.5 text-[11px] text-purple-500 hover:text-purple-600"
+                onClick={() => handleCreateBranch("stream")}
+              />
+            }
+          >
+            <GitBranchIcon className="size-3" />
+            Create Branch
           </TooltipTrigger>
           <TooltipContent className="border bg-muted text-xs">
             Create a new branch from this snapshot

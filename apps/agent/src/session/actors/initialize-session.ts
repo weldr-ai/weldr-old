@@ -6,30 +6,36 @@ import { Logger } from "@weldr/shared/logger";
 import { agentPrompt } from "@/ai/prompts";
 import {
   addIntegrationsTool,
-  getOrCreateBashTool,
   queryRelatedDeclarationsTool,
   searchCodebaseTool,
   spawnAgentsTool,
 } from "@/ai/tools";
 import { stream } from "@/core/stream";
+import { getOrCreateWorkspace } from "@/core/workspace/just-bash";
 import { ensureSnapshotWorkspace } from "@/session/branch-state";
 import type { SessionMachineContext } from "@/session/types";
 
 const buildToolSet = async (context: SessionMachineContext): Promise<ToolSet> => {
   const snapshotId = context.branch.snapshot?.id;
+
   if (!snapshotId) {
     throw new Error("Branch has no snapshot");
   }
 
-  const bashTools = await getOrCreateBashTool(context.project.id, snapshotId);
+  const { tools: bashTools } = await getOrCreateWorkspace({
+    snapshotId,
+    projectId: context.project.id,
+  });
 
+  // Type assertion needed: bash-tool exports Tool<{command: string}, CommandResult>
+  // which is structurally compatible with ToolSet but not assignable due to variance
   return {
-    ...bashTools,
-    search_codebase: searchCodebaseTool(context),
-    query_related_declarations: queryRelatedDeclarationsTool(context),
-    spawn_agents: spawnAgentsTool(context),
-    add_integrations: addIntegrationsTool(context),
-  };
+    ...bashTools.tools,
+    searchCodebase: searchCodebaseTool(context),
+    queryRelatedDeclarations: queryRelatedDeclarationsTool(context),
+    spawnAgents: spawnAgentsTool(context),
+    addIntegrations: addIntegrationsTool(context),
+  } as unknown as ToolSet;
 };
 
 type InitializeResult = {

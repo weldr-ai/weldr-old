@@ -11,13 +11,13 @@ export function IntegrationsInstallationStatus({ message }: { message: Integrati
   return (
     <div className="flex flex-col gap-2 rounded-md border bg-muted p-2">
       {output.value.status === "cancelled" && (
-        <span className="font-medium text-muted-foreground text-xs">
+        <span className="text-xs font-medium text-muted-foreground">
           <span className="text-foreground">Integrations installation</span> cancelled
         </span>
       )}
       {output.value.status === "completed" && (
         <>
-          <h4 className="font-medium text-foreground text-xs">Integrations Installation</h4>
+          <h4 className="text-xs font-medium text-foreground">Integrations Installation</h4>
           {output.value.integrations?.map((integration) => (
             <div
               key={integration.key}
@@ -30,7 +30,7 @@ export function IntegrationsInstallationStatus({ message }: { message: Integrati
               <div
                 className={cn(
                   "flex h-fit items-center gap-1 rounded-sm border bg-background px-1.5 py-0.5",
-                  "shrink-0 font-medium text-[0.65rem] text-muted-foreground",
+                  "shrink-0 text-[0.65rem] font-medium text-muted-foreground",
                 )}
               >
                 {integration.status === "installing" ? (

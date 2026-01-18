@@ -1,12 +1,11 @@
-"use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { BoxesIcon, ExternalLinkIcon, PlusIcon, TrashIcon } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import type { RouterOutputs } from "@weldr/api";
 import type { Session } from "@weldr/auth";
-import { authClient } from "@weldr/auth/client";
 import { Button, buttonVariants } from "@weldr/ui/components/button";
 import {
   CommandDialog,
@@ -16,18 +15,21 @@ import {
   CommandItem,
   CommandList,
 } from "@weldr/ui/components/command";
-import { toast } from "@weldr/ui/hooks/use-toast";
-import { LogoIcon } from "@weldr/ui/icons";
 import { cn } from "@weldr/ui/lib/utils";
+import { WeldrLogo } from "@weldr/ui/logos/weldr";
 
 import { type CommandCenterView, useUIStore } from "@/lib/context/ui-store";
-import { orpc } from "@/lib/orpc/client";
+import { orpc } from "@/lib/orpc";
 import { DeleteAlertDialog } from "./delete-alert-dialog";
 import { CreateProjectForm } from "./projects/create-project-form";
 
-export function CommandCenter({ projects }: { projects: RouterOutputs["projects"]["list"] }) {
-  const { data: session } = authClient.useSession();
-
+export function CommandCenter({
+  projects,
+  session,
+}: {
+  projects: RouterOutputs["projects"]["list"];
+  session: Session | null;
+}) {
   const { commandCenterOpen, commandCenterView, setCommandCenterOpen, setCommandCenterView } =
     useUIStore();
 
@@ -57,8 +59,8 @@ export function CommandCenter({ projects }: { projects: RouterOutputs["projects"
     <CommandDialog
       open={commandCenterOpen}
       onOpenChange={setCommandCenterOpen}
-      dialogClassName="min-h-[600px] min-w-[896px] max-w-4xl"
-      commandClassName="size-full [&_[cmdk-group-heading]]:px-0 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-0"
+      // dialogClassName="min-h-[600px] min-w-[896px] max-w-4xl"
+      // commandClassName="size-full [&_[cmdk-group-heading]]:px-0 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-0"
     >
       <CommandCenterContent view={commandCenterView} projects={projects} session={session} />
     </CommandDialog>
@@ -128,16 +130,13 @@ function ProjectsContent({
       onSuccess: () => {
         setDeleteProjectOpen(false);
         queryClient.invalidateQueries({ queryKey: orpc.projects.list.key() });
-        toast({
-          title: "Project deleted",
+        toast.success("Project deleted", {
           description: "Your project has been deleted",
         });
       },
-      onError: () => {
-        toast({
-          variant: "destructive",
-          title: "Failed to delete project",
-          description: "Please try again",
+      onError: (error) => {
+        toast.error("Failed to delete project", {
+          description: error.message,
         });
       },
     }),
@@ -147,7 +146,7 @@ function ProjectsContent({
     <>
       <div className="border-r">
         <CommandInput className="border-0 focus:ring-0" placeholder="Search projects..." />
-        <CommandList className="scrollbar-thin scrollbar-thumb-muted-foreground scrollbar-track-muted max-h-[calc(100%-84px)] w-[320px] overflow-y-auto">
+        <CommandList className="scrollbar-thin max-h-[calc(100%-84px)] w-[320px] overflow-y-auto scrollbar-thumb-muted-foreground scrollbar-track-muted">
           <CommandEmpty>No projects found.</CommandEmpty>
           <CommandGroup className="p-0 **:[[cmdk-group-heading]]:px-0 **:[[cmdk-group-heading]]:py-0">
             {projects.map((project) => (
@@ -162,7 +161,7 @@ function ProjectsContent({
                 }}
               >
                 <div className="flex size-8 items-center justify-center rounded-md border bg-muted/30">
-                  <LogoIcon className="size-6" />
+                  <WeldrLogo className="size-6" />
                 </div>
                 <span className="font-medium">{project.title ?? "Untitled Project"}</span>
               </CommandItem>
@@ -184,25 +183,27 @@ function ProjectsContent({
         {selectedProject ? (
           <div className="flex h-full flex-col gap-2">
             <Link
-              href={`/projects/${selectedProject.id}`}
+              to="/projects/$projectId"
+              params={{ projectId: selectedProject.id }}
               onClick={() => {
                 setCommandCenterOpen(false);
               }}
               className="block overflow-hidden rounded-lg border"
             >
               <div className="flex aspect-video h-[250px] w-full items-center justify-center rounded-lg bg-muted/30 transition-transform duration-200 hover:scale-[1.1]">
-                <LogoIcon className="size-24" />
+                <WeldrLogo className="size-24" />
               </div>
             </Link>
 
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <h2 className="font-semibold text-xl">
+                  <h2 className="text-xl font-semibold">
                     {selectedProject.title ?? "Untitled Project"}
                   </h2>
                   <Link
-                    href={`/projects/${selectedProject.id}`}
+                    to="/projects/$projectId"
+                    params={{ projectId: selectedProject.id }}
                     onClick={() => {
                       setCommandCenterOpen(false);
                     }}
@@ -235,7 +236,7 @@ function ProjectsContent({
                   isPending={deleteProject.isPending}
                 />
               </div>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-sm text-muted-foreground">
                 {selectedProject.description ?? "No description"}
               </p>
             </div>

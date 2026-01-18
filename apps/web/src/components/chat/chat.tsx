@@ -3,7 +3,7 @@ import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import type { RouterOutputs } from "@weldr/api";
-import { authClient } from "@weldr/auth/client";
+import type { Session } from "@weldr/auth";
 import type { ChatMessage } from "@weldr/shared/types";
 import { Button } from "@weldr/ui/components/button";
 import { cn } from "@weldr/ui/lib/utils";
@@ -26,12 +26,11 @@ interface ChatProps {
   project: RouterOutputs["projects"]["get"];
   branch: RouterOutputs["branches"]["getByIdOrMain"];
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
+  session: Session | null;
 }
 
 export const Chat = memo<ChatProps>(
-  ({ integrationTemplates, project, branch, environmentVariables }) => {
-    const { data: session } = authClient.useSession();
-
+  ({ integrationTemplates, project, branch, environmentVariables, session }) => {
     // Get the first (most recent) chat from the branch
     const chat = branch.chats?.[0];
     const snapshot = branch.snapshot;
@@ -68,6 +67,7 @@ export const Chat = memo<ChatProps>(
     const { eventSourceRef, connectToEventStream, closeEventStream } = useEventStream({
       projectId: project.id,
       branchId: branch.id,
+      snapshotId: snapshot?.id ?? null,
       chatId: chat?.id ?? "",
       setStatus,
       setMessages,
@@ -169,7 +169,7 @@ export const Chat = memo<ChatProps>(
         >
           <div
             ref={messagesContainerRef}
-            className="scrollbar scrollbar-thumb-rounded-full scrollbar-thumb-muted-foreground scrollbar-track-transparent flex h-full flex-col gap-2 overflow-y-auto border-b p-2"
+            className="scrollbar-thumb-rounded-full scrollbar flex h-full flex-col gap-2 overflow-y-auto border-b p-2 scrollbar-thumb-muted-foreground scrollbar-track-transparent"
           >
             <Messages
               messages={messages}
@@ -186,6 +186,7 @@ export const Chat = memo<ChatProps>(
 
         <MultimodalInput
           type="editor"
+          session={session}
           chatId={chat?.id ?? ""}
           message={userMessageContent}
           setMessage={setUserMessageContent}

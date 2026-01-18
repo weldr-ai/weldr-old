@@ -29,7 +29,7 @@ const email: string = session.user.email;
 
 ```typescript
 // Client-side auth hooks
-import { authClient } from "@weldr/auth/client";
+import { authClient } from "@/lib/auth/client";
 
 const { data: session, isPending, error } = authClient.useSession();
 
@@ -50,7 +50,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@weldr/db";
 
 export const auth = betterAuth({
-  baseURL: process.env.NEXT_PUBLIC_WEB_URL,
+  baseURL: process.env.VITE_WEB_URL,
   trustedOrigins: ["https://weldr.ai", "http://localhost:3000"],
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -146,7 +146,7 @@ const sessions = await auth.api.listSessions({
 ### Client-Side Session Access
 
 ```typescript
-import { authClient } from "@weldr/auth/client";
+import { authClient } from "@/lib/auth/client";
 
 // React hook for session
 function MyComponent() {
@@ -324,7 +324,7 @@ await resend.emails.send({
 ### User Management
 
 ```typescript
-import { authClient } from "@weldr/auth/client";
+import { authClient } from "@/lib/auth/client";
 
 // List users (admin only)
 const users = await authClient.admin.listUsers({
@@ -438,7 +438,7 @@ export type Subscription = {
 | Variable                | Required | Description                  |
 | ----------------------- | -------- | ---------------------------- |
 | `BETTER_AUTH_SECRET`    | Yes      | Auth secret key              |
-| `NEXT_PUBLIC_WEB_URL`   | Yes      | Base URL for auth callbacks  |
+| `VITE_WEB_URL`          | Yes      | Base URL for auth callbacks  |
 | `DATABASE_URL`          | Yes      | PostgreSQL connection string |
 | `RESEND_API_KEY`        | Yes      | Email delivery service       |
 | `GITHUB_CLIENT_ID`      | No       | GitHub OAuth                 |

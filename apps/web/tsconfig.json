@@ -1,13 +1,11 @@
 {
-  "extends": "@weldr/tsconfig/next.json",
+  "extends": "@weldr/tsconfig/tanstack-start.json",
   "compilerOptions": {
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    },
-    "incremental": true,
-    "tsBuildInfoFile": ".tsbuildinfo"
-  },
-  "include": ["next-env.d.ts", "src/**/*", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+    }
+  }
 }

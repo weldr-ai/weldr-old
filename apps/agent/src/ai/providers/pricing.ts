@@ -1,6 +1,4 @@
-import { and, eq } from "drizzle-orm";
-
-import { db } from "@weldr/db";
+import { and, db, eq } from "@weldr/db";
 import { type AiModel, type AiModelKey, type AiModelProvider, aiModels } from "@weldr/db/schema";
 
 export interface CostCalculation {

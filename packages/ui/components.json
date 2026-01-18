@@ -1,7 +1,7 @@
 {
   "$schema": "https://ui.shadcn.com/schema.json",
-  "style": "new-york",
-  "rsc": true,
+  "style": "base-nova",
+  "rsc": false,
   "tsx": true,
   "tailwind": {
     "config": "",
@@ -10,11 +10,13 @@
     "cssVariables": true
   },
   "iconLibrary": "lucide",
+  "menuColor": "default",
+  "menuAccent": "subtle",
   "aliases": {
     "components": "@weldr/ui/components",
     "utils": "@weldr/ui/lib/utils",
-    "hooks": "@weldr/ui/hooks",
+    "ui": "@weldr/ui/components",
     "lib": "@weldr/ui/lib",
-    "ui": "@weldr/ui/components"
+    "hooks": "@weldr/ui/hooks"
   }
 }
