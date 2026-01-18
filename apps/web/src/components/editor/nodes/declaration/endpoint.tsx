@@ -9,24 +9,20 @@ import { ScrollArea } from "@weldr/ui/components/scroll-area";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { OpenApiViewer } from "@/components/openapi-viewer";
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 import type { CanvasNodeProps } from "@/types";
 import { ProtectedBadge } from "../components/protected-badge";
 import { Status } from "../components/status";
 
 export const EndpointNode = memo(
   ({ data: _data, selected, positionAbsoluteX, positionAbsoluteY }: CanvasNodeProps) => {
-    const trpc = useTRPC();
-
     const { data: declaration } = useQuery(
-      trpc.declarations.byId.queryOptions(
-        {
+      orpc.declarations.get.queryOptions({
+        input: {
           id: _data.id,
         },
-        {
-          initialData: _data,
-        },
-      ),
+        initialData: _data,
+      }),
     );
 
     const specs = declaration.metadata?.specs;

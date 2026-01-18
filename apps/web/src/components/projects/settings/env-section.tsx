@@ -18,7 +18,7 @@ import { toast } from "@weldr/ui/hooks/use-toast";
 
 import { CreateEnvironmentVariableDialog } from "@/components/create-environment-variable-dialog";
 import { DeleteAlertDialog } from "@/components/delete-alert-dialog";
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 
 export function EnvSection({
   environmentVariables,
@@ -29,16 +29,13 @@ export function EnvSection({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const queryClient = useQueryClient();
-  const trpc = useTRPC();
 
   const deleteEnvironmentVariable = useMutation(
-    trpc.environmentVariables.delete.mutationOptions({
+    orpc.environmentVariables.delete.mutationOptions({
       onSuccess: () => {
-        queryClient.invalidateQueries(
-          trpc.environmentVariables.list.queryFilter({
-            projectId,
-          }),
-        );
+        queryClient.invalidateQueries({
+          queryKey: orpc.environmentVariables.list.key({ input: { projectId } }),
+        });
         setDeleteDialogOpen(false);
       },
       onError: (error) => {

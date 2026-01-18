@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { notFound, redirect } from "next/navigation";
 
 import { CommandCenter } from "@/components/command-center";
-import { api } from "@/lib/trpc/server";
+import { api } from "@/lib/orpc/client";
 
 export default async function ProjectLayout({ children }: { children: React.ReactNode }) {
   try {

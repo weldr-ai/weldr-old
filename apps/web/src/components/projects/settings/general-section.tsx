@@ -28,21 +28,20 @@ import { Input } from "@weldr/ui/components/input";
 import { toast } from "@weldr/ui/hooks/use-toast";
 
 import { DeleteAlertDialog } from "@/components/delete-alert-dialog";
-import { getProjectDownloadUrl } from "@/lib/actions/get-project-download-url";
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 
-export function GeneralSection({ project }: { project: RouterOutputs["projects"]["byId"] }) {
+export function GeneralSection({ project }: { project: RouterOutputs["projects"]["get"] }) {
   const router = useRouter();
-  const [isDownloading, setIsDownloading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
 
   const updateProject = useMutation(
-    trpc.projects.update.mutationOptions({
+    orpc.projects.update.mutationOptions({
       onSuccess: () => {
-        queryClient.invalidateQueries(trpc.projects.byId.queryFilter({ id: project.id }));
+        queryClient.invalidateQueries({
+          queryKey: orpc.projects.get.key({ input: { id: project.id } }),
+        });
       },
       onError: (error) => {
         toast({
@@ -56,7 +55,7 @@ export function GeneralSection({ project }: { project: RouterOutputs["projects"]
   );
 
   const deleteProject = useMutation(
-    trpc.projects.delete.mutationOptions({
+    orpc.projects.delete.mutationOptions({
       onSuccess: () => {
         router.push("/");
       },
@@ -164,24 +163,9 @@ export function GeneralSection({ project }: { project: RouterOutputs["projects"]
             <h3 className="font-medium">Download Project</h3>
             <p className="text-muted-foreground text-sm">Download your project code.</p>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isDownloading}
-            onClick={async () => {
-              setIsDownloading(true);
-              const url = await getProjectDownloadUrl({
-                projectId: project.id,
-              });
-              window.open(url, "_blank");
-              setIsDownloading(false);
-            }}
-          >
-            {isDownloading ? (
-              <LoaderIcon className="mr-2 size-3.5 animate-spin" />
-            ) : (
-              <DownloadIcon className="mr-2 size-3.5" />
-            )}
+          {/* FIXME: Implement download */}
+          <Button size="sm" variant="outline">
+            <DownloadIcon className="mr-2 size-3.5" />
             Download
           </Button>
         </div>

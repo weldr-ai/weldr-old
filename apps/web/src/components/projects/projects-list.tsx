@@ -4,19 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 
 import type { RouterOutputs } from "@weldr/api";
 
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 
 export function ProjectsList({
   projects: _projects,
 }: {
   projects: RouterOutputs["projects"]["list"];
 }) {
-  const trpc = useTRPC();
-  const { data: projects } = useQuery(
-    trpc.projects.list.queryOptions(undefined, {
-      initialData: _projects,
-    }),
-  );
+  const { data: projects } = useQuery(orpc.projects.list.queryOptions({ initialData: _projects }));
 
   return (
     <div className="flex w-full flex-col gap-4">

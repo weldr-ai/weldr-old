@@ -5,7 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import type { NodeType } from "@weldr/shared/types";
 
 import { ProjectView } from "@/components/projects/project-view";
-import { api } from "@/lib/trpc/server";
+import { api } from "@/lib/orpc/client";
 import type { CanvasNode } from "@/types";
 import { getSnapshotDeclarations } from "./_utils/get-snapshot-declarations";
 
@@ -19,13 +19,13 @@ export default async function ProjectPage({
   try {
     const { projectId } = await params;
     const { snapshotId } = await searchParams;
-    const project = await api.projects.byId({ id: projectId });
-    const branch = await api.branches.byIdOrMain({
+    const project = await api.projects.get({ id: projectId });
+    const branch = await api.branches.getByIdOrMain({
       projectId: project.id,
       snapshotId,
     });
     const integrationTemplates = await api.integrationTemplates.list();
-
+    const environmentVariables = await api.environmentVariables.list({ projectId: project.id });
     const snapshotDeclarations = getSnapshotDeclarations(branch.snapshot);
 
     const initialNodes: CanvasNode[] =
@@ -70,6 +70,7 @@ export default async function ProjectPage({
       <ProjectView
         project={project}
         branch={branch}
+        environmentVariables={environmentVariables}
         initialNodes={initialNodes}
         initialEdges={initialEdges}
         integrationTemplates={integrationTemplates}

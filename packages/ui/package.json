@@ -14,7 +14,7 @@
   },
   "scripts": {
     "add-component": "bunx --bun shadcn@latest add",
-    "clean": "git clean -xdf .turbo node_modules dist",
+    "clean": "git clean -xdf .turbo node_modules dist .tsbuildinfo",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {

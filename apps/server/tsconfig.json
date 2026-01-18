@@ -8,10 +8,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"],
-  "references": [
-    {
-      "path": "../../packages/api_v2"
-    }
-  ]
+  "include": ["src"]
 }

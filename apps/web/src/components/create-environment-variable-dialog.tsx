@@ -29,7 +29,7 @@ import {
 import { Input } from "@weldr/ui/components/input";
 import { toast } from "@weldr/ui/hooks/use-toast";
 
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 
 export function CreateEnvironmentVariableDialog({ children }: { children?: React.ReactNode }) {
   const { projectId } = useParams<{ projectId: string }>();
@@ -46,17 +46,14 @@ export function CreateEnvironmentVariableDialog({ children }: { children?: React
     },
   });
 
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
 
   const createEnvironmentVariable = useMutation(
-    trpc.environmentVariables.create.mutationOptions({
+    orpc.environmentVariables.create.mutationOptions({
       onSuccess: async (data) => {
-        await queryClient.invalidateQueries(
-          trpc.environmentVariables.list.queryFilter({
-            projectId,
-          }),
-        );
+        await queryClient.invalidateQueries({
+          queryKey: orpc.environmentVariables.list.key({ input: { projectId } }),
+        });
         if (data.id) {
           setIsDialogOpen(false);
           form.reset();

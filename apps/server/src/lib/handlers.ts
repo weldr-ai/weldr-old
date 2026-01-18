@@ -1,4 +1,4 @@
-import { createHandlers } from "@weldr/api_v2/handlers";
+import { createHandlers } from "@weldr/api";
 
 import { env } from "./env";
 import { logger } from "./logger";

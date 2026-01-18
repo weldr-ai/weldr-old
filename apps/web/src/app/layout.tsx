@@ -1,3 +1,4 @@
+import { TanStackDevtools } from "@tanstack/react-devtools";
 import { ReactFlowProvider } from "@xyflow/react";
 import type { Metadata } from "next";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
@@ -7,10 +8,10 @@ import { Toaster } from "@weldr/ui/components/toaster";
 import { TooltipProvider } from "@weldr/ui/components/tooltip";
 import { cn } from "@weldr/ui/lib/utils";
 
-import { QueryProvider } from "@/components/query-client-provider";
 import { UIStoreProvider } from "@/lib/context/ui-store";
-import { TRPCReactProvider } from "@/lib/trpc/react";
-import { HydrateClient } from "@/lib/trpc/server";
+import TanStackQueryDevtools from "@/lib/tanstack-query/devtools";
+import { Provider as TanstackQueryProvider } from "@/lib/tanstack-query/root-provider";
+
 import "@weldr/ui/styles/globals.css";
 
 const fontSans = Poppins({
@@ -43,26 +44,28 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         )}
       >
         <UIStoreProvider>
-          <TRPCReactProvider>
-            <QueryProvider>
-              <HydrateClient>
-                <TooltipProvider delayDuration={200}>
-                  <ReactFlowProvider>
-                    <NextThemesProvider
-                      attribute="class"
-                      defaultTheme="system"
-                      enableSystem
-                      disableTransitionOnChange
-                      enableColorScheme
-                    >
-                      {children}
-                      <Toaster />
-                    </NextThemesProvider>
-                  </ReactFlowProvider>
-                </TooltipProvider>
-              </HydrateClient>
-            </QueryProvider>
-          </TRPCReactProvider>
+          <TanstackQueryProvider>
+            <TooltipProvider delayDuration={200}>
+              <ReactFlowProvider>
+                <NextThemesProvider
+                  attribute="class"
+                  defaultTheme="system"
+                  enableSystem
+                  disableTransitionOnChange
+                  enableColorScheme
+                >
+                  {children}
+                  <Toaster />
+                </NextThemesProvider>
+              </ReactFlowProvider>
+            </TooltipProvider>
+            <TanStackDevtools
+              config={{
+                position: "bottom-right",
+              }}
+              plugins={[TanStackQueryDevtools]}
+            />
+          </TanstackQueryProvider>
         </UIStoreProvider>
       </body>
     </html>

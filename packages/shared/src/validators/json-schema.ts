@@ -77,7 +77,7 @@ export const jsonSchema = simpleValidationSchema.extend({
 
   // Conditionals
   if: z.unknown().optional(),
-  // oxlint-disable-next-line no-then-property
+  // oxlint-disable-next-line no-thenable
   then: z.unknown().optional(),
   else: z.unknown().optional(),
 

@@ -34,7 +34,7 @@ const PureMessageItem = ({
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
   setStatus: Dispatch<SetStateAction<TStatus>>;
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
-  project: RouterOutputs["projects"]["byId"];
+  project: RouterOutputs["projects"]["get"];
 }) => {
   return (
     <div

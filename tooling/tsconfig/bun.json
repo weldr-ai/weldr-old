@@ -4,11 +4,7 @@
   "extends": "./base.json",
   "compilerOptions": {
     "lib": ["ESNext", "DOM"],
-    "target": "ESNext",
-    "moduleDetection": "force",
     "jsx": "react-jsx",
-    "allowJs": true,
-    "allowImportingTsExtensions": true,
     "noEmit": true
   }
 }

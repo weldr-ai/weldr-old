@@ -1,8 +1,8 @@
 import type { RouterOutputs } from "@weldr/api";
 
-type Snapshot = NonNullable<RouterOutputs["branches"]["byIdOrMain"]["snapshot"]>;
+type Snapshot = NonNullable<RouterOutputs["branches"]["getByIdOrMain"]>["snapshot"];
 
-type Declaration = Snapshot["declarations"][number]["declaration"];
+type Declaration = NonNullable<Snapshot>["declarations"][number]["declaration"];
 
 type DeclarationEdge = {
   dependencyId: string | undefined;

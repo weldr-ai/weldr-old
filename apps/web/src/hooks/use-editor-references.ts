@@ -5,11 +5,11 @@ import type { RouterOutputs } from "@weldr/api";
 import type { referencePartSchema } from "@weldr/shared/validators/chats";
 
 type SnapshotDeclaration = NonNullable<
-  RouterOutputs["branches"]["byIdOrMain"]["snapshot"]
+  RouterOutputs["branches"]["getByIdOrMain"]["snapshot"]
 >["declarations"][number];
 
 interface UseEditorReferencesOptions {
-  snapshot?: RouterOutputs["branches"]["byIdOrMain"]["snapshot"];
+  snapshot?: RouterOutputs["branches"]["getByIdOrMain"]["snapshot"];
 }
 
 export function useEditorReferences({ snapshot }: UseEditorReferencesOptions) {

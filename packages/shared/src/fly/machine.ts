@@ -185,7 +185,7 @@ export namespace Machine {
             },
           ],
           env: {
-            ...(baseConfig.env ?? {}),
+            ...baseConfig.env,
             PROJECT_ID: projectId,
           },
         } as paths["/apps/{app_name}/machines"]["post"]["requestBody"]["content"]["application/json"]["config"];

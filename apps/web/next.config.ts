@@ -3,6 +3,9 @@
 import type { NextConfig } from "next";
 
 const config = {
+  typedRoutes: true,
+  reactCompiler: true,
+
   /** Enables hot reloading for local packages without a build step */
   transpilePackages: ["@weldr/api", "@weldr/auth", "@weldr/db", "@weldr/ui"],
 

@@ -4,20 +4,26 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "default": "./src/index.ts"
+    }
   },
   "scripts": {
-    "clean": "git clean -xdf .turbo node_modules dist",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "clean": "git clean -xdf node_modules dist .turbo .tsbuildinfo",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@trpc/server": "11.1.2",
+    "@opentelemetry/api": "^1.9.0",
+    "@orpc/experimental-pino": "^1.13.4",
+    "@orpc/openapi": "^1.13.4",
+    "@orpc/server": "^1.13.4",
+    "@orpc/zod": "^1.13.4",
+    "@sentry/bun": "^10.34.0",
     "@weldr/auth": "workspace:*",
     "@weldr/db": "workspace:*",
     "@weldr/shared": "workspace:*",
-    "redis": "^5.5.5",
-    "superjson": "^2.2.2",
-    "zod": "^4.3.5"
+    "pino": "^10.1.0",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@weldr/tsconfig": "workspace:*",

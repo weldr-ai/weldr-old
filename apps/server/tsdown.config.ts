@@ -7,4 +7,5 @@ export default defineConfig({
   outDir: "dist",
   target: "es2022",
   minify: true,
+  noExternal: [/^@weldr\/.*/],
 });

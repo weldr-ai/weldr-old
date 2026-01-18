@@ -6,9 +6,9 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   const isAllowed = origin && corsConfig.origin.includes(origin);
 
   return {
-    "Access-Control-Allow-Origin": isAllowed ? origin : corsConfig.origin[0],
-    "Access-Control-Allow-Methods": corsConfig.allowMethods.join(", "),
-    "Access-Control-Allow-Headers": corsConfig.allowHeaders.join(", "),
+    "Access-Control-Allow-Origin": isAllowed ? origin : corsConfig.origin.join(","),
+    "Access-Control-Allow-Methods": corsConfig.allowMethods.join(","),
+    "Access-Control-Allow-Headers": corsConfig.allowHeaders.join(","),
     "Access-Control-Allow-Credentials": String(corsConfig.credentials),
     "Access-Control-Max-Age": String(corsConfig.maxAge),
   };

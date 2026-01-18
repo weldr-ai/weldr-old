@@ -1,5 +1,5 @@
 {
-  "extends": "@weldr/tsconfig/node.json",
+  "extends": "@weldr/tsconfig/bun.json",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {

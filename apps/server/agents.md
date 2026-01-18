@@ -6,7 +6,7 @@ Backend API server for **Weldr**. Built with Bun, ORPC, Drizzle, and Better-Auth
 
 The server app is a simple runtime that:
 
-- Runs the ORPC API from `@weldr/api_v2`
+- Runs the ORPC API from `@weldr/api`
 - Handles HTTP requests and responses
 - Provides server configuration and environment setup
 - Manages logging and observability
@@ -42,7 +42,7 @@ bun run db:studio   # Open Drizzle Studio
 src/
 ├── lib/
 │   ├── env.ts          # Environment variables
-│   ├── handlers.ts     # ORPC handlers (imported from @weldr/api_v2)
+│   ├── handlers.ts     # ORPC handlers (imported from @weldr/api)
 │   └── logger.ts       # Pino logger
 ├── index.ts            # App entry point (exports fetch handler)
 └── server.ts           # Server entry point (Bun.serve)
@@ -64,7 +64,7 @@ All API routes are defined in `packages/api_v2`. See `packages/api_v2/agents.md`
 
 ## Creating New Routes
 
-**Note**: Routes are created in the `@weldr/api_v2` package, not in the server app. The server app only runs the API. See `packages/api_v2/agents.md` for instructions on creating new routes.
+**Note**: Routes are created in the `@weldr/api` package, not in the server app. The server app only runs the API. See `packages/api_v2/agents.md` for instructions on creating new routes.
 
 ## TypeScript Rules
 
@@ -97,7 +97,7 @@ function process(input: any) {}
 - **Run linter after EVERY file change** - fix all errors before proceeding
 - **Use full TypeScript types** - never use `any`, always properly type everything
 - Keep server app minimal - it only runs the API
-- Import handlers from `@weldr/api_v2`
+- Import handlers from `@weldr/api`
 - Use proper logging with Pino
 - Handle environment variables correctly
 
@@ -118,9 +118,9 @@ function process(input: any) {}
 
 ## Quick Reference
 
-| Task             | How To                                                    |
-| ---------------- | --------------------------------------------------------- |
-| Import handlers  | `import { createHandlers } from "@weldr/api_v2/handlers"` |
-| Get logger       | `import { logger } from "@/lib/logger"`                   |
-| Environment vars | `import { env } from "@/lib/env"`                         |
-| Start server     | `Bun.serve({ port, fetch })`                              |
+| Task             | How To                                                 |
+| ---------------- | ------------------------------------------------------ |
+| Import handlers  | `import { createHandlers } from "@weldr/api/handlers"` |
+| Get logger       | `import { logger } from "@/lib/logger"`                |
+| Environment vars | `import { env } from "@/lib/env"`                      |
+| Start server     | `Bun.serve({ port, fetch })`                           |

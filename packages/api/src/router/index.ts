@@ -1,27 +1,25 @@
-import { createTRPCRouter } from "../init";
-import { branchRouter } from "./branches";
-import { chatsRouter } from "./chats";
-import { declarationsRouter } from "./declarations";
-import { environmentVariablesRouter } from "./environment-variables";
-import { integrationTemplatesRouter } from "./integration-templates";
-import { integrationsRouter } from "./integrations";
-import { nodesRouter } from "./nodes";
-import { projectsRouter } from "./projects";
-import { snapshotsRouter } from "./snapshots";
-import { themesRouter } from "./themes";
+import branches from "./branches";
+import chats from "./chats";
+import declarations from "./declarations";
+import environmentVariables from "./environment-variables";
+import health from "./health";
+import integrationTemplates from "./integration-templates";
+import integrations from "./integrations";
+import nodes from "./nodes";
+import projects from "./projects";
+import ready from "./ready";
+import snapshots from "./snapshots";
 
-export const appRouter = createTRPCRouter({
-  projects: projectsRouter,
-  chats: chatsRouter,
-  environmentVariables: environmentVariablesRouter,
-  declarations: declarationsRouter,
-  snapshots: snapshotsRouter,
-  integrations: integrationsRouter,
-  integrationTemplates: integrationTemplatesRouter,
-  themes: themesRouter,
-  nodes: nodesRouter,
-  branches: branchRouter,
-});
-
-// export type definition of API
-export type AppRouter = typeof appRouter;
+export const router = {
+  health,
+  ready,
+  projects,
+  chats,
+  environmentVariables,
+  declarations,
+  snapshots,
+  integrations,
+  integrationTemplates,
+  nodes,
+  branches,
+};

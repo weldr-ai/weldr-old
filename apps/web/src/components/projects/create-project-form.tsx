@@ -19,7 +19,7 @@ import {
 import { toast } from "@weldr/ui/hooks/use-toast";
 
 import { useUIStore } from "@/lib/context/ui-store";
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 import { MultimodalInput } from "../chat/multimodal-input/multimodal-input";
 
 const placeholders = [
@@ -56,10 +56,8 @@ export function CreateProjectForm({ session }: { session: Session | null }) {
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
-  const trpc = useTRPC();
-
   const createProjectMutation = useMutation(
-    trpc.projects.create.mutationOptions({
+    orpc.projects.create.mutationOptions({
       onSuccess: async (data) => {
         toast({
           title: "Success",

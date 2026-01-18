@@ -18,14 +18,14 @@ const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 const resend = new Resend(process.env.RESEND_API_KEY ?? "");
 
 export const auth = betterAuth({
-  baseURL: process.env.NEXT_PUBLIC_BASE_URL,
+  baseURL: process.env.API_URL,
   advanced: {
     database: {
       generateId: () => nanoid(),
     },
     cookiePrefix: "weldr",
   },
-  trustedOrigins: ["https://weldr.ai", "http://localhost:3000"],
+  trustedOrigins: process.env.CORS_ORIGIN?.split(",") ?? [],
   database: drizzleAdapter(db, {
     provider: "pg",
     usePlural: true,

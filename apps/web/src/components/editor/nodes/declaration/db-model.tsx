@@ -18,23 +18,19 @@ import { ScrollArea } from "@weldr/ui/components/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@weldr/ui/components/tooltip";
 import { cn } from "@weldr/ui/lib/utils";
 
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 import type { CanvasNodeProps } from "@/types";
 import { Status } from "../components/status";
 
 export const DbModelNode = memo(
   ({ data: _data, selected, positionAbsoluteX, positionAbsoluteY }: CanvasNodeProps) => {
-    const trpc = useTRPC();
-
     const { data: declaration } = useQuery(
-      trpc.declarations.byId.queryOptions(
-        {
+      orpc.declarations.get.queryOptions({
+        input: {
           id: _data.id,
         },
-        {
-          initialData: _data,
-        },
-      ),
+        initialData: _data,
+      }),
     );
 
     const specs = declaration.metadata?.specs;
@@ -160,11 +156,11 @@ export const DbModelNode = memo(
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-1">
                       {column.isPrimaryKey ? (
-                        <KeyIcon className="size-2.5 flex-shrink-0 text-warning" />
+                        <KeyIcon className="size-2.5 shrink-0 text-warning" />
                       ) : column.unique ? (
-                        <FingerprintIcon className="size-2.5 flex-shrink-0 text-primary" />
+                        <FingerprintIcon className="size-2.5 shrink-0 text-primary" />
                       ) : (
-                        <div className="size-2.5 flex-shrink-0" />
+                        <div className="size-2.5 shrink-0" />
                       )}
                       <span className="truncate font-mono text-xs">{column.name}</span>
                     </div>
