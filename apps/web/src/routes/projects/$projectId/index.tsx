@@ -1,4 +1,4 @@
-import { useSuspenseQueries } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import type { Edge } from "@xyflow/react";
 import { useMemo } from "react";
@@ -18,6 +18,25 @@ const projectSearchSchema = z.object({
 
 export const Route = createFileRoute("/projects/$projectId/")({
   validateSearch: projectSearchSchema,
+  beforeLoad: async ({ context, params, search }) => {
+    const { projectId } = params;
+    const { snapshotId } = search;
+
+    await Promise.all([
+      context.queryClient.prefetchQuery(
+        orpc.projects.get.queryOptions({ input: { id: projectId } }),
+      ),
+      context.queryClient.prefetchQuery(
+        orpc.branches.getByIdOrMain.queryOptions({
+          input: { projectId, snapshotId },
+        }),
+      ),
+      context.queryClient.prefetchQuery(orpc.integrationTemplates.list.queryOptions({ input: {} })),
+      context.queryClient.prefetchQuery(
+        orpc.environmentVariables.list.queryOptions({ input: { projectId } }),
+      ),
+    ]);
+  },
   pendingComponent: () => (
     <div className="flex h-screen w-full items-center justify-center">
       <Spinner className="size-8" />
@@ -34,9 +53,9 @@ function RouteComponent() {
   const [
     { data: project },
     { data: branch },
-    { data: integrationTemplates },
-    { data: environmentVariables },
-  ] = useSuspenseQueries({
+    { data: integrationTemplates = [] },
+    { data: environmentVariables = [] },
+  ] = useQueries({
     queries: [
       orpc.projects.get.queryOptions({ input: { id: projectId } }),
       orpc.branches.getByIdOrMain.queryOptions({

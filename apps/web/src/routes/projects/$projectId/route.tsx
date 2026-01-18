@@ -1,4 +1,4 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 import { Spinner } from "@weldr/ui/components/spinner";
@@ -8,12 +8,14 @@ import { getSessionFn } from "@/lib/auth/get-session-fn";
 import { orpc } from "@/lib/orpc";
 
 export const Route = createFileRoute("/projects/$projectId")({
-  beforeLoad: async () => {
+  beforeLoad: async ({ context }) => {
     const session = await getSessionFn();
 
     if (!session) {
       throw redirect({ to: "/auth/sign-in" });
     }
+
+    await context.queryClient.prefetchQuery(orpc.projects.list.queryOptions());
 
     return { session };
   },
@@ -27,7 +29,7 @@ export const Route = createFileRoute("/projects/$projectId")({
 
 function RouteComponent() {
   const { session } = Route.useRouteContext();
-  const { data: projects } = useSuspenseQuery(orpc.projects.list.queryOptions());
+  const { data: projects = [] } = useQuery(orpc.projects.list.queryOptions());
 
   return (
     <>

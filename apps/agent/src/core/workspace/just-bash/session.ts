@@ -104,6 +104,23 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
   const bashToolkit = await createBashTool({
     sandbox: bash,
     destination: workdir,
+    extraInstructions:
+      customCommands.length > 0
+        ? `
+      You also have access to the following commands:
+
+      ${customCommands
+        .map((command) => {
+          if (command.name === "git") {
+            return `- **git**: Full Git version control support. Use for cloning repositories, checking status, committing changes, branching, and all standard Git operations.`;
+          }
+          if (command.name === "bun") {
+            return `- **bun**: Bun package manager and runtime. Use for installing dependencies (bun install), running scripts (bun run), executing TypeScript/JavaScript files, and managing packages.`;
+          }
+        })
+        .join("\n\n")}
+    `
+        : undefined,
   });
 
   const session: WorkspaceSession = {

@@ -13,8 +13,13 @@ import { getActiveSubscriptionFn } from "@/lib/auth/get-active-subscription-fn";
 import { getSessionFn } from "@/lib/auth/get-session-fn";
 
 export const Route = createFileRoute("/(misc)/pricing")({
-  beforeLoad: async () => {
+  beforeLoad: async ({ context }) => {
     const session = await getSessionFn();
+
+    if (session) {
+      const activeSubscription = await getActiveSubscriptionFn({ data: { session } });
+      context.queryClient.setQueryData(["activeSubscription"], activeSubscription);
+    }
 
     return { session };
   },

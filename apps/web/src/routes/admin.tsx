@@ -59,12 +59,27 @@ import { authClient } from "@/lib/auth/client";
 import { getSessionFn } from "@/lib/auth/get-session-fn";
 
 export const Route = createFileRoute("/admin")({
-  beforeLoad: async () => {
+  beforeLoad: async ({ context }) => {
     const session = await getSessionFn();
 
     if (!session || session.user.role !== "admin") {
       throw redirect({ to: "/" });
     }
+
+    const data = await authClient.admin.listUsers(
+      {
+        query: {
+          limit: 10,
+          sortBy: "createdAt",
+          sortDirection: "desc",
+        },
+      },
+      {
+        throw: true,
+      },
+    );
+
+    context.queryClient.setQueryData(["users"], data?.users || []);
 
     return { session };
   },

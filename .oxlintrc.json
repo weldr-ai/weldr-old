@@ -191,6 +191,7 @@
     "*.config.ts",
     "*.config.js",
     "**/data/**",
-    "**/*.hbs"
+    "**/*.hbs",
+    "routeTree.gen.ts"
   ]
 }

@@ -1,12 +1,7 @@
-import { useSuspenseQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { Suspense } from "react";
 
-import type { RouterOutputs } from "@weldr/api";
-import type { Session } from "@weldr/auth";
 import { buttonVariants } from "@weldr/ui/components/button";
-import { Spinner } from "@weldr/ui/components/spinner";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { UpgradeButton } from "@/components/billing/upgrade-button";
@@ -16,22 +11,37 @@ import { CreateProjectForm } from "@/components/projects/create-project-form";
 import { getActiveSubscriptionFn } from "@/lib/auth/get-active-subscription-fn";
 import { getSessionFn } from "@/lib/auth/get-session-fn";
 import { getSessionsFn } from "@/lib/auth/get-sessions-fn";
+import { orpc } from "@/lib/orpc";
 import { AccountSettings } from "@/routes/auth/-components/account-settings";
 import { AuthDialog } from "@/routes/auth/-components/auth-dialog";
 
 export const Route = createFileRoute("/")({
-  beforeLoad: async () => {
+  beforeLoad: async ({ context }) => {
     const session = await getSessionFn();
 
-    const projects: RouterOutputs["projects"]["list"] = [];
+    if (!session) {
+      return { session: null, sessions: null, activeSubscription: null, projects: [] };
+    }
 
-    return { session, projects };
+    const [sessions, activeSubscription] = await Promise.all([
+      getSessionsFn({ data: { session } }),
+      getActiveSubscriptionFn({ data: { session } }),
+      context.queryClient.prefetchQuery(orpc.projects.list.queryOptions()),
+    ]);
+
+    return { session, sessions, activeSubscription };
   },
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const { session, projects } = Route.useRouteContext();
+  const { session, sessions, activeSubscription } = Route.useRouteContext();
+
+  const { data: projects = [] } = useQuery(
+    orpc.projects.list.queryOptions({
+      enabled: !!session,
+    }),
+  );
 
   return (
     <div className="relative flex min-h-screen w-full flex-col items-center justify-between">
@@ -97,45 +107,6 @@ function RouteComponent() {
           </a>
         </div>
       </div>
-      <Suspense
-        fallback={
-          <div className="flex h-screen w-full items-center justify-center">
-            <Spinner className="size-8" />
-          </div>
-        }
-      >
-        <HomeContent session={session} projects={projects} />
-      </Suspense>
-      <AuthDialog />
-    </div>
-  );
-}
-
-function HomeContent({
-  session,
-  projects,
-}: {
-  session: Session | null;
-  projects: RouterOutputs["projects"]["list"];
-}) {
-  const getSessions = useServerFn(getSessionsFn);
-  const getActiveSubscription = useServerFn(getActiveSubscriptionFn);
-
-  const [{ data: sessions }, { data: activeSubscription }] = useSuspenseQueries({
-    queries: [
-      {
-        queryKey: ["sessions"],
-        queryFn: () => getSessions({ data: { session } }),
-      },
-      {
-        queryKey: ["activeSubscription"],
-        queryFn: () => getActiveSubscription({ data: { session } }),
-      },
-    ],
-  });
-
-  return (
-    <>
       {!activeSubscription && session && (
         <div className="absolute right-2 bottom-2 z-50 flex w-64 items-center justify-between gap-2 rounded-lg border bg-muted p-2 text-xs">
           <h3 className="font-semibold">Upgrade to Pro</h3>
@@ -148,6 +119,7 @@ function HomeContent({
         activeSubscription={activeSubscription}
       />
       {session && <CommandCenter session={session} projects={projects} />}
-    </>
+      <AuthDialog />
+    </div>
   );
 }
