@@ -21,8 +21,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@weldr/ui/comp
 import { ToggleGroup, ToggleGroupItem } from "@weldr/ui/components/toggle-group";
 import { cn } from "@weldr/ui/lib/utils";
 
+import { orpc } from "@/lib/orpc/client";
 import { getPreviewUrl } from "@/lib/preview-url";
-import { useTRPC } from "@/lib/trpc/react";
 
 interface SitePreviewDialogProps {
   open: boolean;
@@ -32,6 +32,20 @@ interface SitePreviewDialogProps {
   url?: string;
   isProtected?: boolean;
 }
+
+const handleBack = () => {
+  const iframe = document.querySelector("iframe");
+  if (iframe) {
+    iframe.contentWindow?.postMessage({ type: "navigation", action: "back" }, "*");
+  }
+};
+
+const handleForward = () => {
+  const iframe = document.querySelector("iframe");
+  if (iframe) {
+    iframe.contentWindow?.postMessage({ type: "navigation", action: "forward" }, "*");
+  }
+};
 
 export function SitePreviewDialog({
   open,
@@ -44,7 +58,6 @@ export function SitePreviewDialog({
   const [iframeKey, setIframeKey] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
 
   const { projectId, branchId } = useParams<{
@@ -55,10 +68,8 @@ export function SitePreviewDialog({
   const snapshotId = searchParams.get("snapshotId") ?? undefined;
 
   const branch = queryClient.getQueryData(
-    trpc.branches.byIdOrMain.queryKey({
-      id: branchId,
-      projectId,
-      snapshotId,
+    orpc.branches.getByIdOrMain.queryKey({
+      input: { id: branchId, projectId, snapshotId },
     }),
   );
 
@@ -85,20 +96,6 @@ export function SitePreviewDialog({
   const handleRefresh = () => {
     setIframeKey((prev) => prev + 1);
     setIsLoading(true);
-  };
-
-  const handleBack = () => {
-    const iframe = document.querySelector("iframe");
-    if (iframe) {
-      iframe.contentWindow?.postMessage({ type: "navigation", action: "back" }, "*");
-    }
-  };
-
-  const handleForward = () => {
-    const iframe = document.querySelector("iframe");
-    if (iframe) {
-      iframe.contentWindow?.postMessage({ type: "navigation", action: "forward" }, "*");
-    }
   };
 
   return (

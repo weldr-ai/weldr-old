@@ -50,7 +50,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@weldr/db";
 
 export const auth = betterAuth({
-  baseURL: process.env.NEXT_PUBLIC_BASE_URL,
+  baseURL: process.env.NEXT_PUBLIC_WEB_URL,
   trustedOrigins: ["https://weldr.ai", "http://localhost:3000"],
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -438,7 +438,7 @@ export type Subscription = {
 | Variable                | Required | Description                  |
 | ----------------------- | -------- | ---------------------------- |
 | `BETTER_AUTH_SECRET`    | Yes      | Auth secret key              |
-| `NEXT_PUBLIC_BASE_URL`  | Yes      | Base URL for auth callbacks  |
+| `NEXT_PUBLIC_WEB_URL`   | Yes      | Base URL for auth callbacks  |
 | `DATABASE_URL`          | Yes      | PostgreSQL connection string |
 | `RESEND_API_KEY`        | Yes      | Email delivery service       |
 | `GITHUB_CLIENT_ID`      | No       | GitHub OAuth                 |

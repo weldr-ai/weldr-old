@@ -60,12 +60,11 @@ src/
 
 ## Commands
 
-- `bun dev`: `bun with-env tsx watch --clear-screen=false src/index.ts`
+- `bun dev`: `tsx watch --clear-screen=false src/index.ts`
 - `bun build`: `tsdown`
 - `bun start`: `node dist/index.js`
 - `bun typecheck`: `tsc --noEmit --emitDeclarationOnly false`
-- `bun clean`: `git clean -xdf .turbo node_modules dist tsconfig.tsbuildinfo`
-- `bun with-env`: `dotenv -e ../../.env --`
+- `bun clean`: `git clean -xdf .turbo node_modules dist .tsbuildinfo`
 
 ## Build Notes
 

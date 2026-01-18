@@ -10,7 +10,7 @@ import type {
   TStatus,
 } from "@weldr/shared/types";
 
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 import type { CanvasNode } from "@/types";
 
 interface UseEventStreamOptions {
@@ -28,7 +28,6 @@ export function useEventStream({
   setStatus,
   setMessages,
 }: UseEventStreamOptions) {
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { getNodes, setNodes, updateNodeData } = useReactFlow<CanvasNode>();
 
@@ -86,7 +85,7 @@ export function useEventStream({
     });
     eventSourceRef.current = eventSource;
 
-    eventSource.onmessage = (event) => {
+    eventSource.addEventListener("message", (event) => {
       try {
         // EventSource API should give us clean JSON data directly
         const chunk: SSEEvent = JSON.parse(event.data);
@@ -242,25 +241,28 @@ export function useEventStream({
           }
           case "update_project": {
             // Update the project data in the query cache
-            queryClient.setQueryData(trpc.projects.byId.queryKey({ id: projectId }), (old) => {
-              if (!old) return old;
-              return {
-                ...old,
-                title: chunk.data.title,
-                description: chunk.data.description,
-              };
-            });
+            queryClient.setQueryData(
+              orpc.projects.get.queryKey({ input: { id: projectId } }),
+              (old) => {
+                if (!old) return old;
+                return {
+                  ...old,
+                  title: chunk.data.title,
+                  description: chunk.data.description,
+                };
+              },
+            );
 
             // Invalidate the query to ensure the data is fresh
             queryClient.invalidateQueries({
-              queryKey: trpc.projects.byId.queryKey({ id: projectId }),
+              queryKey: orpc.projects.get.queryKey({ input: { id: projectId } }),
             });
 
             break;
           }
           case "update_branch": {
             queryClient.setQueryData(
-              trpc.branches.byIdOrMain.queryKey({ id: branchId, projectId }),
+              orpc.branches.getByIdOrMain.queryKey({ input: { id: branchId, projectId } }),
               (old) => {
                 if (!old) return old;
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -277,9 +279,8 @@ export function useEventStream({
             );
 
             queryClient.invalidateQueries({
-              queryKey: trpc.branches.byIdOrMain.queryKey({
-                id: branchId,
-                projectId,
+              queryKey: orpc.branches.getByIdOrMain.queryKey({
+                input: { id: branchId, projectId },
               }),
             });
 
@@ -327,9 +328,9 @@ export function useEventStream({
       } catch (error) {
         console.error("Error parsing SSE message:", error);
       }
-    };
+    });
 
-    eventSource.onerror = (error) => {
+    eventSource.addEventListener("error", (error) => {
       console.error("SSE connection error:", error);
 
       // Clear connecting flag
@@ -358,10 +359,10 @@ export function useEventStream({
       } else {
         setStatusRef.current(null);
       }
-    };
+    });
 
     return eventSource;
-  }, [projectId, branchId, getNodes, setNodes, updateNodeData, queryClient, trpc]);
+  }, [projectId, branchId, getNodes, setNodes, updateNodeData, queryClient]);
 
   const closeEventStream = useCallback(() => {
     // Reset reconnection attempts and connecting flag

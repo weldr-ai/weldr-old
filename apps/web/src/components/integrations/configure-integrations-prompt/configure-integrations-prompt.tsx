@@ -11,7 +11,7 @@ import type { ChatMessage, IntegrationCategoryKey, TStatus } from "@weldr/shared
 import { Button } from "@weldr/ui/components/button";
 import { toast } from "@weldr/ui/hooks/use-toast";
 
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 import type { IntegrationToolCall } from "../shared/types";
 import { ConfigureIntegrationDialog } from "./configure-integration-dialog";
 import { IntegrationsCombobox } from "./integrations-combobox";
@@ -31,11 +31,10 @@ const PureConfigureIntegrationsPrompt = ({
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
   integrationTemplates: RouterOutputs["integrationTemplates"]["list"];
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
-  project: RouterOutputs["projects"]["byId"];
+  project: RouterOutputs["projects"]["get"];
   setStatus: Dispatch<SetStateAction<TStatus>>;
   branchId: string;
 }) => {
-  const trpc = useTRPC();
   const { projectId } = useParams<{ projectId: string }>();
 
   const messageContent = message.content as Exclude<AssistantContent, string>;
@@ -104,7 +103,7 @@ const PureConfigureIntegrationsPrompt = ({
   );
 
   const createBatchIntegrationsMutation = useMutation(
-    trpc.integrations.createBatch.mutationOptions(),
+    orpc.integrations.createBatch.mutationOptions(),
   );
 
   const handleSelectIntegration = (
@@ -128,7 +127,7 @@ const PureConfigureIntegrationsPrompt = ({
     }
 
     const variables = integration.variables || [];
-    const needsConfig = variables.length > 0 && variables.some((v) => v.source === "user");
+    const needsConfig = variables.some((v) => v.source === "user");
 
     if (!needsConfig) {
       setConfiguredIntegrations((prev) => ({
@@ -175,7 +174,7 @@ const PureConfigureIntegrationsPrompt = ({
       const integration = selectedIntegrations[categoryKey];
       if (!integration) return false;
       const variables = integration.variables || [];
-      return variables.length > 0 && variables.some((v) => v.source === "user");
+      return variables.some((v) => v.source === "user");
     },
     [selectedIntegrations],
   );
@@ -223,7 +222,7 @@ const PureConfigureIntegrationsPrompt = ({
   };
 
   const addMessageMutation = useMutation(
-    trpc.chats.addMessage.mutationOptions({
+    orpc.chats.addMessage.mutationOptions({
       onSuccess: (data) => {
         setStatus(null);
         setMessages((prev) => [...prev, data]);
@@ -240,7 +239,7 @@ const PureConfigureIntegrationsPrompt = ({
   );
 
   const updateMessageMutation = useMutation(
-    trpc.chats.updateMessage.mutationOptions({
+    orpc.chats.updateMessage.mutationOptions({
       onSuccess: (data) => {
         setMessages((prev) => {
           const withoutOptimistic = prev.filter((msg) => msg.id !== data.id);
@@ -387,7 +386,7 @@ const PureConfigureIntegrationsPrompt = ({
       </div>
       <div className="flex flex-col gap-2 p-1.5">
         {Object.entries(groupedTemplates)
-          .sort(([, a], [, b]) => {
+          .toSorted(([, a], [, b]) => {
             const aNeedsConfig = needsUserConfig(a.category.key);
             const bNeedsConfig = needsUserConfig(b.category.key);
             if (aNeedsConfig && !bNeedsConfig) return -1;

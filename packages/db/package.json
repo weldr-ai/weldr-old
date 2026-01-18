@@ -10,18 +10,17 @@
     "./types": "./src/types.ts"
   },
   "scripts": {
-    "clean": "git clean -xdf .turbo node_modules dist",
-    "check": "bun with-env drizzle-kit check",
-    "generate": "bun with-env drizzle-kit generate",
-    "migrate": "bun with-env drizzle-kit migrate",
-    "migrate:drop": "bun with-env drizzle-kit drop",
-    "pull": "bun with-env drizzle-kit introspect",
-    "push": "bun with-env drizzle-kit push",
-    "studio": "bun with-env drizzle-kit studio",
-    "seed": "bun with-env tsx src/seed.ts",
-    "up": "bun with-env drizzle-kit up",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false",
-    "with-env": "dotenv -e ../../.env --"
+    "clean": "git clean -xdf .turbo node_modules dist .tsbuildinfo",
+    "check": "drizzle-kit check",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "migrate:drop": "drizzle-kit drop",
+    "pull": "drizzle-kit introspect",
+    "push": "drizzle-kit push",
+    "studio": "drizzle-kit studio",
+    "seed": "tsx src/seed.ts",
+    "up": "drizzle-kit up",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
     "@weldr/shared": "workspace:*",
@@ -31,7 +30,6 @@
   },
   "devDependencies": {
     "@weldr/tsconfig": "workspace:*",
-    "dotenv-cli": "^7.4.4",
     "drizzle-kit": "^0.30.6",
     "tsx": "^4.19.4",
     "typescript": "^5.9.3"

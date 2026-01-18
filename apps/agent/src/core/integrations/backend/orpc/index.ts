@@ -32,7 +32,6 @@ export const orpcIntegration = defineIntegration<"orpc">({
         },
         development: {
           "@types/node": "^24.0.14",
-          "dotenv-cli": "^8.0.0",
           "pino-pretty": "^13.0.0",
           tsdown: "^0.12.9",
           tsx: "^4.20.3",

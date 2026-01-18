@@ -72,12 +72,11 @@ src/
 
 ## Local Commands
 
-- `bun dev`: `bun with-env next dev --turbopack -p 3000`
+- `bun dev`: `next dev --turbopack -p 3000`
 - `bun build`: `next build`
 - `bun start`: `next start`
 - `bun typecheck`: `tsc --noEmit --emitDeclarationOnly false`
-- `bun clean`: `git clean -xdf .next .turbo node_modules dist tsconfig.tsbuildinfo`
-- `bun with-env`: `dotenv -e ../../.env --`
+- `bun clean`: `git clean -xdf .next .turbo node_modules dist .tsbuildinfo`
 
 ## Providers & Globals
 
@@ -111,24 +110,20 @@ export const MyComponent: React.FC<ComponentProps> = ({
 ### tRPC Usage (v11 with TanStack Query)
 
 ```typescript
-// Use the useTRPC hook from @trpc/tanstack-react-query
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 import { useQuery, useMutation } from "@tanstack/react-query";
 
 export function MyComponent({ projectId, initialData }: Props) {
-  const trpc = useTRPC();
-
   // Queries with queryOptions pattern
   const { data, error, isLoading } = useQuery(
-    trpc.projects.byId.queryOptions(
-      { id: projectId },
-      { initialData } // Server-side hydration
+    orpc.projects.byId.queryOptions(
+      { input: { id: projectId } },
     )
   );
 
   // Mutations with mutationOptions pattern
   const createProject = useMutation(
-    trpc.projects.create.mutationOptions({
+    orpc.projects.create.mutationOptions({
       onSuccess: (data) => {
         // data is fully typed
       },
@@ -363,15 +358,6 @@ async function getData(): Promise<DataType> {
 }
 ```
 
-### Client-Side with tRPC
-
-```typescript
-// Use tRPC hooks for type-safe data fetching
-const { data, isLoading, error } = api.projects.byId.useQuery({
-  id: projectId,
-});
-```
-
 ## Error Handling
 
 ### Error Boundaries
@@ -467,7 +453,6 @@ export const { GET, POST } = toNextJsHandler(auth);
 - **Attachment uploads**: `src/app/api/attachments/route.ts` (Tigris/S3 storage)
 - **Agent SSE proxy**: `src/app/api/chat/[projectId]/[branchId]/stream/route.ts`
 - **Agent proxy**: `src/app/api/proxy/route.ts` (general proxy to agent service)
-- **Dynamic avatars**: `src/app/api/avatars/[name]/route.tsx` (generated avatar images)
 - **Better Auth**: `src/app/api/auth/[...all]/route.ts` (catch-all auth handler)
 
 ### Fly.io Production Routing

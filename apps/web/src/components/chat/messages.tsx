@@ -12,7 +12,7 @@ interface MessagesProps {
   branchId: string;
   integrationTemplates: RouterOutputs["integrationTemplates"]["list"];
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
-  project: RouterOutputs["projects"]["byId"];
+  project: RouterOutputs["projects"]["get"];
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
   setStatus: Dispatch<SetStateAction<TStatus>>;
 }

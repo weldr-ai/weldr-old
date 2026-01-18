@@ -43,6 +43,9 @@
     "turbo": "^2.6.0",
     "typescript": "^5.9.3"
   },
+  "overrides": {
+    "@tanstack/query-core": "5.90.19"
+  },
   "engines": {
     "node": ">=22"
   },

@@ -23,7 +23,7 @@ import { CreateBranchDialog } from "./create-branch-dialog";
 type TimelineContextValue = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  branch: RouterOutputs["branches"]["byIdOrMain"];
+  branch: RouterOutputs["branches"]["getByIdOrMain"];
 };
 
 const TimelineContext = createContext<TimelineContextValue | null>(null);
@@ -72,7 +72,7 @@ export function Timeline({
 }: {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  branch: RouterOutputs["branches"]["byIdOrMain"];
+  branch: RouterOutputs["branches"]["getByIdOrMain"];
   children: React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useControllableState({
@@ -88,7 +88,7 @@ export function Timeline({
   );
 }
 
-type Snapshot = RouterOutputs["branches"]["byIdOrMain"]["snapshotHistory"][number];
+type Snapshot = RouterOutputs["branches"]["getByIdOrMain"]["snapshotHistory"][number];
 
 export function TimelineContent({ className }: { className?: string }) {
   const { open, branch } = useTimelineContext();

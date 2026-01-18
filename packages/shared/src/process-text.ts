@@ -33,7 +33,8 @@ export function processText(content: string): (z.infer<typeof referencePartSchem
     let attrMatch: RegExpExecArray | null;
 
     while ((attrMatch = attrRegex.exec(attributesString)) !== null) {
-      attributes[attrMatch[1]] = attrMatch[2];
+      // oxlint-disable-next-line no-non-null-assertion
+      attributes[attrMatch[1]!] = attrMatch[2]!;
     }
 
     // Create the appropriate reference part based on type
@@ -115,7 +116,8 @@ export function parseReferences(content: string): z.infer<typeof referencePartSc
     let attrMatch: RegExpExecArray | null;
 
     while ((attrMatch = attrRegex.exec(attributesString)) !== null) {
-      attributes[attrMatch[1]] = attrMatch[2];
+      // oxlint-disable-next-line no-non-null-assertion
+      attributes[attrMatch[1]!] = attrMatch[2]!;
     }
 
     // Create the appropriate reference part based on type
@@ -159,7 +161,8 @@ export function preprocessReferences(content: string): string {
 
       attrMatch = attrRegex.exec(attributesString);
       while (attrMatch !== null) {
-        attributes[attrMatch[1]] = attrMatch[2];
+        // oxlint-disable-next-line no-non-null-assertion
+        attributes[attrMatch[1]!] = attrMatch[2]!;
         attrMatch = attrRegex.exec(attributesString);
       }
 

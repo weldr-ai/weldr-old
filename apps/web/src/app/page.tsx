@@ -11,14 +11,19 @@ import { UpgradeButton } from "@/components/billing/upgrade-button";
 import { CommandCenter } from "@/components/command-center";
 import { MainDropdownMenu } from "@/components/main-dropdown-menu";
 import { CreateProjectForm } from "@/components/projects/create-project-form";
-import { getActiveSubscription } from "@/lib/actions/get-active-subscription";
-import { api } from "@/lib/trpc/server";
+import { api } from "@/lib/orpc/client";
 
 export default async function Home() {
   const session = await auth.api.getSession({ headers: await headers() });
   const sessions = session ? await auth.api.listSessions({ headers: await headers() }) : null;
   const projects = session ? await api.projects.list() : [];
-  const activeSubscription = await getActiveSubscription();
+  const subscriptions = await auth.api.listActiveSubscriptions({
+    headers: await headers(),
+  });
+
+  const activeSubscription = subscriptions.find(
+    (subscription) => subscription.status === "active" || subscription.status === "trialing",
+  );
 
   return (
     <div className="relative flex min-h-screen w-full flex-col items-center justify-between">
@@ -100,7 +105,7 @@ export default async function Home() {
       <AccountSettings
         session={session}
         sessions={sessions}
-        activeSubscription={activeSubscription}
+        activeSubscription={activeSubscription ?? null}
       />
       {session && <CommandCenter projects={projects} />}
       <AuthDialog />

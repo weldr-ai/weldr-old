@@ -21,15 +21,11 @@ import { LogoIcon } from "@weldr/ui/icons";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { type CommandCenterView, useUIStore } from "@/lib/context/ui-store";
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 import { DeleteAlertDialog } from "./delete-alert-dialog";
 import { CreateProjectForm } from "./projects/create-project-form";
 
-export function CommandCenter({
-  projects: _projects,
-}: {
-  projects: RouterOutputs["projects"]["list"];
-}) {
+export function CommandCenter({ projects }: { projects: RouterOutputs["projects"]["list"] }) {
   const { data: session } = authClient.useSession();
 
   const { commandCenterOpen, commandCenterView, setCommandCenterOpen, setCommandCenterView } =
@@ -64,7 +60,7 @@ export function CommandCenter({
       dialogClassName="min-h-[600px] min-w-[896px] max-w-4xl"
       commandClassName="size-full [&_[cmdk-group-heading]]:px-0 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-0"
     >
-      <CommandCenterContent view={commandCenterView} projects={_projects} session={session} />
+      <CommandCenterContent view={commandCenterView} projects={projects} session={session} />
     </CommandDialog>
   );
 }
@@ -110,27 +106,28 @@ function CreateContent({ session }: { session: Session | null }) {
   );
 }
 
-function ProjectsContent({ projects: _projects }: { projects: RouterOutputs["projects"]["list"] }) {
+function ProjectsContent({
+  projects: initialProjects,
+}: {
+  projects: RouterOutputs["projects"]["list"];
+}) {
   const { setCommandCenterView, setCommandCenterOpen } = useUIStore();
   const [deleteProjectOpen, setDeleteProjectOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<
     RouterOutputs["projects"]["list"][number] | null
   >(null);
 
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
 
   const { data: projects } = useQuery(
-    trpc.projects.list.queryOptions(undefined, {
-      initialData: _projects,
-    }),
+    orpc.projects.list.queryOptions({ input: {}, initialData: initialProjects }),
   );
 
   const deleteProject = useMutation(
-    trpc.projects.delete.mutationOptions({
+    orpc.projects.delete.mutationOptions({
       onSuccess: () => {
         setDeleteProjectOpen(false);
-        queryClient.invalidateQueries(trpc.projects.list.queryFilter());
+        queryClient.invalidateQueries({ queryKey: orpc.projects.list.key() });
         toast({
           title: "Project deleted",
           description: "Your project has been deleted",
@@ -152,7 +149,7 @@ function ProjectsContent({ projects: _projects }: { projects: RouterOutputs["pro
         <CommandInput className="border-0 focus:ring-0" placeholder="Search projects..." />
         <CommandList className="scrollbar-thin scrollbar-thumb-muted-foreground scrollbar-track-muted max-h-[calc(100%-84px)] w-[320px] overflow-y-auto">
           <CommandEmpty>No projects found.</CommandEmpty>
-          <CommandGroup className="p-0 [&_[cmdk-group-heading]]:px-0 [&_[cmdk-group-heading]]:py-0">
+          <CommandGroup className="p-0 **:[[cmdk-group-heading]]:px-0 **:[[cmdk-group-heading]]:py-0">
             {projects.map((project) => (
               <CommandItem
                 key={project.id}

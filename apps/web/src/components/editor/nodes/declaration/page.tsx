@@ -20,8 +20,8 @@ import { Label } from "@weldr/ui/components/label";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { SitePreviewDialog } from "@/components/site-preview-dialog";
+import { orpc } from "@/lib/orpc/client";
 import { getPreviewUrl as buildPreviewUrl } from "@/lib/preview-url";
-import { useTRPC } from "@/lib/trpc/react";
 import type { CanvasNodeProps } from "@/types";
 import { ProtectedBadge } from "../components/protected-badge";
 
@@ -49,7 +49,6 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
     throw new Error("Page node data is not a page");
   }
 
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { projectId, branchId } = useParams<{
     projectId: string;
@@ -59,24 +58,20 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
   const snapshotId = searchParams.get("snapshotId") ?? undefined;
 
   const branch = queryClient.getQueryData(
-    trpc.branches.byIdOrMain.queryKey({
-      id: branchId,
-      projectId,
-      snapshotId,
+    orpc.branches.getByIdOrMain.queryKey({
+      input: { id: branchId, projectId, snapshotId },
     }),
   );
 
   const snapshot = branch?.snapshot;
 
   const { data: declaration } = useQuery(
-    trpc.declarations.byId.queryOptions(
-      {
+    orpc.declarations.get.queryOptions({
+      input: {
         id: _data.id,
       },
-      {
-        initialData: _data,
-      },
-    ),
+      initialData: _data,
+    }),
   );
 
   const specs = declaration.metadata?.specs;

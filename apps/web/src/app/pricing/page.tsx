@@ -8,11 +8,16 @@ import { cn } from "@weldr/ui/lib/utils";
 
 import { SubscriptionPlans } from "@/components/billing/subscription-plans";
 import { MainDropdownMenu } from "@/components/main-dropdown-menu";
-import { getActiveSubscription } from "@/lib/actions/get-active-subscription";
 
 export default async function PricingPage() {
   const session = await auth.api.getSession({ headers: await headers() });
-  const activeSubscription = await getActiveSubscription();
+  const subscriptions = await auth.api.listActiveSubscriptions({
+    headers: await headers(),
+  });
+
+  const activeSubscription = subscriptions.find(
+    (subscription) => subscription.status === "active" || subscription.status === "trialing",
+  );
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center">
@@ -50,7 +55,7 @@ export default async function PricingPage() {
         <p className="max-w-lg text-center text-muted-foreground">
           Choose a plan that works best for you and start building today.
         </p>
-        <SubscriptionPlans activeSubscription={activeSubscription} session={session} />
+        <SubscriptionPlans activeSubscription={activeSubscription ?? null} session={session} />
       </div>
       <div className="flex w-full items-center justify-between p-2">
         <p className="text-muted-foreground text-xs">

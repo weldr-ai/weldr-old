@@ -23,7 +23,7 @@ import { Form } from "@weldr/ui/components/form";
 import { toast } from "@weldr/ui/hooks/use-toast";
 
 import { IntegrationConfigurationFields } from "@/components/integrations/shared";
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 import { getIntegrationIcon } from "./shared/utils";
 
 export function CreateIntegrationDialog({
@@ -31,14 +31,13 @@ export function CreateIntegrationDialog({
   integration,
   environmentVariables,
 }: {
-  integrationTemplate: RouterOutputs["integrationTemplates"]["byId"];
+  integrationTemplate: RouterOutputs["integrationTemplates"]["get"];
   integration?: RouterOutputs["integrations"]["list"][number];
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { projectId } = useParams<{ projectId: string }>();
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
 
   const requiredVariables = integrationTemplate.variables || [];
@@ -76,7 +75,7 @@ export function CreateIntegrationDialog({
   });
 
   const addIntegrationMutation = useMutation(
-    trpc.integrations.create.mutationOptions({
+    orpc.integrations.create.mutationOptions({
       onSuccess: async () => {
         toast({
           title: "Success",
@@ -84,7 +83,7 @@ export function CreateIntegrationDialog({
           duration: 2000,
         });
         setDialogOpen?.(false);
-        await queryClient.invalidateQueries(trpc.integrations.list.queryFilter());
+        await queryClient.invalidateQueries({ queryKey: orpc.integrations.list.key() });
       },
       onError: (error) => {
         toast({
@@ -98,7 +97,7 @@ export function CreateIntegrationDialog({
   );
 
   const updateIntegrationMutation = useMutation(
-    trpc.integrations.update.mutationOptions({
+    orpc.integrations.update.mutationOptions({
       onSuccess: async () => {
         toast({
           title: "Success",
@@ -106,7 +105,7 @@ export function CreateIntegrationDialog({
           duration: 2000,
         });
         setDialogOpen?.(false);
-        await queryClient.invalidateQueries(trpc.integrations.list.queryFilter());
+        await queryClient.invalidateQueries({ queryKey: orpc.integrations.list.key() });
       },
       onError: (error) => {
         toast({

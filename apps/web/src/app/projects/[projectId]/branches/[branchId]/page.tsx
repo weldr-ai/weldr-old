@@ -1,11 +1,11 @@
-import { TRPCError } from "@trpc/server";
+import { ORPCError } from "@orpc/server";
 import type { Edge } from "@xyflow/react";
 import { notFound, redirect } from "next/navigation";
 
 import type { NodeType } from "@weldr/shared/types";
 
 import { ProjectView } from "@/components/projects/project-view";
-import { api } from "@/lib/trpc/server";
+import { api } from "@/lib/orpc/client";
 import type { CanvasNode } from "@/types";
 import { getSnapshotDeclarations } from "../../_utils/get-snapshot-declarations";
 
@@ -19,14 +19,14 @@ export default async function BranchPage({
   try {
     const { projectId, branchId } = await params;
     const { snapshotId } = await searchParams;
-    const project = await api.projects.byId({ id: projectId });
-    const branch = await api.branches.byIdOrMain({
+    const project = await api.projects.get({ id: projectId });
+    const branch = await api.branches.getByIdOrMain({
       id: branchId,
       projectId,
       snapshotId,
     });
-    const integrationTemplates = await api.integrationTemplates.list();
-
+    const integrationTemplates = await api.integrationTemplates.list({});
+    const environmentVariables = await api.environmentVariables.list({ projectId: project.id });
     const snapshotDeclarations = getSnapshotDeclarations(branch.snapshot);
 
     const initialNodes: CanvasNode[] =
@@ -71,6 +71,7 @@ export default async function BranchPage({
       <ProjectView
         project={project}
         branch={branch}
+        environmentVariables={environmentVariables}
         initialNodes={initialNodes}
         initialEdges={initialEdges}
         integrationTemplates={integrationTemplates}
@@ -78,7 +79,7 @@ export default async function BranchPage({
     );
   } catch (error) {
     console.error(error);
-    if (error instanceof TRPCError) {
+    if (error instanceof ORPCError) {
       switch (error.code) {
         case "NOT_FOUND":
           notFound();

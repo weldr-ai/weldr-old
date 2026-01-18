@@ -23,8 +23,8 @@ import { MultimodalInput } from "./multimodal-input/multimodal-input";
 
 interface ChatProps {
   integrationTemplates: RouterOutputs["integrationTemplates"]["list"];
-  project: RouterOutputs["projects"]["byId"];
-  branch: RouterOutputs["branches"]["byIdOrMain"];
+  project: RouterOutputs["projects"]["get"];
+  branch: RouterOutputs["branches"]["getByIdOrMain"];
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
 }
 

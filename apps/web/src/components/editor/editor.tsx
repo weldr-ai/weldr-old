@@ -20,7 +20,7 @@ import type { RouterOutputs } from "@weldr/api";
 import { Button } from "@weldr/ui/components/button";
 import { toast } from "@weldr/ui/hooks/use-toast";
 
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 import type { CanvasNode } from "@/types";
 import { Chat } from "../chat/chat";
 
@@ -49,8 +49,8 @@ export function Editor({
 }: {
   initialNodes: CanvasNode[];
   initialEdges: Edge[];
-  project: RouterOutputs["projects"]["byId"];
-  branch: RouterOutputs["branches"]["byIdOrMain"];
+  project: RouterOutputs["projects"]["get"];
+  branch: RouterOutputs["branches"]["getByIdOrMain"];
   integrationTemplates: RouterOutputs["integrationTemplates"]["list"];
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
 }) {
@@ -62,10 +62,8 @@ export function Editor({
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
-  const trpc = useTRPC();
-
   const updateNode = useMutation(
-    trpc.nodes.update.mutationOptions({
+    orpc.nodes.update.mutationOptions({
       onError: (error) => {
         toast({
           title: "Error",
@@ -77,7 +75,7 @@ export function Editor({
   );
 
   const batchUpdateNodePositions = useMutation(
-    trpc.nodes.batchUpdatePositions.mutationOptions({
+    orpc.nodes.batchUpdatePositions.mutationOptions({
       onError: (error) => {
         toast({
           title: "Error",
@@ -288,14 +286,10 @@ export function Editor({
   const onNodeDragStop = useCallback(
     async (_event: React.MouseEvent, node: CanvasNode, _nodes: CanvasNode[]) => {
       const updatedData = {
-        where: {
-          id: node.id,
-        },
-        payload: {
-          position: {
-            x: Math.floor(node.position.x),
-            y: Math.floor(node.position.y),
-          },
+        id: node.id,
+        position: {
+          x: Math.floor(node.position.x),
+          y: Math.floor(node.position.y),
         },
       };
 

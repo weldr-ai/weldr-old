@@ -6,7 +6,7 @@ import { useParams, useSearchParams } from "next/navigation";
 
 import type { RouterOutputs } from "@weldr/api";
 
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 import type { CanvasNode } from "@/types";
 import { Editor } from "../editor";
 import { MainDropdownMenu } from "../main-dropdown-menu";
@@ -15,12 +15,14 @@ import { ProjectSettings } from "./settings";
 export function ProjectView({
   project: _project,
   branch: _branch,
+  environmentVariables: _environmentVariables,
   initialNodes,
   initialEdges,
   integrationTemplates,
 }: {
-  project: RouterOutputs["projects"]["byId"];
-  branch: RouterOutputs["branches"]["byIdOrMain"];
+  project: RouterOutputs["projects"]["get"];
+  branch: RouterOutputs["branches"]["getByIdOrMain"];
+  environmentVariables: RouterOutputs["environmentVariables"]["list"];
   initialNodes: CanvasNode[];
   initialEdges: Edge[];
   integrationTemplates: RouterOutputs["integrationTemplates"]["list"];
@@ -29,41 +31,33 @@ export function ProjectView({
   const searchParams = useSearchParams();
   const snapshotId = searchParams.get("snapshotId") ?? undefined;
 
-  const trpc = useTRPC();
-
   const { data: project } = useQuery(
-    trpc.projects.byId.queryOptions(
-      {
+    orpc.projects.get.queryOptions({
+      input: {
         id: _project.id,
       },
-      {
-        initialData: _project,
-      },
-    ),
+      initialData: _project,
+    }),
   );
 
   const { data: currentBranch } = useQuery(
-    trpc.branches.byIdOrMain.queryOptions(
-      {
+    orpc.branches.getByIdOrMain.queryOptions({
+      input: {
         id: branchId,
         projectId: _project.id,
         snapshotId,
       },
-      {
-        initialData: _branch,
-      },
-    ),
+      initialData: _branch,
+    }),
   );
 
   const { data: environmentVariables } = useQuery(
-    trpc.environmentVariables.list.queryOptions(
-      {
+    orpc.environmentVariables.list.queryOptions({
+      input: {
         projectId: project.id,
       },
-      {
-        initialData: project.environmentVariables,
-      },
-    ),
+      initialData: _environmentVariables,
+    }),
   );
 
   return (

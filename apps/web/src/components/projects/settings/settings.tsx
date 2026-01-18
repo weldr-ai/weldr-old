@@ -24,7 +24,7 @@ export function ProjectSettings({
   integrationTemplates,
   environmentVariables,
 }: {
-  project: RouterOutputs["projects"]["byId"];
+  project: RouterOutputs["projects"]["get"];
   integrationTemplates: RouterOutputs["integrationTemplates"]["list"];
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
 }) {

@@ -2,12 +2,11 @@
   "name": "@weldr/agent",
   "type": "module",
   "scripts": {
-    "dev": "bun with-env tsx watch --clear-screen=false src/index.ts",
+    "dev": "tsx watch --clear-screen=false src/index.ts",
     "build": "tsdown",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false",
-    "with-env": "dotenv -e ../../.env --",
-    "clean": "git clean -xdf .turbo node_modules dist tsconfig.tsbuildinfo"
+    "clean": "git clean -xdf .turbo node_modules dist .tsbuildinfo"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.12",
@@ -40,7 +39,6 @@
     "@types/handlebars": "^4.1.0",
     "@types/node": "^22.15.30",
     "@types/pluralize": "^0.0.33",
-    "dotenv-cli": "^7.4.4",
     "tsdown": "^0.12.9",
     "tsx": "^4.7.1",
     "typescript": "^5.9.3"

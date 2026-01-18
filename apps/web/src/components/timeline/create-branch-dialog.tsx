@@ -18,7 +18,7 @@ import {
 } from "@weldr/ui/components/alert-dialog";
 import { toast } from "@weldr/ui/hooks/use-toast";
 
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 
 interface CreateBranchDialogProps {
   open: boolean;
@@ -38,7 +38,6 @@ export function CreateBranchDialog({
   branchType,
 }: CreateBranchDialogProps) {
   const router = useRouter();
-  const trpc = useTRPC();
 
   const generatedName = useMemo(() => {
     const randomName = uniqueNamesGenerator({
@@ -51,7 +50,7 @@ export function CreateBranchDialog({
   }, [branchType]);
 
   const createBranch = useMutation(
-    trpc.branches.create.mutationOptions({
+    orpc.branches.create.mutationOptions({
       onSuccess: (branch) => {
         onOpenChange(false);
         // Navigate to the new branch

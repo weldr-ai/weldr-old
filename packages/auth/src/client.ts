@@ -6,7 +6,7 @@ export const authClient = createAuthClient({
   plugins: [
     adminClient(),
     stripeClient({
-      subscription: true, //if you want to enable subscription management
+      subscription: true,
     }),
   ],
 });

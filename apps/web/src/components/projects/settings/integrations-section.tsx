@@ -14,29 +14,24 @@ import {
 import { ScrollArea } from "@weldr/ui/components/scroll-area";
 
 import { CreateIntegrationDialog } from "@/components/integrations/create-integration-dialog";
-import { useTRPC } from "@/lib/trpc/react";
+import { orpc } from "@/lib/orpc/client";
 
 export function IntegrationsSection({
   integrationTemplates,
-  integrations: initialIntegrations,
+  integrations: _integrations,
   environmentVariables,
 }: {
   integrationTemplates: RouterOutputs["integrationTemplates"]["list"];
-  integrations: RouterOutputs["projects"]["byId"]["integrations"];
+  integrations: RouterOutputs["projects"]["get"]["integrations"];
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
 }) {
   const { projectId } = useParams<{ projectId: string }>();
-  const trpc = useTRPC();
 
   const { data: integrations } = useQuery(
-    trpc.integrations.list.queryOptions(
-      {
-        projectId,
-      },
-      {
-        initialData: initialIntegrations,
-      },
-    ),
+    orpc.integrations.list.queryOptions({
+      input: { projectId },
+      initialData: _integrations,
+    }),
   );
 
   return (
@@ -52,7 +47,7 @@ export function IntegrationsSection({
               <CreateIntegrationDialog
                 key={integrationTemplate.id}
                 integrationTemplate={
-                  integrationTemplate as RouterOutputs["integrationTemplates"]["byId"]
+                  integrationTemplate as RouterOutputs["integrationTemplates"]["get"]
                 }
                 integration={integrations?.find(
                   (integration) => integration.integrationTemplate.id === integrationTemplate.id,

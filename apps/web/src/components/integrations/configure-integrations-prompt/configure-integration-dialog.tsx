@@ -24,7 +24,7 @@ interface ConfigureIntegrationDialogProps {
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
   environmentVariableMappings: Record<string, string>;
   onEnvironmentVariableMapping: (configKey: string, envVarId: string) => void;
-  project: RouterOutputs["projects"]["byId"];
+  project: RouterOutputs["projects"]["get"];
   isConfigured: boolean;
   disabled?: boolean;
   onConfirm: () => void;
