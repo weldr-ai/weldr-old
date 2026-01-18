@@ -4,7 +4,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { UAParser } from "ua-parser-js";
 
-import type { auth } from "@weldr/auth";
 import { Button } from "@weldr/ui/components/button";
 import {
   Card,
@@ -17,10 +16,8 @@ import {
 import { authClient } from "@/lib/auth/client";
 
 export function SessionsList({
-  sessions: initialSessions,
   session: currentSession,
 }: {
-  sessions: Awaited<ReturnType<typeof auth.api.listSessions>>;
   session: typeof authClient.$Infer.Session;
 }) {
   const queryClient = useQueryClient();
@@ -31,7 +28,6 @@ export function SessionsList({
       const sessions = await authClient.listSessions();
       return sessions.data;
     },
-    initialData: initialSessions,
   });
 
   const [isRevoking, setIsRevoking] = useState(false);

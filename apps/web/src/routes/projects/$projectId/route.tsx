@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 import { Spinner } from "@weldr/ui/components/spinner";
@@ -29,7 +28,6 @@ export const Route = createFileRoute("/projects/$projectId")({
 
 function RouteComponent() {
   const { session } = Route.useRouteContext();
-  const { data: projects = [] } = useQuery(orpc.projects.list.queryOptions());
 
   return (
     <>
@@ -38,7 +36,7 @@ function RouteComponent() {
           <Outlet />
         </div>
       </main>
-      <CommandCenter projects={projects} session={session} />
+      <CommandCenter session={session} />
     </>
   );
 }

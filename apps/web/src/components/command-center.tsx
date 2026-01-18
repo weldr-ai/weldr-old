@@ -23,13 +23,7 @@ import { orpc } from "@/lib/orpc";
 import { DeleteAlertDialog } from "./delete-alert-dialog";
 import { CreateProjectForm } from "./projects/create-project-form";
 
-export function CommandCenter({
-  projects,
-  session,
-}: {
-  projects: RouterOutputs["projects"]["list"];
-  session: Session | null;
-}) {
+export function CommandCenter({ session }: { session: Session | null }) {
   const { commandCenterOpen, commandCenterView, setCommandCenterOpen, setCommandCenterView } =
     useUIStore();
 
@@ -62,24 +56,22 @@ export function CommandCenter({
       // dialogClassName="min-h-[600px] min-w-[896px] max-w-4xl"
       // commandClassName="size-full [&_[cmdk-group-heading]]:px-0 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-0"
     >
-      <CommandCenterContent view={commandCenterView} projects={projects} session={session} />
+      <CommandCenterContent view={commandCenterView} session={session} />
     </CommandDialog>
   );
 }
 
 function CommandCenterContent({
   view,
-  projects,
   session,
 }: {
   view: CommandCenterView;
-  projects: RouterOutputs["projects"]["list"];
   session: Session | null;
 }) {
   return (
     <div className="flex size-full">
       {view === "projects" ? (
-        <ProjectsContent projects={projects} />
+        <ProjectsContent />
       ) : view === "create" ? (
         <CreateContent session={session} />
       ) : null}
@@ -108,11 +100,7 @@ function CreateContent({ session }: { session: Session | null }) {
   );
 }
 
-function ProjectsContent({
-  projects: initialProjects,
-}: {
-  projects: RouterOutputs["projects"]["list"];
-}) {
+function ProjectsContent() {
   const { setCommandCenterView, setCommandCenterOpen } = useUIStore();
   const [deleteProjectOpen, setDeleteProjectOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<
@@ -121,9 +109,7 @@ function ProjectsContent({
 
   const queryClient = useQueryClient();
 
-  const { data: projects } = useQuery(
-    orpc.projects.list.queryOptions({ input: {}, initialData: initialProjects }),
-  );
+  const { data: projects = [] } = useQuery(orpc.projects.list.queryOptions());
 
   const deleteProject = useMutation(
     orpc.projects.delete.mutationOptions({

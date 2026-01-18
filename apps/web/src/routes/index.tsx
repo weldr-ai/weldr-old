@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { buttonVariants } from "@weldr/ui/components/button";
@@ -35,13 +34,7 @@ export const Route = createFileRoute("/")({
 });
 
 function RouteComponent() {
-  const { session, sessions, activeSubscription } = Route.useRouteContext();
-
-  const { data: projects = [] } = useQuery(
-    orpc.projects.list.queryOptions({
-      enabled: !!session,
-    }),
-  );
+  const { session, activeSubscription } = Route.useRouteContext();
 
   return (
     <div className="relative flex min-h-screen w-full flex-col items-center justify-between">
@@ -113,12 +106,8 @@ function RouteComponent() {
           <UpgradeButton>Upgrade</UpgradeButton>
         </div>
       )}
-      <AccountSettings
-        session={session}
-        sessions={sessions}
-        activeSubscription={activeSubscription}
-      />
-      {session && <CommandCenter session={session} projects={projects} />}
+      <AccountSettings session={session} activeSubscription={activeSubscription} />
+      {session && <CommandCenter session={session} />}
       <AuthDialog />
     </div>
   );

@@ -24,22 +24,17 @@ const updateEmailSchema = z.object({
   }),
 });
 
-export function UpdateEmailForm({
-  session: initialSession,
-}: {
-  session: typeof authClient.$Infer.Session;
-}) {
+export function UpdateEmailForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const queryClient = useQueryClient();
 
   const { data: session } = useQuery({
-    queryKey: ["session", initialSession.session.id],
+    queryKey: ["session"],
     queryFn: async () => {
       const session = await authClient.getSession();
       return session.data;
     },
-    initialData: initialSession,
   });
 
   const form = useForm({

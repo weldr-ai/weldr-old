@@ -32,22 +32,17 @@ const updateNameSchema = z.object({
     }),
 });
 
-export function UpdateNameForm({
-  session: initialSession,
-}: {
-  session: typeof authClient.$Infer.Session;
-}) {
+export function UpdateNameForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const queryClient = useQueryClient();
 
   const { data: session } = useQuery({
-    queryKey: ["session", initialSession.session.id],
+    queryKey: ["session"],
     queryFn: async () => {
       const session = await authClient.getSession();
       return session.data;
     },
-    initialData: initialSession,
   });
 
   const form = useForm({

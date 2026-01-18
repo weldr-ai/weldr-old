@@ -7,7 +7,9 @@ import { z } from "zod";
 import type { NodeType } from "@weldr/shared/types";
 import { Spinner } from "@weldr/ui/components/spinner";
 
-import { ProjectView } from "@/components/projects/project-view";
+import { Editor } from "@/components/editor";
+import { MainDropdownMenu } from "@/components/main-dropdown-menu";
+import { ProjectSettings } from "@/components/projects/settings";
 import { orpc } from "@/lib/orpc";
 import type { CanvasNode } from "@/types";
 import { getSnapshotDeclarations } from "./-utils/get-snapshot-declarations";
@@ -31,7 +33,7 @@ export const Route = createFileRoute("/projects/$projectId/")({
           input: { projectId, snapshotId },
         }),
       ),
-      context.queryClient.prefetchQuery(orpc.integrationTemplates.list.queryOptions({ input: {} })),
+      context.queryClient.prefetchQuery(orpc.integrationTemplates.list.queryOptions()),
       context.queryClient.prefetchQuery(
         orpc.environmentVariables.list.queryOptions({ input: { projectId } }),
       ),
@@ -61,7 +63,7 @@ function RouteComponent() {
       orpc.branches.getByIdOrMain.queryOptions({
         input: { projectId, snapshotId },
       }),
-      orpc.integrationTemplates.list.queryOptions({ input: {} }),
+      orpc.integrationTemplates.list.queryOptions(),
       orpc.environmentVariables.list.queryOptions({ input: { projectId } }),
     ],
   });
@@ -115,14 +117,25 @@ function RouteComponent() {
   }, [branch.snapshot]);
 
   return (
-    <ProjectView
-      project={project}
-      branch={branch}
-      environmentVariables={environmentVariables}
-      initialNodes={initialNodes}
-      initialEdges={initialEdges}
-      integrationTemplates={integrationTemplates}
-      session={session}
-    />
+    <div className="flex size-full flex-col">
+      <div className="flex h-10 items-center justify-between border-b p-1.5">
+        <MainDropdownMenu session={session} />
+        <span className="text-sm font-medium">{project.title ?? "Untitled Project"}</span>
+        <ProjectSettings
+          project={project}
+          integrationTemplates={integrationTemplates}
+          environmentVariables={environmentVariables}
+        />
+      </div>
+      <Editor
+        session={session}
+        project={project}
+        branch={branch}
+        initialNodes={initialNodes}
+        initialEdges={initialEdges}
+        integrationTemplates={integrationTemplates}
+        environmentVariables={environmentVariables}
+      />
+    </div>
   );
 }

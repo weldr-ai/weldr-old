@@ -1,6 +1,6 @@
 import type { Subscription } from "@better-auth/stripe";
 
-import type { auth, Session } from "@weldr/auth";
+import type { Session } from "@weldr/auth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@weldr/ui/components/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@weldr/ui/components/tabs";
 
@@ -13,16 +13,14 @@ import { UpdateNameForm } from "./update-name-form";
 
 export function AccountSettings({
   session,
-  sessions,
   activeSubscription,
 }: {
-  sessions: Awaited<ReturnType<typeof auth.api.listSessions>> | null;
   session: Session | null;
   activeSubscription: Subscription | null;
 }) {
   const { accountSettingsOpen, setAccountSettingsOpen } = useUIStore();
 
-  if (!session || !sessions) {
+  if (!session) {
     return null;
   }
 
@@ -43,10 +41,10 @@ export function AccountSettings({
           </TabsList>
           <TabsContent value="account">
             <div className="scrollbar-thin flex max-h-[516px] flex-col gap-4 overflow-y-auto scrollbar-thumb-muted-foreground scrollbar-track-background">
-              <UpdateNameForm session={session} />
-              <UpdateEmailForm session={session} />
+              <UpdateNameForm />
+              <UpdateEmailForm />
               <ChangePasswordForm />
-              <SessionsList sessions={sessions} session={session} />
+              <SessionsList session={session} />
             </div>
           </TabsContent>
           <TabsContent value="billing">
