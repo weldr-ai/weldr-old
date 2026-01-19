@@ -2,6 +2,8 @@ import { useCallback, useRef } from "react";
 
 import type { SessionResponse, TStatus, UserMessage } from "@weldr/shared/types";
 
+const AGENT_URL = import.meta.env.VITE_AGENT_URL ?? "http://localhost:8081";
+
 interface UseSessionOptions {
   projectId: string;
   branchId: string;
@@ -31,13 +33,13 @@ export function useSession({
   const startSession = useCallback(
     async (message?: { content: UserMessage["content"]; attachmentIds?: string[] }) => {
       try {
-        const response = await fetch("/api/proxy", {
+        const response = await fetch(`${AGENT_URL}/session`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
           body: JSON.stringify({
-            endpoint: "/session",
             projectId,
             branchId,
             message,
