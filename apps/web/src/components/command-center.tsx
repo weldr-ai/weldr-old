@@ -8,6 +8,7 @@ import type { RouterOutputs } from "@weldr/api";
 import type { Session } from "@weldr/auth";
 import { Button, buttonVariants } from "@weldr/ui/components/button";
 import {
+  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -15,10 +16,11 @@ import {
   CommandItem,
   CommandList,
 } from "@weldr/ui/components/command";
+import { Separator } from "@weldr/ui/components/separator";
 import { cn } from "@weldr/ui/lib/utils";
 import { WeldrLogo } from "@weldr/ui/logos/weldr";
 
-import { type CommandCenterView, useUIStore } from "@/lib/context/ui-store";
+import { useUIStore } from "@/lib/context/ui-store";
 import { orpc } from "@/lib/orpc";
 import { DeleteAlertDialog } from "./delete-alert-dialog";
 import { CreateProjectForm } from "./projects/create-project-form";
@@ -53,50 +55,31 @@ export function CommandCenter({ session }: { session: Session | null }) {
     <CommandDialog
       open={commandCenterOpen}
       onOpenChange={setCommandCenterOpen}
-      dialogClassName="min-h-[600px] min-w-[896px] max-w-4xl"
-      commandClassName="size-full [&_[cmdk-group-heading]]:px-0 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-0"
+      className="min-h-[600px] max-w-4xl min-w-[896px]"
     >
-      <CommandCenterContent view={commandCenterView} session={session} />
+      <Command className="p-0">
+        <div className="flex size-full">
+          {commandCenterView === "projects" ? (
+            <ProjectsContent />
+          ) : commandCenterView === "create" ? (
+            <div className="relative flex size-full items-center justify-center">
+              {session && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute top-3 right-3"
+                  onClick={() => setCommandCenterView("projects")}
+                >
+                  <BoxesIcon className="mr-2 size-4" />
+                  View Projects
+                </Button>
+              )}
+              <CreateProjectForm session={session} />
+            </div>
+          ) : null}
+        </div>
+      </Command>
     </CommandDialog>
-  );
-}
-
-function CommandCenterContent({
-  view,
-  session,
-}: {
-  view: CommandCenterView;
-  session: Session | null;
-}) {
-  return (
-    <div className="flex size-full">
-      {view === "projects" ? (
-        <ProjectsContent />
-      ) : view === "create" ? (
-        <CreateContent session={session} />
-      ) : null}
-    </div>
-  );
-}
-
-function CreateContent({ session }: { session: Session | null }) {
-  const { setCommandCenterView } = useUIStore();
-
-  return (
-    <div className="relative flex size-full items-center justify-center">
-      {session && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute top-3 right-3"
-          onClick={() => setCommandCenterView("projects")}
-        >
-          <BoxesIcon className="mr-2 size-4" />
-          View Projects
-        </Button>
-      )}
-      <CreateProjectForm session={session} />
-    </div>
   );
 }
 
@@ -129,17 +112,17 @@ function ProjectsContent() {
   );
 
   return (
-    <>
-      <div className="border-r">
-        <CommandInput className="border-0 focus:ring-0" placeholder="Search projects..." />
-        <CommandList className="scrollbar-thin max-h-[calc(100%-84px)] w-[320px] overflow-y-auto scrollbar-thumb-muted-foreground scrollbar-track-muted">
+    <div className="flex size-full">
+      <div className="flex w-[320px] flex-col p-2">
+        <CommandInput wrapperClassName="p-0 pb-2" placeholder="Search projects..." />
+        <CommandList className="max-h-[512px] grow">
           <CommandEmpty>No projects found.</CommandEmpty>
-          <CommandGroup className="p-0 **:[[cmdk-group-heading]]:px-0 **:[[cmdk-group-heading]]:py-0">
+          <CommandGroup className="p-0 pb-1">
             {projects.map((project) => (
               <CommandItem
                 key={project.id}
                 value={project.id}
-                className={cn("flex items-center gap-3 rounded-none p-2", {
+                className={cn("mb-1 flex items-center gap-3 rounded-none", {
                   "bg-accent": selectedProject?.id === project.id,
                 })}
                 onSelect={() => {
@@ -153,19 +136,20 @@ function ProjectsContent() {
               </CommandItem>
             ))}
           </CommandGroup>
-          <Button
-            variant="ghost"
-            className="absolute bottom-0 w-80 rounded-t-none rounded-br-none rounded-bl-lg border-t bg-background"
-            onClick={() => {
-              setCommandCenterView("create");
-            }}
-          >
-            <PlusIcon className="mr-2 size-4" />
-            Create New Project
-          </Button>
         </CommandList>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => {
+            setCommandCenterView("create");
+          }}
+        >
+          <PlusIcon className="size-4" />
+          Create New Project
+        </Button>
       </div>
-      <div className="flex-1 p-6">
+      <Separator orientation="vertical" className="bg-border/40" />
+      <div className="flex-1 p-2">
         {selectedProject ? (
           <div className="flex h-full flex-col gap-2">
             <Link
@@ -233,6 +217,6 @@ function ProjectsContent() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

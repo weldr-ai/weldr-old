@@ -1,15 +1,10 @@
 import { NavigationMenu as NavigationMenuPrimitive } from "@base-ui/react/navigation-menu";
 import { cva } from "class-variance-authority";
 import { ChevronDownIcon } from "lucide-react";
-import type { ComponentProps } from "react";
 
 import { cn } from "@weldr/ui/lib/utils";
 
-function NavigationMenu({
-  className,
-  children,
-  ...props
-}: ComponentProps<typeof NavigationMenuPrimitive.Root>) {
+function NavigationMenu({ className, children, ...props }: NavigationMenuPrimitive.Root.Props) {
   return (
     <NavigationMenuPrimitive.Root
       data-slot="navigation-menu"
@@ -28,7 +23,7 @@ function NavigationMenu({
 function NavigationMenuList({
   className,
   ...props
-}: ComponentProps<typeof NavigationMenuPrimitive.List>) {
+}: React.ComponentPropsWithRef<typeof NavigationMenuPrimitive.List>) {
   return (
     <NavigationMenuPrimitive.List
       data-slot="navigation-menu-list"
@@ -41,7 +36,7 @@ function NavigationMenuList({
 function NavigationMenuItem({
   className,
   ...props
-}: ComponentProps<typeof NavigationMenuPrimitive.Item>) {
+}: React.ComponentPropsWithRef<typeof NavigationMenuPrimitive.Item>) {
   return (
     <NavigationMenuPrimitive.Item
       data-slot="navigation-menu-item"
@@ -59,7 +54,7 @@ function NavigationMenuTrigger({
   className,
   children,
   ...props
-}: ComponentProps<typeof NavigationMenuPrimitive.Trigger>) {
+}: NavigationMenuPrimitive.Trigger.Props) {
   return (
     <NavigationMenuPrimitive.Trigger
       data-slot="navigation-menu-trigger"
@@ -75,10 +70,7 @@ function NavigationMenuTrigger({
   );
 }
 
-function NavigationMenuContent({
-  className,
-  ...props
-}: ComponentProps<typeof NavigationMenuPrimitive.Content>) {
+function NavigationMenuContent({ className, ...props }: NavigationMenuPrimitive.Content.Props) {
   return (
     <NavigationMenuPrimitive.Content
       data-slot="navigation-menu-content"
@@ -98,7 +90,7 @@ function NavigationMenuPositioner({
   align = "start",
   alignOffset = 0,
   ...props
-}: ComponentProps<typeof NavigationMenuPrimitive.Positioner>) {
+}: NavigationMenuPrimitive.Positioner.Props) {
   return (
     <NavigationMenuPrimitive.Portal>
       <NavigationMenuPrimitive.Positioner
@@ -120,10 +112,7 @@ function NavigationMenuPositioner({
   );
 }
 
-function NavigationMenuLink({
-  className,
-  ...props
-}: ComponentProps<typeof NavigationMenuPrimitive.Link>) {
+function NavigationMenuLink({ className, ...props }: NavigationMenuPrimitive.Link.Props) {
   return (
     <NavigationMenuPrimitive.Link
       data-slot="navigation-menu-link"
@@ -139,7 +128,7 @@ function NavigationMenuLink({
 function NavigationMenuIndicator({
   className,
   ...props
-}: ComponentProps<typeof NavigationMenuPrimitive.Icon>) {
+}: React.ComponentPropsWithRef<typeof NavigationMenuPrimitive.Icon>) {
   return (
     <NavigationMenuPrimitive.Icon
       data-slot="navigation-menu-indicator"

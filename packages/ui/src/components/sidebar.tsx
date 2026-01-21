@@ -77,7 +77,6 @@ function SidebarProvider({
       }
 
       // This sets the cookie to keep the sidebar state.
-      // biome-ignore lint/suspicious/noDocumentCookie: this is a valid use case
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
     },
     [setOpenProp, open],
@@ -489,8 +488,7 @@ function SidebarMenuButton({
     tooltip?: string | React.ComponentProps<typeof TooltipContent>;
   } & VariantProps<typeof sidebarMenuButtonVariants>) {
   const { isMobile, state } = useSidebar();
-
-  const buttonElement = useRender({
+  const comp = useRender({
     defaultTagName: "button",
     props: mergeProps<"button">(
       {
@@ -498,7 +496,7 @@ function SidebarMenuButton({
       },
       props,
     ),
-    render,
+    render: !tooltip ? render : TooltipTrigger,
     state: {
       slot: "sidebar-menu-button",
       sidebar: "menu-button",
@@ -508,7 +506,7 @@ function SidebarMenuButton({
   });
 
   if (!tooltip) {
-    return buttonElement;
+    return comp;
   }
 
   if (typeof tooltip === "string") {
@@ -519,7 +517,7 @@ function SidebarMenuButton({
 
   return (
     <Tooltip>
-      <TooltipTrigger render={buttonElement} />
+      {comp}
       <TooltipContent
         side="right"
         align="center"

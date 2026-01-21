@@ -18,5 +18,8 @@
     "ui": "@weldr/ui/components",
     "lib": "@weldr/ui/lib",
     "hooks": "@weldr/ui/hooks"
+  },
+  "registries": {
+    "@ai-elements": "https://registry.ai-sdk.dev/{name}.json"
   }
 }

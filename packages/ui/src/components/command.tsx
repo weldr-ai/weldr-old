@@ -29,16 +29,13 @@ function CommandDialog({
   title = "Command Palette",
   description = "Search for a command to run...",
   children,
-  dialogClassName,
-  commandClassName,
+  className,
   showCloseButton = false,
   ...props
 }: Omit<React.ComponentProps<typeof Dialog>, "children"> & {
   title?: string;
   description?: string;
   className?: string;
-  dialogClassName?: string;
-  commandClassName?: string;
   showCloseButton?: boolean;
   children: React.ReactNode;
 }) {
@@ -49,28 +46,24 @@ function CommandDialog({
         <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
       <DialogContent
-        className={cn("overflow-hidden rounded-xl! p-0", dialogClassName)}
+        className={cn("overflow-hidden rounded-xl! p-0", className)}
         showCloseButton={showCloseButton}
       >
-        <Command
-          className={cn(
-            "**:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground **:[[cmdk-group]]:px-2 **:[[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 **:[[cmdk-input-wrapper]_svg]:size-5 **:[[cmdk-input]]:h-12 **:[[cmdk-item]_svg]:size-5 **:[[cmdk-item]]:px-2 **:[[cmdk-item]]:py-3",
-            commandClassName,
-          )}
-        >
-          {children}
-        </Command>
+        {children}
       </DialogContent>
     </Dialog>
   );
 }
 
 function CommandInput({
+  wrapperClassName,
   className,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+}: React.ComponentProps<typeof CommandPrimitive.Input> & {
+  wrapperClassName?: string;
+}) {
   return (
-    <div data-slot="command-input-wrapper" className="p-1 pb-0">
+    <div data-slot="command-input-wrapper" className={cn("p-1 pb-0", wrapperClassName)}>
       <InputGroup className="h-8! rounded-lg! border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
         <CommandPrimitive.Input
           data-slot="command-input"
