@@ -214,7 +214,7 @@ export async function readFromStream(
   });
 
   return {
-    bodyStream: response.bodyStream,
+    bodyStream: () => response.bodyStream(),
     offset: response.offset,
   };
 }
