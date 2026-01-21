@@ -6,7 +6,7 @@ import type {
   IntegrationTemplate,
 } from "@weldr/shared/types";
 
-import type { ExecutionContext } from "@/session";
+import type { ChatContext } from "@/ai/agent/types";
 
 export interface IntegrationCallbackResult {
   success: boolean;
@@ -31,7 +31,7 @@ export type FileItem =
     };
 
 export type IntegrationCallback = (params: {
-  context: ExecutionContext;
+  context: ChatContext;
   integration: Integration;
 }) => Promise<IntegrationCallbackResult>;
 
@@ -59,11 +59,11 @@ export type IntegrationScriptSets = {
 interface IntegrationDefinitionExtension<K extends IntegrationKey> {
   category: IntegrationCategoryKey;
   packages?: (
-    context: ExecutionContext,
+    context: ChatContext,
     options?: ExtractOptionsForKey<K>,
   ) => Promise<IntegrationPackageSets>;
   scripts?: (
-    context: ExecutionContext,
+    context: ChatContext,
     options?: ExtractOptionsForKey<K>,
   ) => Promise<IntegrationScriptSets>;
   preInstall?: IntegrationCallback;

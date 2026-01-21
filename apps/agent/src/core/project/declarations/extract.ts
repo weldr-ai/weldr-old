@@ -5,8 +5,8 @@ import type { AgentFS } from "agentfs-sdk";
 import { db, eq } from "@weldr/db";
 import { Logger } from "@weldr/shared/logger";
 
+import type { ChatContext } from "@/ai/agent/types";
 import { getOrCreateWorkspace } from "@/core/workspace/just-bash/session";
-import type { ExecutionContext } from "@/session";
 import { extractAndSaveDeclarations } from "./query";
 
 /**
@@ -107,7 +107,7 @@ export async function extractDeclarationsFromProject({
   context,
   changedFiles,
 }: {
-  context: ExecutionContext;
+  context: ChatContext;
   changedFiles?: ChangedFile[];
 }): Promise<{ processed: number; errors: string[] }> {
   const project = context.project;
@@ -211,7 +211,7 @@ export async function handleFileDeleted({
   context,
   filePath,
 }: {
-  context: ExecutionContext;
+  context: ChatContext;
   filePath: string;
 }): Promise<void> {
   const { and, inArray } = await import("@weldr/db");

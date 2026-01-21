@@ -2,6 +2,7 @@ import type { ToolResultPart } from "ai";
 
 import type { RouterOutputs } from "@weldr/api";
 import type {
+  AddIntegrationsInput,
   ChatMessage,
   IntegrationCategoryKey,
   IntegrationInstallationStatus,
@@ -28,10 +29,8 @@ export interface SelectedIntegration {
 export type IntegrationToolCall = {
   type: "tool-call";
   toolCallId: string;
-  toolName: string;
-  input: {
-    categories: IntegrationCategoryKey[];
-  };
+  toolName: "add_integrations";
+  input: AddIntegrationsInput;
 };
 
 export type IntegrationToolOutput = {

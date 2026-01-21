@@ -7,9 +7,9 @@ import Handlebars from "handlebars";
 import { Logger } from "@weldr/shared/logger";
 import type { Integration, IntegrationCategoryKey } from "@weldr/shared/types";
 
+import type { ChatContext } from "@/ai/agent/types";
 import { applyEdit } from "@/ai/utils/apply-edit";
 import { getOrCreateWorkspace } from "@/core/workspace/just-bash/session";
-import type { ExecutionContext } from "@/session";
 import type { FileItem } from "../types";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,7 +21,7 @@ export async function applyFiles({
   categoryKey,
 }: {
   integration: Integration;
-  context: ExecutionContext;
+  context: ChatContext;
   categoryKey: IntegrationCategoryKey;
 }): Promise<void> {
   const branch = context.branch;
@@ -107,7 +107,7 @@ async function generateFiles({
   categoryKey,
 }: {
   integration: Integration;
-  context: ExecutionContext;
+  context: ChatContext;
   categoryKey: IntegrationCategoryKey;
 }): Promise<FileItem[]> {
   const project = context.project;

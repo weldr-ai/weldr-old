@@ -9,15 +9,6 @@ import { Bash } from "just-bash";
 
 import { Logger } from "@weldr/shared/logger";
 
-import {
-  type AgentFSMetricsCollector,
-  createAgentFSMetricsCollector,
-} from "@/core/metrics/agentfs-collector";
-import {
-  createAgentFSStorage,
-  type AgentFSSessionStorage,
-} from "@/core/persistence/agentfs-storage";
-import { createToolTracker, type ToolTracker } from "@/core/persistence/tool-tracker";
 import { createBunCommand, createGitCommand } from "./commands";
 
 // Workspace storage - keyed by snapshotId for snapshot-based isolation
@@ -39,9 +30,6 @@ export interface WorkspaceSession {
   agent: AgentFS;
   bash: Bash;
   tools: BashToolkit;
-  storage: AgentFSSessionStorage;
-  metrics: AgentFSMetricsCollector;
-  toolTracker: ToolTracker;
 }
 
 export interface CreateWorkspaceOptions {
@@ -74,11 +62,6 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
 
   const dbPath = path.join(dbDir, `${snapshotId}.db`);
   const agent = await AgentFS.open({ path: dbPath });
-
-  // Create SQLite-backed storage and metrics
-  const storage = createAgentFSStorage(agent, snapshotId);
-  const metrics = await createAgentFSMetricsCollector(agent);
-  const toolTracker = createToolTracker(agent);
 
   // Create just-bash compatible filesystem from AgentFS
   const fs = await agentfs(agent);
@@ -129,9 +112,6 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
     agent,
     bash,
     tools: bashToolkit,
-    storage,
-    metrics,
-    toolTracker,
   };
 
   workspaces.set(snapshotId, session);

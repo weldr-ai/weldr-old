@@ -44,7 +44,8 @@ export async function convertMessages(messages: ChatMessage[]) {
       continue;
     }
 
-    const parts = message.content ?? [];
+    // Handle both string and array content formats
+    const content = message.content;
 
     const messageContent: (TextPart | FilePart | ImagePart | ToolCallPart | ToolResultPart)[] = [];
 
@@ -60,50 +61,58 @@ export async function convertMessages(messages: ChatMessage[]) {
       }
     };
 
-    for (const part of parts) {
-      if (part.type === "text") {
-        const processed = processText(part.text);
-        for (const p of processed) {
-          if (p.type === "text") {
-            currentTextContent += p.text;
-          }
-          if (p.type === "db-model" || p.type === "page" || p.type === "endpoint") {
-            const reference = await db.query.declarations.findFirst({
-              where: eq(declarations.id, p.id),
-            });
-            if (reference) {
-              currentTextContent += formatDeclarationSpecs(reference);
+    // If content is a string, handle it directly
+    if (typeof content === "string") {
+      currentTextContent = content;
+    } else {
+      // Content is an array of parts
+      const parts = content ?? [];
+
+      for (const part of parts) {
+        if (part.type === "text") {
+          const processed = processText(part.text);
+          for (const p of processed) {
+            if (p.type === "text") {
+              currentTextContent += p.text;
+            }
+            if (p.type === "db-model" || p.type === "page" || p.type === "endpoint") {
+              const reference = await db.query.declarations.findFirst({
+                where: eq(declarations.id, p.id),
+              });
+              if (reference) {
+                currentTextContent += formatDeclarationSpecs(reference);
+              }
             }
           }
         }
-      }
 
-      if (part.type === "file") {
-        flushTextContent();
-        messageContent.push({
-          type: "file",
-          data: part.data,
-          mediaType: part.mediaType,
-        });
-      }
+        if (part.type === "file") {
+          flushTextContent();
+          messageContent.push({
+            type: "file",
+            data: part.data,
+            mediaType: part.mediaType,
+          });
+        }
 
-      if (part.type === "image") {
-        flushTextContent();
-        messageContent.push({
-          type: "image",
-          image: part.image as URL | DataContent,
-          mediaType: part.mediaType,
-        });
-      }
+        if (part.type === "image") {
+          flushTextContent();
+          messageContent.push({
+            type: "image",
+            image: part.image as URL | DataContent,
+            mediaType: part.mediaType,
+          });
+        }
 
-      if (part.type === "tool-call") {
-        flushTextContent();
-        messageContent.push({
-          type: "tool-call",
-          toolCallId: part.toolCallId,
-          toolName: part.toolName,
-          input: part.input,
-        });
+        if (part.type === "tool-call") {
+          flushTextContent();
+          messageContent.push({
+            type: "tool-call",
+            toolCallId: part.toolCallId,
+            toolName: part.toolName,
+            input: part.input,
+          });
+        }
       }
     }
 

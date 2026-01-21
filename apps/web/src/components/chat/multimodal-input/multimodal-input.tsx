@@ -368,7 +368,7 @@ function PureMultimodalInput({
         </div>
       )}
 
-      {status && (
+      {status !== "idle" && (
         <div className="flex items-center gap-2 border-b bg-muted px-2 py-1 text-xs">
           <WeldrLogo className="size-4" />
           <span className="inline-flex w-fit animate-shine bg-[linear-gradient(90deg,var(--color-muted-foreground)_0%,var(--color-muted-foreground)_40%,var(--color-foreground)_50%,var(--color-muted-foreground)_60%,var(--color-muted-foreground)_100%)] bg-size-[200%_100%] bg-clip-text text-transparent">
@@ -392,7 +392,7 @@ function PureMultimodalInput({
           onSubmit={submitForm}
           references={references}
           typeaheadPosition={"bottom"}
-          disabled={!!status}
+          disabled={status !== "idle"}
           onFocus={onFocus}
         />
       )}
@@ -406,18 +406,18 @@ function PureMultimodalInput({
           className={cn(
             "max-h-[calc(75dvh)] min-h-[128px] resize-none overflow-y-auto rounded-lg border-none bg-input/30 transition-colors duration-200 focus-visible:ring-0",
             {
-              "bg-muted/30 opacity-70": !!status,
+              "bg-muted/30 opacity-70": status !== "idle",
             },
             textareaClassName,
           )}
           rows={2}
           autoFocus
-          disabled={!!status}
+          disabled={status !== "idle"}
           onFocus={onFocus}
           onKeyDown={(event) => {
             if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
               event.preventDefault();
-              if (status) {
+              if (status !== "idle") {
                 toast.error("Something went wrong!", {
                   description: "Something went wrong, please try again!",
                 });
@@ -494,7 +494,7 @@ function PureAttachmentsButton({
 
         fileInputRef.current?.click();
       }}
-      disabled={!!status}
+      disabled={status !== "idle"}
     >
       <PlusIcon className="size-3.5" />
     </Button>
@@ -518,7 +518,7 @@ function PureSendButton({ submitForm, message, uploadQueue, status, session }: S
     (typeof message === "string" && message.length === 0) ||
     (Array.isArray(message) && message.length === 0) ||
     uploadQueue.length > 0 ||
-    !!status;
+    status !== "idle";
 
   return (
     <Button
@@ -531,7 +531,7 @@ function PureSendButton({ submitForm, message, uploadQueue, status, session }: S
           return;
         }
 
-        if (status) {
+        if (status !== "idle") {
           return;
         }
 

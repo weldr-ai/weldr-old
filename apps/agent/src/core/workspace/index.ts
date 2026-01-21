@@ -15,6 +15,7 @@
  * - just-bash: Provides 80+ built-in commands with custom git/bun support
  */
 
+export * from "./branch-state";
 export * from "./cloud-storage";
 export * from "./errors";
 export * from "./exec";

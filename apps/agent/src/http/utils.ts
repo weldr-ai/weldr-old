@@ -1,12 +1,12 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { PinoLogger } from "hono-pino";
 
-import type { ExecutionContext } from "@/session";
+import type { ChatContext } from "@/ai/agent/types";
 
 export type HonoContext = {
   Variables: {
     logger: PinoLogger;
-    sessionContext: ExecutionContext;
+    sessionContext: ChatContext;
   };
 };
 

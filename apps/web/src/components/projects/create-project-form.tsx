@@ -102,7 +102,7 @@ export function CreateProjectForm({ session }: { session: Session | null }) {
             type="textarea"
             chatId={projectChatId}
             handleSubmit={handleSubmit}
-            status={null}
+            status="idle"
             message={message}
             setMessage={setMessage}
             attachments={attachments}

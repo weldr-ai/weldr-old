@@ -1,8 +1,9 @@
 import { Logger } from "@weldr/shared/logger";
 
 import { Git } from "@/core/git";
-import { createSnapshotService, syncFromCloud } from "@/core/workspace";
-import { initWorkspace, workspaceExists } from "@/core/workspace/exec";
+import { initWorkspace, workspaceExists } from "./exec";
+import { SnapshotService } from "./snapshots";
+import { createStorageBackend, syncFromCloud } from "./sync";
 
 /**
  * Ensure agentfs workspace exists for a snapshot.
@@ -93,7 +94,8 @@ async function createSnapshotFromParent(
 }> {
   const logger = Logger.get({ snapshotId, parentSnapshotId });
 
-  const snapshotService = createSnapshotService(projectId);
+  const backend = createStorageBackend();
+  const snapshotService = new SnapshotService(projectId, backend);
 
   try {
     // Check if parent snapshot exists in cloud storage

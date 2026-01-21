@@ -2,8 +2,8 @@ import { db, eq, inArray } from "@weldr/db";
 import { branches, declarations, projects, users } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 
+import type { ChatContext } from "@/ai/agent/types";
 import { getInstalledCategories } from "@/core/integrations/utils/get-installed-categories";
-import type { ExecutionContext } from "@/session";
 import { extractAndSaveDeclarations } from "../query";
 import { fixtures } from "./test-fixtures";
 
@@ -58,12 +58,13 @@ function createExecutionContextForTest(
   },
   branch: typeof branches.$inferSelect & { snapshot: unknown },
   user: typeof users.$inferSelect,
-): ExecutionContext {
+): ChatContext {
   return {
     project,
     branch,
     user,
-  } as ExecutionContext;
+    modelId: "google:gemini-2.5-pro",
+  } as ChatContext;
 }
 
 /**
@@ -84,7 +85,7 @@ async function cleanupTestData(projectId: string, declarationIdsBefore: string[]
 }
 
 async function testExtractionAndDependencies(
-  context: ExecutionContext,
+  context: ChatContext,
   filePath: string,
   sourceCode: string,
   expectedDeclarations?: string[],

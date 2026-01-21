@@ -10,8 +10,6 @@
     "./types/declarations": "./src/types/declarations.ts",
     "./fly": "./src/fly/index.ts",
     "./tigris": "./src/tigris.ts",
-    "./color-utils": "./src/color-utils.ts",
-    "./machine-lookup-store": "./src/machine-lookup-store.ts",
     "./nanoid": "./src/nanoid.ts",
     "./logger": "./src/logger.ts",
     "./process-text": "./src/process-text.ts"

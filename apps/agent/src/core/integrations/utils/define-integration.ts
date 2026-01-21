@@ -1,8 +1,8 @@
 import { Logger } from "@weldr/shared/logger";
 import type { Integration, IntegrationKey } from "@weldr/shared/types";
 
+import type { ChatContext } from "@/ai/agent/types";
 import { isLocalMode } from "@/core/utils/mode";
-import type { ExecutionContext } from "@/session";
 import type { ExtractOptionsForKey, IntegrationDefinition } from "../types";
 import { combineResults } from "./combine-results";
 import { seedDeclarationTemplates } from "./declaration-templates-utils";
@@ -18,7 +18,7 @@ export function defineIntegration<K extends IntegrationKey>(
       context,
       integration,
     }: {
-      context: ExecutionContext;
+      context: ChatContext;
       integration: Integration;
     }) => {
       try {

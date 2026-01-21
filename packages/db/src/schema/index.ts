@@ -14,5 +14,4 @@ export * from "./projects";
 export * from "./relations";
 export * from "./snapshot-declarations";
 export * from "./snapshots";
-export * from "./themes";
 export * from "./vault";

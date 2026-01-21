@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { runSubAgents } from "@/ai/agent/sub-agents";
 import { createTool } from "../utils/create-tool";
 
 export const spawnAgentsInputSchema = z.object({
@@ -109,8 +110,11 @@ MIXED PARALLEL AND SEQUENTIAL:
   ]
   -> schema and docs run in parallel, api waits for schema, frontend waits for api
 
-Failed agents retry up to 3 times. If still failing, dependent agents are cancelled.
+If an agent fails, its dependent agents are cancelled.
 Sub-agents cannot spawn further agents. Maximum 10 agents per call.`,
   inputSchema: spawnAgentsInputSchema,
   outputSchema: spawnAgentsOutputSchema,
+  execute: async ({ input, context }) => {
+    return runSubAgents(input, context);
+  },
 });

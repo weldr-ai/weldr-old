@@ -16,8 +16,8 @@ import { secrets } from "@weldr/db/schema";
 import { Logger } from "@weldr/shared/logger";
 import type { Integration } from "@weldr/shared/types";
 
+import type { ChatContext } from "@/ai/agent/types";
 import { getOrCreateWorkspace } from "@/core/workspace/just-bash/session";
-import type { ExecutionContext } from "@/session";
 
 /**
  * Parse a .env file content into a Map
@@ -167,7 +167,7 @@ export async function writeEnvironmentVariables({
   context,
   integration,
 }: {
-  context: ExecutionContext;
+  context: ChatContext;
   integration: Integration;
 }): Promise<void> {
   const project = context.project;
