@@ -13,7 +13,6 @@ export const getRouter = () => {
     routeTree,
     context: { ...reactQueryContext },
     defaultPreload: "intent",
-    notFoundMode: "fuzzy",
     defaultNotFoundComponent: NotFound,
     Wrap: (props: { children: React.ReactNode }) => {
       return (

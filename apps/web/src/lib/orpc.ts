@@ -6,7 +6,7 @@ import { createTanstackQueryUtils, type RouterUtils } from "@orpc/tanstack-query
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 
-import { type RouterClient, router } from "@weldr/api";
+import { router, type RouterClient } from "@weldr/api";
 
 export type ORPCReactUtils = RouterUtils<RouterClient>;
 
@@ -20,7 +20,7 @@ const getORPCClient = createIsomorphicFn()
   )
   .client((): RouterClient => {
     const link = new RPCLink({
-      url: `${import.meta.env.VITE_SERVER_URL ?? "http://localhost:8080"}/rpc`,
+      url: import.meta.env.DEV ? window.location.href : `${import.meta.env.VITE_SERVER_URL}/rpc`,
       fetch: (url, init) => fetch(url, { ...init, credentials: "include" }),
       plugins: [
         new BatchLinkPlugin({

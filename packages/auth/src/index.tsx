@@ -1,7 +1,7 @@
 import { stripe } from "@better-auth/stripe";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { admin, oAuthProxy, openAPI, organization } from "better-auth/plugins";
+import { admin, haveIBeenPwned, lastLoginMethod, openAPI, organization } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { Resend } from "resend";
 import { Stripe } from "stripe";
@@ -78,9 +78,10 @@ export const auth = betterAuth({
     // },
   },
   plugins: [
-    oAuthProxy(),
     admin(),
-    openAPI(),
+    haveIBeenPwned(),
+    lastLoginMethod(),
+    openAPI({ disableDefaultReference: true }),
     organization(),
     stripe({
       stripeClient,

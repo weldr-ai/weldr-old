@@ -1,20 +1,33 @@
-// vite.config.ts
-import { defineConfig } from "vite";
+import tailwindcss from "@tailwindcss/vite";
+import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
-import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from "vite";
+import viteTsConfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   server: {
     port: 3000,
+    proxy: {
+      "/api": {
+        target: "http://localhost:8080",
+      },
+      "/rpc": {
+        target: "http://localhost:8080",
+      },
+    },
   },
   plugins: [
-    tailwindcss(),
-    tsconfigPaths(),
-    tanstackStart({
-      srcDirectory: "src",
+    devtools(),
+    viteTsConfigPaths({
+      projects: ["./tsconfig.json"],
     }),
-    viteReact(),
+    tailwindcss(),
+    tanstackStart(),
+    viteReact({
+      babel: {
+        plugins: ["babel-plugin-react-compiler"],
+      },
+    }),
   ],
 });
