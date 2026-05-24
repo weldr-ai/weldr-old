@@ -1,6 +1,6 @@
 # Weldr
 
-> **⚠️ Note**: This project is under active development. Things can break unexpectedly.
+> **Note**: This project is archived and is not being actively developed at the moment.
 
 Chat to build: Weldr generates code and models the repo as a semantic call graph, with key pieces highlighted on a visual canvas.
 
