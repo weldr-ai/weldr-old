@@ -1,7 +1,4 @@
-"use client";
-
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
 
 import type { RouterOutputs } from "@weldr/api";
 import {
@@ -14,19 +11,19 @@ import {
 import { ScrollArea } from "@weldr/ui/components/scroll-area";
 
 import { CreateIntegrationDialog } from "@/components/integrations/create-integration-dialog";
-import { orpc } from "@/lib/orpc/client";
+import { orpc } from "@/lib/orpc";
 
 export function IntegrationsSection({
+  projectId,
   integrationTemplates,
   integrations: _integrations,
   environmentVariables,
 }: {
+  projectId: string;
   integrationTemplates: RouterOutputs["integrationTemplates"]["list"];
   integrations: RouterOutputs["projects"]["get"]["integrations"];
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
 }) {
-  const { projectId } = useParams<{ projectId: string }>();
-
   const { data: integrations } = useQuery(
     orpc.integrations.list.queryOptions({
       input: { projectId },
@@ -46,6 +43,7 @@ export function IntegrationsSection({
             {integrationTemplates.map((integrationTemplate) => (
               <CreateIntegrationDialog
                 key={integrationTemplate.id}
+                projectId={projectId}
                 integrationTemplate={
                   integrationTemplate as RouterOutputs["integrationTemplates"]["get"]
                 }

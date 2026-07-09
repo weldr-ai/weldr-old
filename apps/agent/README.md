@@ -79,7 +79,6 @@ Each project operates on a **branch-version model**:
 The agent provides real-time updates through a streaming system:
 
 - **Event Types**: Status updates, task progress, code changes, node updates
-- **Redis Backend**: Uses Redis for pub/sub messaging
 - **WebSocket Support**: Clients receive live updates as work progresses
 - **Progress Visibility**: Real-time feedback on planning, coding, and finalization phases
 
@@ -158,7 +157,6 @@ The agent can recover from interruptions:
 
 - **Database**: Stores projects, branches, versions, tasks, declarations, integrations
 - **File System**: Each branch has its own directory with the codebase
-- **Redis**: Handles real-time event streaming
 - **S3/Tigris**: Cloud storage for branch state and snapshots (cloud mode)
 
 ### Key Components
@@ -176,7 +174,6 @@ The agent can recover from interruptions:
 
 - Node.js 22+
 - bun
-- Redis (for streaming)
 - PostgreSQL (via @weldr/db package)
 - Git
 

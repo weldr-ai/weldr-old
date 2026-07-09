@@ -1,5 +1,3 @@
-"use client";
-
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import { BrainIcon, ChevronDownIcon } from "lucide-react";
 import { type ComponentProps, createContext, memo, useContext, useEffect, useState } from "react";
@@ -119,7 +117,7 @@ export const ReasoningTrigger = memo(({ className, children, ...props }: Reasoni
 
   return (
     <CollapsibleTrigger
-      className={cn("flex items-center gap-2 text-muted-foreground text-sm", className)}
+      className={cn("flex items-center gap-2 text-sm text-muted-foreground", className)}
       {...props}
     >
       {children ?? (
@@ -150,7 +148,7 @@ export const ReasoningContent = memo(({ className, children, ...props }: Reasoni
   <CollapsibleContent
     className={cn(
       "mt-4 text-sm",
-      "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
+      "text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:animate-in data-[state=open]:slide-in-from-top-2",
       className,
     )}
     {...props}

@@ -7,8 +7,7 @@ export async function callAgentProxy<T = unknown>(
   body: { projectId: string } & Record<string, unknown>,
   requestHeaders?: Headers,
 ): Promise<T> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const proxyUrl = `${baseUrl}/api/proxy`;
+  const agentUrl = process.env.AGENT_URL || "http://localhost:8081";
 
   const proxyHeaders = new Headers();
   proxyHeaders.set("content-type", "application/json");
@@ -27,13 +26,10 @@ export async function callAgentProxy<T = unknown>(
     proxyHeaders.set("cookie", cookie);
   }
 
-  const response = await fetch(proxyUrl, {
+  const response = await fetch(`${agentUrl}${endpoint}`, {
     method: "POST",
     headers: proxyHeaders,
-    body: JSON.stringify({
-      endpoint,
-      ...body,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

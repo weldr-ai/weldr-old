@@ -1,20 +1,37 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueries } from "@tanstack/react-query";
+import { useParams } from "@tanstack/react-router";
 import type { AssistantContent } from "ai";
 import fastDeepEqual from "fast-deep-equal";
-import { CheckIcon, LoaderIcon, PenIcon } from "lucide-react";
-import { useParams } from "next/navigation";
-import { type Dispatch, memo, type SetStateAction, useCallback, useState } from "react";
+import {
+  AlertCircleIcon,
+  CheckCircleIcon,
+  CheckIcon,
+  LoaderIcon,
+  PenIcon,
+  RefreshCwIcon,
+} from "lucide-react";
+import { type Dispatch, memo, type SetStateAction, useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import type { RouterOutputs } from "@weldr/api";
 import { nanoid } from "@weldr/shared/nanoid";
 import type { ChatMessage, IntegrationCategoryKey, TStatus } from "@weldr/shared/types";
 import { Button } from "@weldr/ui/components/button";
-import { toast } from "@weldr/ui/hooks/use-toast";
 
-import { orpc } from "@/lib/orpc/client";
+import { api, orpc } from "@/lib/orpc";
 import type { IntegrationToolCall } from "../shared/types";
 import { ConfigureIntegrationDialog } from "./configure-integration-dialog";
 import { IntegrationsCombobox } from "./integrations-combobox";
+
+type Phase = "configuring" | "installing" | "completed" | "failed";
+
+type CreatedIntegration = {
+  id: string;
+  installationId: string;
+  key: string;
+  name: string;
+  status: string;
+};
 
 const PureConfigureIntegrationsPrompt = ({
   message,
@@ -35,7 +52,7 @@ const PureConfigureIntegrationsPrompt = ({
   setStatus: Dispatch<SetStateAction<TStatus>>;
   branchId: string;
 }) => {
-  const { projectId } = useParams<{ projectId: string }>();
+  const { projectId } = useParams({ strict: false }) as { projectId: string };
 
   const messageContent = message.content as Exclude<AssistantContent, string>;
 
@@ -63,6 +80,11 @@ const PureConfigureIntegrationsPrompt = ({
   );
 
   const [categoryChange, setCategoryChange] = useState<IntegrationCategoryKey[]>([]);
+
+  // Phase management for the new flow
+  const [phase, setPhase] = useState<Phase>("configuring");
+  const [createdIntegrations, setCreatedIntegrations] = useState<CreatedIntegration[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [configuredIntegrations, setConfiguredIntegrations] = useState<
     Record<
@@ -102,9 +124,23 @@ const PureConfigureIntegrationsPrompt = ({
     >,
   );
 
-  const createBatchIntegrationsMutation = useMutation(
-    orpc.integrations.createBatch.mutationOptions(),
-  );
+  // Poll installation status for each created integration
+  const installationQueries = useQueries({
+    queries: createdIntegrations.map((integration) => ({
+      queryKey: ["installation-status", integration.installationId],
+      queryFn: () =>
+        api.integrations.getInstallation({ installationId: integration.installationId }),
+      enabled: phase === "installing",
+      refetchInterval: (query: { state: { data?: { status: string } } }) => {
+        const status = query.state.data?.status;
+        // Stop polling when installed or failed
+        if (status === "installed" || status === "failed") {
+          return false;
+        }
+        return 500; // Fast polling
+      },
+    })),
+  });
 
   const handleSelectIntegration = (
     categoryKey: string,
@@ -224,37 +260,85 @@ const PureConfigureIntegrationsPrompt = ({
   const addMessageMutation = useMutation(
     orpc.chats.addMessage.mutationOptions({
       onSuccess: (data) => {
-        setStatus(null);
+        setStatus("idle");
         setMessages((prev) => [...prev, data]);
         setStatus("thinking");
       },
       onError: (error) => {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
+        toast.error(error.message);
       },
     }),
   );
 
-  const updateMessageMutation = useMutation(
-    orpc.chats.updateMessage.mutationOptions({
-      onSuccess: (data) => {
-        setMessages((prev) => {
-          const withoutOptimistic = prev.filter((msg) => msg.id !== data.id);
-          return [...withoutOptimistic, data];
-        });
-      },
-      onError: (error) => {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      },
-    }),
+  // Check if all installations are complete
+  const allInstallationsComplete = installationQueries.every(
+    (query) => query.data?.status === "installed" || query.data?.status === "failed",
   );
+  const hasFailedInstallations = installationQueries.some(
+    (query) => query.data?.status === "failed",
+  );
+  const allInstallationsSucceeded = installationQueries.every(
+    (query) => query.data?.status === "installed",
+  );
+
+  // Handle completion - send tool result when all installations are done
+  useEffect(() => {
+    if (phase !== "installing" || !allInstallationsComplete || installationQueries.length === 0) {
+      return;
+    }
+
+    if (hasFailedInstallations) {
+      setPhase("failed");
+      return;
+    }
+
+    if (allInstallationsSucceeded) {
+      // All done! Send tool result to resume AI
+      addMessageMutation.mutate({
+        chatId,
+        message: {
+          id: nanoid(),
+          role: "tool",
+          createdAt: new Date(),
+          content: [
+            {
+              type: "tool-result",
+              toolCallId: integrationToolCall.toolCallId,
+              toolName: integrationToolCall.toolName,
+              output: {
+                type: "json",
+                value: {
+                  status: "completed",
+                  categories: requiredCategories,
+                  integrations: installationQueries.map((query) => ({
+                    name: query.data?.integration.name ?? "",
+                    category:
+                      filteredIntegrationTemplates.find(
+                        (t) => t.key === query.data?.integration.key,
+                      )?.category.key ?? "",
+                    key: query.data?.integration.key ?? "",
+                    status: query.data?.status ?? "installed",
+                  })),
+                },
+              },
+            },
+          ],
+        },
+      });
+      setPhase("completed");
+    }
+  }, [
+    phase,
+    allInstallationsComplete,
+    hasFailedInstallations,
+    allInstallationsSucceeded,
+    installationQueries,
+    addMessageMutation,
+    chatId,
+    integrationToolCall,
+    requiredCategories,
+    filteredIntegrationTemplates,
+  ]);
 
   const handleFinalConfirm = useCallback(async () => {
     const configurations = Object.values(selectedIntegrations)
@@ -267,8 +351,6 @@ const PureConfigureIntegrationsPrompt = ({
         return {
           name: configuredIntegration?.name || integration.name,
           integrationTemplateId: integration.id,
-          category: integration.category.key,
-          integrationKey: integration.key,
           environmentVariableMappings: Object.entries(
             configuredIntegration?.environmentVariableMappings || {},
           ).map(([configKey, envVarId]) => ({
@@ -278,78 +360,42 @@ const PureConfigureIntegrationsPrompt = ({
         };
       });
 
-    const messageContentWithoutToolCall = messageContent.filter(
-      (part) => part.type !== "tool-call" || part.toolCallId !== integrationToolCall.toolCallId,
-    );
+    setIsSubmitting(true);
 
-    updateMessageMutation.mutate({
-      chatId,
-      id: message.id,
-      content: [
-        ...messageContentWithoutToolCall,
-        {
-          type: "tool-call",
-          toolCallId: integrationToolCall.toolCallId,
-          toolName: integrationToolCall.toolName,
-          input: {
-            status: "completed",
-            categories: requiredCategories,
-          },
+    try {
+      // Call the agent endpoint directly
+      const response = await fetch("/agent/integrations/install", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      ],
-    });
+        credentials: "include",
+        body: JSON.stringify({
+          projectId,
+          branchId,
+          integrations: configurations,
+        }),
+      });
 
-    addMessageMutation.mutate({
-      chatId,
-      message: {
-        id: nanoid(),
-        role: "tool",
-        createdAt: new Date(),
-        content: [
-          {
-            type: "tool-result",
-            toolCallId: integrationToolCall.toolCallId,
-            toolName: integrationToolCall.toolName,
-            output: {
-              type: "json",
-              value: {
-                status: "completed",
-                categories: requiredCategories,
-                integrations: configurations.map((integration) => ({
-                  name: integration.name,
-                  category: integration.category,
-                  key: integration.integrationKey,
-                  status: "queued",
-                })),
-              },
-            },
-          },
-        ],
-      },
-    });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to setup integrations");
+      }
 
-    createBatchIntegrationsMutation.mutate({
-      projectId,
-      branchId,
-      chatId,
-      startSession: true,
-      integrations: configurations,
-    });
-  }, [
-    projectId,
-    chatId,
-    message,
-    messageContent,
-    updateMessageMutation,
-    branchId,
-    createBatchIntegrationsMutation,
-    configuredIntegrations,
-    addMessageMutation,
-    selectedIntegrations,
-    isConfigured,
-    integrationToolCall,
-    requiredCategories,
-  ]);
+      const result = (await response.json()) as {
+        success: boolean;
+        integrations: CreatedIntegration[];
+      };
+
+      // Store the created integrations and start polling
+      setCreatedIntegrations(result.integrations);
+      setPhase("installing");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(errorMessage);
+      setIsSubmitting(false);
+    }
+  }, [projectId, branchId, configuredIntegrations, selectedIntegrations, isConfigured]);
 
   const handleIntegrationCancel = useCallback(() => {
     addMessageMutation.mutate({
@@ -376,11 +422,134 @@ const PureConfigureIntegrationsPrompt = ({
     });
   }, [addMessageMutation, chatId, integrationToolCall, requiredCategories]);
 
+  // Handle retry for failed installations
+  const handleRetry = useCallback(async () => {
+    const failedInstallations = installationQueries
+      .filter((query) => query.data?.status === "failed")
+      .map((query) => query.data);
+
+    if (failedInstallations.length === 0) return;
+
+    setPhase("installing");
+    // Reset queries to trigger refetch
+    for (const query of installationQueries) {
+      if (query.data?.status === "failed") {
+        query.refetch();
+      }
+    }
+  }, [installationQueries]);
+
+  // Handle continue anyway (with partial results)
+  const handleContinueAnyway = useCallback(() => {
+    addMessageMutation.mutate({
+      chatId,
+      message: {
+        id: nanoid(),
+        role: "tool",
+        createdAt: new Date(),
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: integrationToolCall.toolCallId,
+            toolName: integrationToolCall.toolName,
+            output: {
+              type: "json",
+              value: {
+                status: "completed",
+                categories: requiredCategories,
+                integrations: installationQueries.map((query) => ({
+                  name: query.data?.integration.name ?? "",
+                  category:
+                    filteredIntegrationTemplates.find((t) => t.key === query.data?.integration.key)
+                      ?.category.key ?? "",
+                  key: query.data?.integration.key ?? "",
+                  status: query.data?.status ?? "failed",
+                  error: query.data?.installationMetadata?.error,
+                })),
+              },
+            },
+          },
+        ],
+      },
+    });
+    setPhase("completed");
+  }, [
+    addMessageMutation,
+    chatId,
+    integrationToolCall,
+    requiredCategories,
+    installationQueries,
+    filteredIntegrationTemplates,
+  ]);
+
+  // Show installation progress
+  if (phase === "installing" || phase === "failed" || phase === "completed") {
+    return (
+      <div className="rounded-md border">
+        <div className="flex flex-col items-center border-b p-1.5">
+          <h3 className="font-medium">
+            {phase === "installing" && "Installing Integrations..."}
+            {phase === "failed" && "Installation Failed"}
+            {phase === "completed" && "Installation Complete"}
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            {phase === "installing" && "Please wait while integrations are being installed"}
+            {phase === "failed" && "Some integrations failed to install"}
+            {phase === "completed" && "All integrations have been installed"}
+          </p>
+        </div>
+        <div className="flex flex-col gap-2 p-1.5">
+          {createdIntegrations.map((integration, index) => {
+            const query = installationQueries[index];
+            const status = query?.data?.status ?? "queued";
+            const error = query?.data?.installationMetadata?.error;
+
+            return (
+              <div key={integration.id} className="flex items-center justify-between gap-2">
+                <span className="text-sm">{integration.name}</span>
+                <div className="flex items-center gap-1.5">
+                  {(status === "queued" || status === "installing") && (
+                    <LoaderIcon className="size-4 animate-spin text-muted-foreground" />
+                  )}
+                  {status === "installed" && <CheckCircleIcon className="size-4 text-green-500" />}
+                  {status === "failed" && (
+                    <div className="flex items-center gap-1">
+                      <AlertCircleIcon className="size-4 text-destructive" />
+                      {error && (
+                        <span className="text-xs text-destructive" title={error}>
+                          Failed
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <span className="text-xs text-muted-foreground capitalize">{status}</span>
+                </div>
+              </div>
+            );
+          })}
+
+          {phase === "failed" && (
+            <div className="flex justify-end gap-1 border-t pt-1.5">
+              <Button type="button" variant="outline" size="sm" onClick={handleRetry}>
+                <RefreshCwIcon className="mr-1 size-3" />
+                Retry Failed
+              </Button>
+              <Button type="button" size="sm" variant="destructive" onClick={handleContinueAnyway}>
+                Continue Anyway
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Show configuration UI (phase === "configuring")
   return (
     <div className="rounded-md border">
       <div className="flex flex-col items-center border-b p-1.5">
         <h3 className="font-medium">Setup Integrations</h3>
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-muted-foreground">
           Select and configure integrations for your project
         </p>
       </div>
@@ -395,7 +564,7 @@ const PureConfigureIntegrationsPrompt = ({
           })
           .map(([categoryKey, { category, templates }]) => (
             <div key={categoryKey} className="flex flex-col gap-1">
-              <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
+              <h4 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                 {category.key}
               </h4>
               <div className="flex w-full items-center gap-1.5">
@@ -475,7 +644,7 @@ const PureConfigureIntegrationsPrompt = ({
             type="button"
             variant="outline"
             size="sm"
-            disabled={createBatchIntegrationsMutation.isPending}
+            disabled={isSubmitting}
             onClick={handleIntegrationCancel}
           >
             Cancel
@@ -489,13 +658,11 @@ const PureConfigureIntegrationsPrompt = ({
                 (integration) => integration && !isConfigured(integration.category.key),
               ) ||
               Object.values(selectedIntegrations).every((integration) => !integration) ||
-              createBatchIntegrationsMutation.isPending ||
+              isSubmitting ||
               categoryChange.length !== 0
             }
           >
-            {createBatchIntegrationsMutation.isPending && (
-              <LoaderIcon className="size-3 animate-spin" />
-            )}
+            {isSubmitting && <LoaderIcon className="size-3 animate-spin" />}
             Confirm
           </Button>
         </div>

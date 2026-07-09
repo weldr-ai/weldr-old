@@ -28,5 +28,6 @@
     "source.fixAll.oxc": "explicit",
     "source.action.useSortedKeys.oxc": "explicit",
     "source.action.useSortedAttributes.oxc": "explicit"
-  }
+  },
+  "biome.enabled": false
 }

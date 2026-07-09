@@ -6,11 +6,9 @@ import { requestId } from "hono/request-id";
 import { Logger } from "@weldr/shared/logger";
 
 import { recoverEnrichingJobs } from "./core/project/declarations/enriching-jobs";
-import { closeDurableStreams, initDurableStreams } from "./core/stream";
 import { loggerMiddleware } from "./http/middlewares/logger";
 import { routes } from "./http/routes";
 import { configureOpenAPI, createRouter } from "./http/utils";
-import { recoverSessions, sessionRegistry } from "./session";
 
 export const app = createRouter();
 
@@ -53,24 +51,11 @@ app.onError((err: Error, c: Context) => {
   );
 });
 
-const port = process.env.PORT ? Number.parseInt(process.env.PORT) : 8080;
+const port = process.env.PORT ? Number.parseInt(process.env.PORT) : 8081;
 
-// Graceful shutdown
+// Graceful shutdown (simplified - no session registry or durable streams)
 async function gracefulShutdown(signal: string) {
   Logger.info(`Received ${signal}, shutting down gracefully...`);
-
-  try {
-    // Stop all active session actors
-    sessionRegistry.shutdown();
-
-    // Close Durable Streams server
-    await closeDurableStreams();
-  } catch (error) {
-    Logger.error("Error during graceful shutdown", {
-      extra: { error: error instanceof Error ? error.message : String(error) },
-    });
-  }
-
   process.exit(0);
 }
 
@@ -86,11 +71,6 @@ if (import.meta.main) {
     },
     async (info) => {
       Logger.info(`Server is running on http://localhost:${info.port}`);
-
-      // Initialize Durable Streams server
-      await initDurableStreams();
-
-      await recoverSessions();
       await recoverEnrichingJobs();
     },
   );

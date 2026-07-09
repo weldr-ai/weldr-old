@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useParams, useSearch } from "@tanstack/react-router";
 import { Handle, Position } from "@xyflow/react";
 import {
   CircleIcon,
@@ -9,7 +10,6 @@ import {
   ShieldCheckIcon,
   ShieldXIcon,
 } from "lucide-react";
-import { useParams, useSearchParams } from "next/navigation";
 import { memo, useCallback, useState } from "react";
 
 import { Badge } from "@weldr/ui/components/badge";
@@ -20,7 +20,7 @@ import { Label } from "@weldr/ui/components/label";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { SitePreviewDialog } from "@/components/site-preview-dialog";
-import { orpc } from "@/lib/orpc/client";
+import { orpc } from "@/lib/orpc";
 import { getPreviewUrl as buildPreviewUrl } from "@/lib/preview-url";
 import type { CanvasNodeProps } from "@/types";
 import { ProtectedBadge } from "../components/protected-badge";
@@ -32,10 +32,10 @@ interface PageNodeHeaderProps {
 }
 
 const PageNodeHeader = memo(({ name, protected: isProtected, children }: PageNodeHeaderProps) => (
-  <div className="-top-10 absolute right-0 left-0 z-20 flex h-8 items-center justify-between gap-2 rounded-md border bg-muted px-2 py-1 opacity-0 transition-all duration-200 group-hover:opacity-100">
+  <div className="absolute -top-10 right-0 left-0 z-20 flex h-8 items-center justify-between gap-2 rounded-md border bg-muted px-2 py-1 opacity-0 transition-all duration-200 group-hover:opacity-100">
     <div className="flex items-center gap-2">
-      <span className="font-semibold text-primary text-xs">PAGE</span>
-      <span className="font-medium text-sm">{name}</span>
+      <span className="text-xs font-semibold text-primary">PAGE</span>
+      <span className="text-sm font-medium">{name}</span>
     </div>
     <div className="flex items-center gap-1">
       {children}
@@ -50,12 +50,11 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
   }
 
   const queryClient = useQueryClient();
-  const { projectId, branchId } = useParams<{
+  const { projectId, branchId } = useParams({ strict: false }) as {
     projectId: string;
     branchId?: string;
-  }>();
-  const searchParams = useSearchParams();
-  const snapshotId = searchParams.get("snapshotId") ?? undefined;
+  };
+  const { snapshotId } = useSearch({ strict: false }) as { snapshotId?: string };
 
   const branch = queryClient.getQueryData(
     orpc.branches.getByIdOrMain.queryKey({
@@ -228,13 +227,13 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
                     {declaration.progress === "pending" && (
                       <>
                         <CircleIcon className="mx-auto size-8 fill-warning text-warning" />
-                        <h3 className="font-semibold text-lg">Pending</h3>
+                        <h3 className="text-lg font-semibold">Pending</h3>
                       </>
                     )}
                     {declaration.progress === "in_progress" && (
                       <>
                         <HammerIcon className="mx-auto size-8 text-primary" />
-                        <h3 className="font-semibold text-lg">Building</h3>
+                        <h3 className="text-lg font-semibold">Building</h3>
                       </>
                     )}
                   </div>
@@ -243,7 +242,7 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
                 {!snapshot && declaration.progress === "completed" && (
                   <div className="space-y-2">
                     <LoaderIcon className="mx-auto size-8 animate-spin text-primary" />
-                    <h3 className="font-semibold text-lg">Loading</h3>
+                    <h3 className="text-lg font-semibold">Loading</h3>
                   </div>
                 )}
 
@@ -270,8 +269,8 @@ export const PageNode = memo(({ data: _data, selected }: CanvasNodeProps) => {
               <>
                 <div className="space-y-2 text-center">
                   <SettingsIcon className="mx-auto h-8 w-8 text-muted-foreground" />
-                  <h3 className="font-semibold text-lg">Parameters Required</h3>
-                  <p className="text-muted-foreground text-sm">
+                  <h3 className="text-lg font-semibold">Parameters Required</h3>
+                  <p className="text-sm text-muted-foreground">
                     Enter parameter values to preview this page
                   </p>
                 </div>

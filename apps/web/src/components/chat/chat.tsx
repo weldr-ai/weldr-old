@@ -1,118 +1,190 @@
+import { useChat, type Message } from "@ai-sdk/react";
+import { useQueryClient } from "@tanstack/react-query";
 import equal from "fast-deep-equal";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import type { RouterOutputs } from "@weldr/api";
-import { authClient } from "@weldr/auth/client";
-import type { ChatMessage } from "@weldr/shared/types";
+import type { Session } from "@weldr/auth";
+import { nanoid } from "@weldr/shared/nanoid";
+import type { Attachment, ChatMessage, TStatus, UserMessage } from "@weldr/shared/types";
 import { Button } from "@weldr/ui/components/button";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { useChatVisibility } from "@/hooks/use-chat-visibility";
 import { useEditorReferences } from "@/hooks/use-editor-references";
-import { useEventStream } from "@/hooks/use-event-stream";
-import { useMessages } from "@/hooks/use-messages";
 import { useScrollToBottom } from "@/hooks/use-scroll-to-bottom";
-import { useSession } from "@/hooks/use-session";
-import { useStatus } from "@/hooks/use-status";
+import { orpc } from "@/lib/orpc";
 import { parseConventionalCommit } from "@/lib/utils";
 import { CommitTypeBadge } from "../commit-type-badge";
 import { Timeline, TimelineContent, TimelineTrigger } from "../timeline";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input/multimodal-input";
 
+const AGENT_URL = import.meta.env.VITE_AGENT_URL ?? "http://localhost:8081";
+
 interface ChatProps {
   integrationTemplates: RouterOutputs["integrationTemplates"]["list"];
   project: RouterOutputs["projects"]["get"];
   branch: RouterOutputs["branches"]["getByIdOrMain"];
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
+  session: Session | null;
+}
+
+// Convert database ChatMessage[] to AI SDK Message[] for useChat initialMessages
+function dbToMessages(dbMessages: ChatMessage[]): Message[] {
+  return dbMessages.map((msg) => {
+    // Handle both string and array content formats
+    const content =
+      typeof msg.content === "string"
+        ? msg.content
+        : msg.content
+            .filter((part): part is { type: "text"; text: string } => part.type === "text")
+            .map((part) => part.text)
+            .join("");
+
+    return {
+      id: msg.id,
+      role: msg.role as "user" | "assistant" | "system",
+      content,
+      createdAt: new Date(msg.createdAt),
+    };
+  });
+}
+
+// Convert AI SDK Message[] to ChatMessage[] for existing components
+function messagesToDB(messages: Message[], chatId: string): ChatMessage[] {
+  return messages.map((msg) => ({
+    id: msg.id,
+    role: (msg.role === "system" ? "user" : msg.role) as "user" | "assistant",
+    content: msg.content, // Schema now accepts string content directly
+    chatId,
+    createdAt: msg.createdAt ?? new Date(),
+  })) as ChatMessage[];
 }
 
 export const Chat = memo<ChatProps>(
-  ({ integrationTemplates, project, branch, environmentVariables }) => {
-    const { data: session } = authClient.useSession();
-
-    // Get the first (most recent) chat from the branch
+  ({ integrationTemplates, project, branch, environmentVariables, session }) => {
     const chat = branch.chats?.[0];
     const snapshot = branch.snapshot;
+    const queryClient = useQueryClient();
+
+    const [status, setStatus] = useState<TStatus>("idle");
+    // UserMessage content - initialize as empty array for editor input
+    const [userMessageContent, setUserMessageContent] = useState<UserMessage["content"]>([]);
+    const [attachments, setAttachments] = useState<Attachment[]>([]);
+    const [isTimelineOpen, setIsTimelineOpen] = useState(true);
+
+    const isSubmittingRef = useRef(false);
+
+    // Convert initial messages from DB format to AI SDK format
+    const initialMessages = chat?.messages ? dbToMessages(chat.messages as ChatMessage[]) : [];
 
     const {
-      messages,
-      setMessages,
-      userMessageContent,
-      setUserMessageContent,
-      attachments,
-      setAttachments,
-      handleSubmit: handleMessageSubmit,
-    } = useMessages({
-      initialMessages: (chat?.messages ?? []) as ChatMessage[],
-      chatId: chat?.id ?? "",
-      session,
+      messages: uiMessages,
+      append,
+      status: chatStatus,
+      error,
+    } = useChat({
+      id: chat?.id,
+      api: `${AGENT_URL}/chat`,
+      credentials: "include",
+      body: {
+        projectId: project.id,
+        branchId: branch.id,
+        chatId: chat?.id,
+      },
+      initialMessages,
+      onResponse: (response) => {
+        if (!response.ok) {
+          console.error("Chat response error:", response.status);
+        }
+      },
+      onFinish: () => {
+        setStatus("idle");
+        queryClient.invalidateQueries({
+          queryKey: orpc.branches.getByIdOrMain.queryKey({
+            input: { id: branch.id, projectId: project.id },
+          }),
+        });
+      },
+      onError: (err) => {
+        console.error("Chat error:", err);
+        setStatus("idle");
+      },
     });
+
+    // Convert AI SDK messages to DB format for existing components
+    const messages = messagesToDB(uiMessages, chat?.id ?? "");
+
+    const setMessages = useCallback((_updater: React.SetStateAction<ChatMessage[]>) => {
+      // AI SDK manages messages internally
+    }, []);
 
     const [messagesContainerRef, messagesEndRef] = useScrollToBottom<HTMLDivElement>(messages);
-
-    const { status, setStatus } = useStatus({
-      messages,
-      project,
-    });
 
     const { isChatVisible, chatContainerRef, handleInputFocus, toggleChatVisibility } =
       useChatVisibility();
 
-    const [isTimelineOpen, setIsTimelineOpen] = useState(true);
+    useEffect(() => {
+      if (chatStatus === "streaming") {
+        if (status === "idle") {
+          setStatus("responding");
+        }
+      } else if (chatStatus === "submitted") {
+        setStatus("thinking");
+      }
+    }, [chatStatus, status]);
 
-    // Track if we're currently submitting to prevent double submissions
-    const isSubmittingRef = useRef(false);
-
-    const { eventSourceRef, connectToEventStream, closeEventStream } = useEventStream({
-      projectId: project.id,
-      branchId: branch.id,
-      chatId: chat?.id ?? "",
-      setStatus,
-      setMessages,
-    });
-
-    const { sendMessage } = useSession({
-      projectId: project.id,
-      branchId: branch.id,
-      setStatus,
-      eventSourceRef,
-      connectToEventStream,
-    });
+    useEffect(() => {
+      if (error) {
+        setStatus("idle");
+      }
+    }, [error]);
 
     const handleSubmit = useCallback(async () => {
-      // Prevent double submissions
-      if (isSubmittingRef.current) {
+      // Handle both string and array content
+      const isEmpty =
+        typeof userMessageContent === "string"
+          ? userMessageContent.length === 0
+          : userMessageContent.length === 0;
+
+      if (isSubmittingRef.current || isEmpty) {
         return;
       }
 
       isSubmittingRef.current = true;
+      setStatus("thinking");
 
       try {
-        await handleMessageSubmit();
-        await sendMessage({
-          content: userMessageContent,
-          attachmentIds: attachments.map((attachment) => attachment.id),
+        const textContent =
+          typeof userMessageContent === "string"
+            ? userMessageContent
+            : userMessageContent
+                .filter((c) => c.type === "text")
+                .map((c) => (c as { text: string }).text)
+                .join("");
+
+        await append({
+          id: nanoid(),
+          role: "user",
+          content: textContent,
+          createdAt: new Date(),
         });
+
+        setUserMessageContent([]);
+        setAttachments([]);
+      } catch (err) {
+        console.error("Failed to send message:", err);
+        setStatus("idle");
       } finally {
-        // Reset the flag after a short delay
         setTimeout(() => {
           isSubmittingRef.current = false;
         }, 500);
       }
-    }, [handleMessageSubmit, sendMessage, userMessageContent, attachments]);
+    }, [userMessageContent, append]);
 
-    const editorReferences = useEditorReferences({
-      snapshot,
-    });
-
-    useEffect(() => {
-      return () => {
-        closeEventStream();
-      };
-    }, [closeEventStream]);
-
+    const editorReferences = useEditorReferences({ snapshot });
     const conventionalCommit = parseConventionalCommit(snapshot?.title ?? null);
 
     return (
@@ -160,16 +232,16 @@ export const Chat = memo<ChatProps>(
             height: !isChatVisible
               ? 0
               : `calc(100vh - ${
-                  274 + // Base offset
-                  (status ? 24 : 0) + // Status bar
-                  (attachments.length > 0 ? 74 : 0) + // Attachments
-                  (isTimelineOpen ? 146 : 0) // Timeline
+                  274 +
+                  (status !== "idle" ? 24 : 0) +
+                  (attachments.length > 0 ? 74 : 0) +
+                  (isTimelineOpen ? 146 : 0)
                 }px)`,
           }}
         >
           <div
             ref={messagesContainerRef}
-            className="scrollbar scrollbar-thumb-rounded-full scrollbar-thumb-muted-foreground scrollbar-track-transparent flex h-full flex-col gap-2 overflow-y-auto border-b p-2"
+            className="scrollbar-thumb-rounded-full scrollbar flex h-full flex-col gap-2 overflow-y-auto border-b p-2 scrollbar-thumb-muted-foreground scrollbar-track-transparent"
           >
             <Messages
               messages={messages}
@@ -186,6 +258,7 @@ export const Chat = memo<ChatProps>(
 
         <MultimodalInput
           type="editor"
+          session={session}
           chatId={chat?.id ?? ""}
           message={userMessageContent}
           setMessage={setUserMessageContent}
@@ -201,18 +274,13 @@ export const Chat = memo<ChatProps>(
     );
   },
   (prevProps, nextProps) => {
-    // Check if environmentVariables changed
     if (!equal(prevProps.environmentVariables, nextProps.environmentVariables)) return false;
-    // Check other props with shallow comparison
     if (prevProps.project.id !== nextProps.project.id) return false;
     if (prevProps.branch.id !== nextProps.branch.id) return false;
-    // Check if branch name changed (streamed from generate-branch-name step)
     if (prevProps.branch.name !== nextProps.branch.name) return false;
-    // Check if snapshot changed
     const prevSnapshot = prevProps.branch.snapshot;
     const nextSnapshot = nextProps.branch.snapshot;
     if (prevSnapshot?.id !== nextSnapshot?.id) return false;
-    // Check if snapshot title or description changed (streamed from generate-snapshot-details step)
     if (prevSnapshot?.title !== nextSnapshot?.title) return false;
     if (prevSnapshot?.description !== nextSnapshot?.description) return false;
     if (prevProps.integrationTemplates.length !== nextProps.integrationTemplates.length)

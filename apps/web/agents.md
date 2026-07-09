@@ -233,7 +233,7 @@ export default async function Page() {
 
 ```typescript
 // Mark client components explicitly
-"use client";
+
 
 import { useState, useEffect } from "react";
 
@@ -364,7 +364,7 @@ async function getData(): Promise<DataType> {
 
 ```typescript
 // app/error.tsx
-"use client";
+
 
 export default function Error({
   error,

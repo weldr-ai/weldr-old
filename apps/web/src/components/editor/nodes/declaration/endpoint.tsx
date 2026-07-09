@@ -9,7 +9,7 @@ import { ScrollArea } from "@weldr/ui/components/scroll-area";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { OpenApiViewer } from "@/components/openapi-viewer";
-import { orpc } from "@/lib/orpc/client";
+import { orpc } from "@/lib/orpc";
 import type { CanvasNodeProps } from "@/types";
 import { ProtectedBadge } from "../components/protected-badge";
 import { Status } from "../components/status";
@@ -156,7 +156,7 @@ export const EndpointNode = memo(
                 <span className="w-full truncate text-start text-sm">{specs.summary}</span>
               )}
               {specs.description && (
-                <span className="w-full text-start text-muted-foreground text-xs">
+                <span className="w-full text-start text-xs text-muted-foreground">
                   {specs.description}
                 </span>
               )}
@@ -168,7 +168,7 @@ export const EndpointNode = memo(
               <div className="flex flex-col items-start justify-start gap-2 border-b p-4">
                 <div className="flex w-full items-center justify-between">
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="font-semibold text-primary text-xs">REST</span>
+                    <span className="text-xs font-semibold text-primary">REST</span>
                     <span className="text-muted-foreground">Endpoint</span>
                   </div>
                   <ProtectedBadge protected={specs.protected ?? false} />

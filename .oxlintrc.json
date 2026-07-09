@@ -69,9 +69,9 @@
     "no-var": "error",
     "prefer-const": "error",
     "no-duplicate-imports": "error",
-    "typescript/no-explicit-any": "warn",
-    "typescript/no-non-null-assertion": "warn",
-    "typescript/consistent-type-imports": "warn",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/consistent-type-imports": "error",
     "import/no-cycle": "error",
     "import/no-self-import": "error",
     "import/no-default-export": "off",
@@ -191,6 +191,7 @@
     "*.config.ts",
     "*.config.js",
     "**/data/**",
-    "**/*.hbs"
+    "**/*.hbs",
+    "routeTree.gen.ts"
   ]
 }

@@ -149,7 +149,7 @@ export default protectedProcedure
       });
 
       callAgentProxy(
-        "/trigger",
+        "/session",
         {
           projectId,
           branchId: mainBranchId,
@@ -158,7 +158,7 @@ export default protectedProcedure
       ).catch((error: unknown) => {
         logger?.error(
           { error, projectId, branchId: mainBranchId },
-          "Failed to trigger agent workflow",
+          "Failed to start agent session",
         );
       });
 

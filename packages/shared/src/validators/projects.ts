@@ -31,10 +31,7 @@ export const updateProjectSchema = z.object({
     id: z.string(),
   }),
   payload: z.object({
-    title: z
-      .string()
-      .transform((name) => name.replace(/\s+/g, " ").trim())
-      .optional(),
+    title: z.string().optional(),
     subdomain: z
       .string()
       .min(1, { message: "Subdomain is required" })

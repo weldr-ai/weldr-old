@@ -1,9 +1,9 @@
-"use client";
+import { toast } from "sonner";
 
-import { authClient } from "@weldr/auth/client";
 import { Button } from "@weldr/ui/components/button";
-import { toast } from "@weldr/ui/hooks/use-toast";
 import { cn } from "@weldr/ui/lib/utils";
+
+import { authClient } from "@/lib/auth/client";
 
 export function UpgradeButton({
   className,
@@ -20,13 +20,11 @@ export function UpgradeButton({
       onClick={async () =>
         await authClient.subscription.upgrade({
           plan: "pro",
-          successUrl: "/",
-          cancelUrl: "/billing",
+          successUrl: import.meta.env.VITE_WEB_URL,
+          cancelUrl: import.meta.env.VITE_WEB_URL + "/billing",
           fetchOptions: {
             onError: (_: unknown) => {
-              toast({
-                variant: "destructive",
-                title: "Error upgrading subscription",
+              toast.error("Error upgrading subscription", {
                 description: "An unknown error occurred",
               });
             },

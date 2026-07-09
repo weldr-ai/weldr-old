@@ -14,6 +14,6 @@
     "functions": ["cn", "cva"],
     "stylesheet": "./packages/ui/src/styles/globals.css"
   },
-  "ignorePatterns": ["**/data/**"],
+  "ignorePatterns": ["**/data/**", "routeTree.gen.ts"],
   "experimentalSortPackageJson": true
 }

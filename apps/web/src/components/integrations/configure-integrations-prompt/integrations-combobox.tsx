@@ -1,5 +1,3 @@
-"use client";
-
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
 
@@ -37,26 +35,28 @@ export function IntegrationsCombobox({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          aria-expanded={open}
-          size="sm"
-          className="flex-1 justify-between gap-2 pr-1"
-        >
-          <div className="flex min-w-0 items-center gap-2">
-            {selectedIntegration ? (
-              <>
-                {getIntegrationIcon(selectedIntegration.key, 4)}
-                <span className="truncate">{selectedIntegration.name}</span>
-              </>
-            ) : (
-              <span className="truncate">{`Select ${categoryName} integration...`}</span>
-            )}
-          </div>
-          <ChevronsUpDown className="size-3.5 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
+      <PopoverTrigger
+        render={
+          <Button
+            variant="outline"
+            aria-expanded={open}
+            size="sm"
+            className="flex-1 justify-between gap-2 pr-1"
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              {selectedIntegration ? (
+                <>
+                  {getIntegrationIcon(selectedIntegration.key, 4)}
+                  <span className="truncate">{selectedIntegration.name}</span>
+                </>
+              ) : (
+                <span className="truncate">{`Select ${categoryName} integration...`}</span>
+              )}
+            </div>
+            <ChevronsUpDown className="size-3.5 shrink-0 opacity-50" />
+          </Button>
+        }
+      />
       <PopoverContent className="w-[448px] p-0">
         <Command>
           <CommandInput placeholder={`Search ${categoryName} integrations...`} />
@@ -84,12 +84,12 @@ export function IntegrationsCombobox({
                     <span>{integration.name}</span>
                   </div>
                   {integration.isRecommended && (
-                    <span className="ml-auto text-muted-foreground text-xs">Recommended</span>
+                    <span className="ml-auto text-xs text-muted-foreground">Recommended</span>
                   )}
                 </CommandItem>
               ))}
               <CommandItem disabled className="h-8 justify-center">
-                <span className="text-muted-foreground text-xs italic">
+                <span className="text-xs text-muted-foreground italic">
                   More integrations coming soon...
                 </span>
               </CommandItem>

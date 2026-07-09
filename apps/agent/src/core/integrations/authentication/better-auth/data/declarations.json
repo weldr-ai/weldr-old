@@ -660,22 +660,22 @@
           ],
           "examples": [
             {
-              "code": "import { betterAuth } from \"better-auth\";\nimport { drizzleAdapter } from \"better-auth/adapters/drizzle\";\nimport { openAPI } from \"better-auth/plugins\";\nimport { reactStartCookies } from \"better-auth/react-start\";\n\nimport { db } from \"@repo/server/db\";\nimport { nanoid } from \"@repo/server/lib/nanoid\";\n\nexport const auth = betterAuth({\n  database: drizzleAdapter(db, {\n    provider: \"pg\",\n    usePlural: true,\n  }),\n  emailAndPassword: {\n    enabled: true,\n  },\n  trustedOrigins: process.env.CORS_HOST?.split(\",\") ?? [],\n  plugins: [reactStartCookies(), openAPI()],\n  advanced: {\n    database: {\n      generateId: () => nanoid(),\n    },\n  },\n});\n\nexport type Session = typeof auth.$Infer.Session.session;\nexport type User = typeof auth.$Infer.Session.user;",
+              "code": "import { betterAuth } from \"better-auth\";\nimport { drizzleAdapter } from \"better-auth/adapters/drizzle\";\nimport { openAPI } from \"better-auth/plugins\";\nimport { reactStartCookies } from \"better-auth/react-start\";\n\nimport { db } from \"@repo/server/db\";\nimport { nanoid } from \"@repo/server/lib/nanoid\";\n\nexport const auth = betterAuth({\n  database: drizzleAdapter(db, {\n    provider: \"pg\",\n    usePlural: true,\n  }),\n  emailAndPassword: {\n    enabled: true,\n  },\n  trustedOrigins: process.env.CORS_ORIGIN?.split(\",\") ?? [],\n  plugins: [reactStartCookies(), openAPI()],\n  advanced: {\n    database: {\n      generateId: () => nanoid(),\n    },\n  },\n});\n\nexport type Session = typeof auth.$Infer.Session.session;\nexport type User = typeof auth.$Infer.Session.user;",
               "description": "This example demonstrates the complete setup of the `auth` constant, configuring `better-auth` with a Drizzle PostgreSQL database, enabling email/password login, securing trusted origins from environment variables, and including essential plugins for React frontend integration and OpenAPI documentation. It also shows how to derive TypeScript types for `Session` and `User` from the configured auth instance."
             }
           ],
           "limitations": [
             "This configuration is tightly coupled to the Drizzle ORM and a PostgreSQL database setup. Migrating to a different ORM or database type would require reconfiguring the `database` adapter.",
-            "Relies on `process.env.CORS_HOST` for trusted origins, meaning proper environment variable management is crucial for correct CORS behavior.",
+            "Relies on `process.env.CORS_ORIGIN` for trusted origins, meaning proper environment variable management is crucial for correct CORS behavior.",
             "The `any` type signature on `auth` might obscure specific type errors or provide less strong typing than ideal without further type inference from `better-auth`.",
             "The `better-auth` library and its plugins may have their own specific limitations or dependencies not immediately apparent from this configuration."
           ],
           "bestPractices": [
-            "Always configure `trustedOrigins` using secure environment variables (`process.env.CORS_HOST`) to prevent unauthorized cross-origin requests.",
+            "Always configure `trustedOrigins` using secure environment variables (`process.env.CORS_ORIGIN`) to prevent unauthorized cross-origin requests.",
             "Ensure the Drizzle adapter is correctly configured with the database instance (`db`) and the correct provider (`pg` for PostgreSQL).",
             "Utilize strong, unique ID generation functions like `nanoid()` for database entries to maintain data integrity and security.",
             "Leverage included plugins like `reactStartCookies()` for seamless integration with modern React frameworks and `openAPI()` for API documentation.",
-            "Carefully manage `process.env.CORS_HOST` in different environments (development, staging, production) to reflect allowed origins accurately."
+            "Carefully manage `process.env.CORS_ORIGIN` in different environments (development, staging, production) to reflect allowed origins accurately."
           ],
           "antiPatterns": [
             "Hardcoding `trustedOrigins` in production instead of using environment variables, which can lead to security vulnerabilities.",

@@ -6684,8 +6684,8 @@
           },
           {
             "type": "external",
-            "packageName": "next-themes",
-            "importPath": "next-themes",
+            "packageName": "better-themes",
+            "importPath": "better-themes",
             "dependsOn": [
               "useTheme"
             ]
@@ -6695,8 +6695,8 @@
         "typeSignature": "const Toaster: (_complex_param: ToasterProps) => any"
       },
       "semanticData": {
-        "summary": "Provides a themed toast notification system component integrated with next-themes and custom styling.",
-        "description": "This Toaster component wraps the 'sonner' library's Toaster to provide a consistent toast notification system within an application. It automatically integrates with 'next-themes' to apply the current theme (light, dark, or system) to the toasts, ensuring they match the application's aesthetic. Additionally, it applies custom CSS variables to control the appearance of the toasts, solving the problem of unstyled or theme-inconsistent notifications by offering a ready-to-use, themed solution.",
+        "summary": "Provides a themed toast notification system component integrated with better-themes and custom styling.",
+        "description": "This Toaster component wraps the 'sonner' library's Toaster to provide a consistent toast notification system within an application. It automatically integrates with 'better-themes' to apply the current theme (light, dark, or system) to the toasts, ensuring they match the application's aesthetic. Additionally, it applies custom CSS variables to control the appearance of the toasts, solving the problem of unstyled or theme-inconsistent notifications by offering a ready-to-use, themed solution.",
         "tags": [
           "ui-component",
           "notifications",
@@ -6719,7 +6719,7 @@
             }
           ],
           "limitations": [
-            "Requires next-themes to be set up correctly for automatic theme integration",
+            "Requires better-themes to be set up correctly for automatic theme integration",
             "Custom CSS variables (--normal-bg, etc.) need to be defined in the application's global CSS or a parent scope for the styling to fully apply as intended",
             "Only one Toaster component instance should be rendered in the application to prevent unexpected behavior or duplicate toasts"
           ],
@@ -25403,8 +25403,8 @@
         "dependencies": [
           {
             "type": "external",
-            "packageName": "next-themes",
-            "importPath": "next-themes",
+            "packageName": "better-themes",
+            "importPath": "better-themes",
             "dependsOn": [
               "useTheme"
             ]
@@ -25446,7 +25446,7 @@
       },
       "semanticData": {
         "summary": "Provides a UI component to toggle between light, dark, and system themes using a dropdown menu.",
-        "description": "The ModeToggle component provides a user-friendly interface, typically a dropdown menu, that allows users to seamlessly switch between light, dark, and system-preferred themes within a web application. It integrates with the 'next-themes' library to manage the global theme state and offers dynamic icon changes to reflect the current mode. This component solves the common problem of providing an accessible and visually appealing theme selection mechanism for a better user experience.",
+        "description": "The ModeToggle component provides a user-friendly interface, typically a dropdown menu, that allows users to seamlessly switch between light, dark, and system-preferred themes within a web application. It integrates with the 'better-themes' library to manage the global theme state and offers dynamic icon changes to reflect the current mode. This component solves the common problem of providing an accessible and visually appealing theme selection mechanism for a better user experience.",
         "tags": [
           "ui-component",
           "theme",
@@ -25468,18 +25468,18 @@
             }
           ],
           "limitations": [
-            "Relies heavily on the 'next-themes' library for theme state management and configuration.",
+            "Relies heavily on the 'better-themes' library for theme state management and configuration.",
             "Requires 'lucide-react' for the default icons and assumes the presence of 'Button' and 'DropdownMenu' components, likely from a UI library like Shadcn UI.",
-            "Primarily designed for React applications, particularly those using Next.js due to the 'next-themes' library's common usage pattern within that framework."
+            "Primarily designed for React applications, particularly those using Next.js due to the 'better-themes' library's common usage pattern within that framework."
           ],
           "bestPractices": [
-            "Always ensure 'next-themes' is properly configured in your application's root (e.g., _app.tsx or layout.tsx in Next.js) to manage theme state globally.",
+            "Always ensure 'better-themes' is properly configured in your application's root (e.g., _app.tsx or layout.tsx in Next.js) to manage theme state globally.",
             "Place the ModeToggle in a consistent, easily discoverable location within the UI, such as the top-right corner of a header or a settings menu.",
             "Ensure all necessary UI component dependencies (Button, DropdownMenu) and icon libraries (lucide-react) are correctly installed and imported."
           ],
           "antiPatterns": [
-            "Attempting to override the component's internal theme logic or styling directly instead of using 'next-themes' configuration.",
-            "Using this component without 'next-themes' configured correctly in the application's root, leading to non-functional theme switching."
+            "Attempting to override the component's internal theme logic or styling directly instead of using 'better-themes' configuration.",
+            "Using this component without 'better-themes' configured correctly in the application's root, leading to non-functional theme switching."
           ]
         }
       }
@@ -25937,7 +25937,7 @@
           ],
           "examples": [
             {
-              "code": "import type { QueryClient } from \"@tanstack/react-query\";\nimport {\n  createRootRouteWithContext,\n  HeadContent,\n  Outlet,\n  Scripts,\n} from \"@tanstack/react-router\";\nimport { Loader2Icon } from \"lucide-react\";\nimport { ThemeProvider } from \"next-themes\";\n\nimport { ErrorBoundary } from \"@repo/web/components/error-boundary\";\nimport { NotFound } from \"@repo/web/components/not-found\";\nimport { Toaster } from \"@repo/web/components/ui/sonner\";\nimport { seo } from \"@repo/web/lib/seo\";\nimport appCss from \"../styles/app.css?url\";\n\ninterface MyRouterContext {\n  queryClient: QueryClient;\n}\n\nexport const Route = createRootRouteWithContext<MyRouterContext>()({\n  head: () => ({\n    meta: [\n      {\n        charSet: \"utf-8\",\n      },\n      {\n        name: \"viewport\",\n        content: \"width=device-width, initial-scale=1\",\n      },\n      ...seo({\n        title: \"Weldr\",\n        description:\n          \"Weldr is a platform for creating and managing your projects.\",\n      }),\n    ],\n    links: [\n      { rel: \"icon\", href: \"/favicon.ico\" },\n      { rel: \"preconnect\", href: \"https://fonts.googleapis.com\" },\n      {\n        rel: \"preconnect\",\n        href: \"https://fonts.gstatic.com\",\n        crossOrigin: \"anonymous\",\n      },\n      {\n        rel: \"stylesheet\",\n        href: \"https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap\",\n      },\n      { rel: \"apple-touch-icon\", href: \"/logo192.png\" },\n      { rel: \"manifest\", href: \"/manifest.json\" },\n      { rel: \"robots\", href: \"/robots.txt\" },\n      { rel: \"stylesheet\", href: appCss },\n    ],\n  }),\n  notFoundComponent: () => <NotFound />,\n  errorComponent: ({ error }) => (\n    <RootDocument>\n      <ErrorBoundary error={error} />\n    </RootDocument>\n  ),\n  pendingComponent: () => (\n    <div className=\"mx-auto mt-8 flex flex-col items-center justify-center\">\n      <Loader2Icon className=\"animate-spin\" />\n      <p className=\"mt-2 text-muted-foreground text-sm\">Loading...</p>\n    </div>\n  ),\n  component: () => (\n    <RootDocument>\n      <Outlet />\n    </RootDocument>\n  ),\n});\n\nfunction RootDocument({ children }: { children: React.ReactNode }) {\n  return (\n    <html lang=\"en\">\n      <head>\n        <HeadContent />\n      </head>\n      <body className=\"flex min-h-svh w-full items-center justify-center\">\n        <ThemeProvider\n          attribute=\"class\"\n          defaultTheme=\"system\"\n          enableSystem\n          disableTransitionOnChange\n        >\n          {children}\n          <Toaster />\n        </ThemeProvider>\n        <Scripts />\n      </body>\n    </html>\n  );\n}",
+              "code": "import type { QueryClient } from \"@tanstack/react-query\";\nimport {\n  createRootRouteWithContext,\n  HeadContent,\n  Outlet,\n  Scripts,\n} from \"@tanstack/react-router\";\nimport { Loader2Icon } from \"lucide-react\";\nimport { ThemeProvider } from \"better-themes\";\n\nimport { ErrorBoundary } from \"@repo/web/components/error-boundary\";\nimport { NotFound } from \"@repo/web/components/not-found\";\nimport { Toaster } from \"@repo/web/components/ui/sonner\";\nimport { seo } from \"@repo/web/lib/seo\";\nimport appCss from \"../styles/app.css?url\";\n\ninterface MyRouterContext {\n  queryClient: QueryClient;\n}\n\nexport const Route = createRootRouteWithContext<MyRouterContext>()({\n  head: () => ({\n    meta: [\n      {\n        charSet: \"utf-8\",\n      },\n      {\n        name: \"viewport\",\n        content: \"width=device-width, initial-scale=1\",\n      },\n      ...seo({\n        title: \"Weldr\",\n        description:\n          \"Weldr is a platform for creating and managing your projects.\",\n      }),\n    ],\n    links: [\n      { rel: \"icon\", href: \"/favicon.ico\" },\n      { rel: \"preconnect\", href: \"https://fonts.googleapis.com\" },\n      {\n        rel: \"preconnect\",\n        href: \"https://fonts.gstatic.com\",\n        crossOrigin: \"anonymous\",\n      },\n      {\n        rel: \"stylesheet\",\n        href: \"https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap\",\n      },\n      { rel: \"apple-touch-icon\", href: \"/logo192.png\" },\n      { rel: \"manifest\", href: \"/manifest.json\" },\n      { rel: \"robots\", href: \"/robots.txt\" },\n      { rel: \"stylesheet\", href: appCss },\n    ],\n  }),\n  notFoundComponent: () => <NotFound />,\n  errorComponent: ({ error }) => (\n    <RootDocument>\n      <ErrorBoundary error={error} />\n    </RootDocument>\n  ),\n  pendingComponent: () => (\n    <div className=\"mx-auto mt-8 flex flex-col items-center justify-center\">\n      <Loader2Icon className=\"animate-spin\" />\n      <p className=\"mt-2 text-muted-foreground text-sm\">Loading...</p>\n    </div>\n  ),\n  component: () => (\n    <RootDocument>\n      <Outlet />\n    </RootDocument>\n  ),\n});\n\nfunction RootDocument({ children }: { children: React.ReactNode }) {\n  return (\n    <html lang=\"en\">\n      <head>\n        <HeadContent />\n      </head>\n      <body className=\"flex min-h-svh w-full items-center justify-center\">\n        <ThemeProvider\n          attribute=\"class\"\n          defaultTheme=\"system\"\n          enableSystem\n          disableTransitionOnChange\n        >\n          {children}\n          <Toaster />\n        </ThemeProvider>\n        <Scripts />\n      </body>\n    </html>\n  );\n}",
               "description": "This example demonstrates the complete configuration of the root route. It sets up global meta tags, links for SEO and fonts, specifies custom components for 404 and error states, defines a loading spinner for pending routes, and establishes the main document structure with a theme provider and toast notifications. It also provides a `QueryClient` via context to all nested routes."
             }
           ],
@@ -25990,8 +25990,8 @@
           },
           {
             "type": "external",
-            "packageName": "next-themes",
-            "importPath": "next-themes",
+            "packageName": "better-themes",
+            "importPath": "better-themes",
             "dependsOn": [
               "ThemeProvider"
             ]

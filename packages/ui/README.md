@@ -4,7 +4,7 @@ Reusable UI component library for the Weldr platform built with shadcn/ui and Ta
 
 ## Overview
 
-This package provides a comprehensive set of reusable React components built on top of Radix UI primitives and styled with Tailwind CSS. It follows the shadcn/ui pattern and includes components for forms, navigation, data display, feedback, and more.
+This package provides a comprehensive set of reusable React components built on top of Base UI primitives and styled with Tailwind CSS. It follows the shadcn/ui pattern and includes components for forms, navigation, data display, feedback, and more.
 
 ## Installation
 

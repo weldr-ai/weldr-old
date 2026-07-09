@@ -89,15 +89,10 @@ export async function syncToRealFs(
           const stats = await virtualFs.stat(entryVirtualPath);
           const realPath = path.join(targetDir, entryRelativePath);
 
-          // Handle both function (just-bash InMemoryFs) and boolean (agentfs wrapper) forms
-          const isDir =
-            typeof stats.isDirectory === "function" ? stats.isDirectory() : stats.isDirectory;
-          const isFile = typeof stats.isFile === "function" ? stats.isFile() : stats.isFile;
-
-          if (isDir) {
+          if (stats.isDirectory) {
             await fs.mkdir(realPath, { recursive: true });
             await walkVirtualFs(entryVirtualPath);
-          } else if (isFile) {
+          } else if (stats.isFile) {
             await fs.mkdir(path.dirname(realPath), { recursive: true });
             const content = await virtualFs.readFileBuffer(entryVirtualPath);
             await fs.writeFile(realPath, content);

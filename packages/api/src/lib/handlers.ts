@@ -36,7 +36,7 @@ export interface HandlersOptions {
 export function createCorsConfig(corsOrigin: string): CorsConfig {
   return {
     origin: corsOrigin.split(","),
-    allowHeaders: ["Content-Type", "Authorization"],
+    allowHeaders: ["Content-Type", "Authorization", "x-orpc-batch"],
     allowMethods: ["POST", "GET", "PUT", "DELETE", "OPTIONS"],
     exposeHeaders: ["Content-Length"],
     maxAge: 600,

@@ -1,5 +1,3 @@
-"use client";
-
 import { useMutation } from "@tanstack/react-query";
 import {
   type ColorMode,
@@ -12,24 +10,25 @@ import {
   useReactFlow,
   useViewport,
 } from "@xyflow/react";
+import { useTheme } from "better-themes";
 import { ArrowUpDownIcon, MinusIcon, PlusIcon } from "lucide-react";
-import { useTheme } from "next-themes";
 import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import type { RouterOutputs } from "@weldr/api";
+import type { Session } from "@weldr/auth";
 import { Button } from "@weldr/ui/components/button";
-import { toast } from "@weldr/ui/hooks/use-toast";
 
-import { orpc } from "@/lib/orpc/client";
+import { orpc } from "@/lib/orpc";
 import type { CanvasNode } from "@/types";
-import { Chat } from "../chat/chat";
 
 import "@xyflow/react/dist/base.css";
 
+import { Chat } from "../chat/chat";
 import { DbModelNode } from "./nodes/declaration/db-model";
-import { EndpointNode } from "./nodes/declaration/endpoint";
-import "@weldr/ui/styles/canvas.css";
+import "@weldr/ui/canvas.css";
 
+import { EndpointNode } from "./nodes/declaration/endpoint";
 import { PageNode } from "./nodes/declaration/page";
 import { Placeholder } from "./placeholder";
 
@@ -46,6 +45,7 @@ export function Editor({
   branch,
   integrationTemplates,
   environmentVariables,
+  session,
 }: {
   initialNodes: CanvasNode[];
   initialEdges: Edge[];
@@ -53,10 +53,12 @@ export function Editor({
   branch: RouterOutputs["branches"]["getByIdOrMain"];
   integrationTemplates: RouterOutputs["integrationTemplates"]["list"];
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
+  session: Session | null;
 }) {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const viewPort = useViewport();
-  const { resolvedTheme } = useTheme();
+  const { theme, systemTheme } = useTheme();
+  const resolvedTheme = theme === "system" ? systemTheme : theme;
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(initialNodes);
   const [edges, _setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
@@ -65,11 +67,7 @@ export function Editor({
   const updateNode = useMutation(
     orpc.nodes.update.mutationOptions({
       onError: (error) => {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
+        toast.error(error.message);
       },
     }),
   );
@@ -77,11 +75,7 @@ export function Editor({
   const batchUpdateNodePositions = useMutation(
     orpc.nodes.batchUpdatePositions.mutationOptions({
       onError: (error) => {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
+        toast.error(error.message);
       },
     }),
   );
@@ -323,6 +317,7 @@ export function Editor({
 
       <Panel position="bottom-left" className="mb-4 ml-4 max-h-[calc(100vh-40px)] w-[500px]">
         <Chat
+          session={session}
           project={project}
           branch={branch}
           integrationTemplates={integrationTemplates}
@@ -365,7 +360,7 @@ export function Editor({
           {`${Math.floor(viewPort.zoom * 100)}%`}
         </Button>
         <Button
-          className="size-9 rounded-r-lg rounded-l-none"
+          className="size-9 rounded-l-none rounded-r-lg"
           variant="ghost"
           disabled={!nodes.length}
           size="icon"

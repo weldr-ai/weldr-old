@@ -1,13 +1,11 @@
-"use client";
-
 import fastDeepEqual from "fast-deep-equal";
 import { type Dispatch, memo, type SetStateAction } from "react";
 
 import type { RouterOutputs } from "@weldr/api";
 import { nanoid } from "@weldr/shared/nanoid";
 import { preprocessReferences } from "@weldr/shared/process-text";
-import type { ChatMessage, TStatus } from "@weldr/shared/types";
-import { LogoIcon } from "@weldr/ui/icons";
+import type { AddIntegrationsInput, ChatMessage, TStatus } from "@weldr/shared/types";
+import { WeldrLogo } from "@weldr/ui/components/logos/weldr";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { ConfigureIntegrationsPrompt } from "@/components/integrations/configure-integrations-prompt";
@@ -36,6 +34,12 @@ const PureMessageItem = ({
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
   project: RouterOutputs["projects"]["get"];
 }) => {
+  // Normalize content to always be an array (schema now allows string content)
+  const contentParts =
+    typeof message.content === "string"
+      ? [{ type: "text" as const, text: message.content }]
+      : message.content;
+
   return (
     <div
       className={cn("flex flex-col text-sm", message.role === "user" && "items-end")}
@@ -43,8 +47,8 @@ const PureMessageItem = ({
     >
       {message.role === "assistant" && (
         <div className="flex items-center gap-1 pb-2">
-          <LogoIcon className="size-5" />
-          <span className="text-muted-foreground text-xs">Weldr</span>
+          <WeldrLogo className="size-5" />
+          <span className="text-xs text-muted-foreground">Weldr</span>
         </div>
       )}
 
@@ -53,7 +57,7 @@ const PureMessageItem = ({
           "rounded-md bg-primary p-2 text-primary-foreground": message.role === "user",
         })}
       >
-        {message.content.map((content) => {
+        {contentParts.map((content) => {
           switch (content.type) {
             case "reasoning": {
               return (
@@ -77,27 +81,26 @@ const PureMessageItem = ({
               );
             }
             case "tool-call": {
-              const toolInput = content.input as {
-                status: "awaiting_config" | "failed";
-              };
-              if (
-                content.toolName === "add_integrations" &&
-                toolInput.status === "awaiting_config"
-              ) {
+              // Handle add_integrations tool call - show integration config UI
+              if (content.toolName === "add_integrations") {
                 const toolCall = content as IntegrationToolCall;
-                return (
-                  <ConfigureIntegrationsPrompt
-                    key={`tool-call-${toolCall.toolCallId || nanoid()}`}
-                    message={message}
-                    branchId={branchId}
-                    integrationTemplates={integrationTemplates}
-                    chatId={message.chatId}
-                    setMessages={setMessages}
-                    environmentVariables={environmentVariables}
-                    project={project}
-                    setStatus={setStatus}
-                  />
-                );
+                const toolInput = toolCall.input as AddIntegrationsInput;
+                // Only show config if there are categories to configure
+                if (toolInput.categories && toolInput.categories.length > 0) {
+                  return (
+                    <ConfigureIntegrationsPrompt
+                      key={`tool-call-${toolCall.toolCallId || nanoid()}`}
+                      message={message}
+                      branchId={branchId}
+                      integrationTemplates={integrationTemplates}
+                      chatId={message.chatId}
+                      setMessages={setMessages}
+                      environmentVariables={environmentVariables}
+                      project={project}
+                      setStatus={setStatus}
+                    />
+                  );
+                }
               }
               return null;
             }
@@ -106,7 +109,7 @@ const PureMessageItem = ({
           }
         })}
         {message.role === "tool" &&
-          message.content.some(
+          contentParts.some(
             (content) => "toolName" in content && content.toolName === "add_integrations",
           ) && <IntegrationsInstallationStatus message={message as IntegrationToolMessage} />}
       </div>

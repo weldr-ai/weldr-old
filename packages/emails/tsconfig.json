@@ -1,5 +1,5 @@
 {
-  "extends": "@weldr/tsconfig/react-library.json",
+  "extends": "@weldr/tsconfig/bun.json",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {

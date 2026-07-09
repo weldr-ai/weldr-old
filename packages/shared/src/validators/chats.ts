@@ -93,7 +93,7 @@ export const messageRoleSchema = z.enum(["user", "assistant", "tool"]);
 
 export const userMessageSchema = baseMessageSchema.extend({
   role: z.literal("user"),
-  content: z.custom<Exclude<UserContent, string>>(),
+  content: z.custom<UserContent>(), // Allow both string and array content
   attachments: attachmentSchema.array().optional(),
   userId: z.string().optional(),
   user: z
@@ -108,7 +108,7 @@ export const userMessageSchema = baseMessageSchema.extend({
 
 export const assistantMessageSchema = baseMessageSchema.extend({
   role: z.literal("assistant"),
-  content: z.custom<Exclude<AssistantContent, string>>(),
+  content: z.custom<AssistantContent>(), // Allow both string and array content
   metadata: aiMetadataSchema.optional(),
 });
 
@@ -133,14 +133,14 @@ export const addMessageItemSchema = z.discriminatedUnion("role", [
   z.object({
     id: z.string().optional(),
     role: z.literal("assistant"),
-    content: z.custom<Exclude<AssistantContent, string>>(),
+    content: z.custom<AssistantContent>(), // Allow both string and array content
     metadata: aiMetadataSchema.optional(),
     createdAt: z.date().optional(),
   }),
   z.object({
     id: z.string().optional(),
     role: z.literal("user"),
-    content: z.custom<Exclude<UserContent, string>>(),
+    content: z.custom<UserContent>(), // Allow both string and array content
     attachmentIds: z.string().array().optional(),
     createdAt: z.date().optional(),
   }),
@@ -155,9 +155,7 @@ export const addMessageItemSchema = z.discriminatedUnion("role", [
 export const updateMessageItemSchema = z.object({
   id: z.string(),
   chatId: z.string(),
-  content: z.custom<
-    Exclude<AssistantContent, string> | Exclude<UserContent, string> | ToolContent
-  >(),
+  content: z.custom<AssistantContent | UserContent | ToolContent>(), // Allow all content types including string
 });
 
 export const addMessagesInputSchema = z.object({

@@ -1,14 +1,12 @@
-import { inArray } from "drizzle-orm";
-
-import { and, db, eq } from "@weldr/db";
+import { and, db, eq, inArray } from "@weldr/db";
 import { declarations, dependencies, snapshotDeclarations } from "@weldr/db/schema";
 import { mergeJson } from "@weldr/db/utils";
 import { Logger } from "@weldr/shared/logger";
 import { nanoid } from "@weldr/shared/nanoid";
 import type { DeclarationCodeMetadata } from "@weldr/shared/types/declarations";
 
+import type { ChatContext } from "@/ai/agent/types";
 import { extractDeclarations } from "@/core/project/declarations/extractor";
-import type { ExecutionContext } from "@/session";
 import { queueEnrichingJob } from "./enriching-jobs";
 
 /**
@@ -381,7 +379,7 @@ export async function extractAndSaveDeclarations({
   sourceCode,
   branchId,
 }: {
-  context: ExecutionContext;
+  context: ChatContext;
   filePath: string;
   sourceCode: string;
   branchId: string;

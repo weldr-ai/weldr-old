@@ -1,5 +1,5 @@
-"use client";
-
+import { useMutation } from "@tanstack/react-query";
+import { upload } from "@tigrisdata/storage/client";
 import equal from "fast-deep-equal";
 import { $getRoot, type EditorState, type LexicalEditor, type ParagraphNode } from "lexical";
 import { MicIcon, PlusIcon, SendIcon } from "lucide-react";
@@ -13,21 +13,25 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { toast } from "sonner";
 import type { z } from "zod";
 
-import { authClient } from "@weldr/auth/client";
+import type { Session } from "@weldr/auth";
+import { nanoid } from "@weldr/shared/nanoid";
 import type { Attachment, TStatus, UserMessage } from "@weldr/shared/types";
 import type { referencePartSchema } from "@weldr/shared/validators/chats";
 import { Button } from "@weldr/ui/components/button";
+import { WeldrLogo } from "@weldr/ui/components/logos/weldr";
 import { Textarea } from "@weldr/ui/components/textarea";
-import { toast } from "@weldr/ui/hooks/use-toast";
-import { LogoIcon } from "@weldr/ui/icons";
 import { cn } from "@weldr/ui/lib/utils";
 
 import { ChatEditor } from "@/components/chat/editor";
 import type { ReferenceNode } from "@/components/chat/editor/plugins/reference/node";
 import { useUIStore } from "@/lib/context/ui-store";
+import { orpc } from "@/lib/orpc";
 import { AttachmentPreview } from "./attachment-preview";
+
+const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? "http://localhost:8080";
 
 type BaseMultimodalInputProps = {
   type: "textarea" | "editor";
@@ -44,6 +48,7 @@ type BaseMultimodalInputProps = {
   textareaClassName?: string;
   onFocus?: () => void;
   isVisible?: boolean;
+  session: Session | null;
 };
 
 type EditorMultimodalInputProps = BaseMultimodalInputProps & {
@@ -76,8 +81,8 @@ function PureMultimodalInput({
   attachmentsClassName,
   textareaClassName,
   onFocus,
+  session,
 }: MultimodalInputProps) {
-  const { data: session } = authClient.useSession();
   const { setAuthDialogOpen } = useUIStore();
 
   const [currentPlaceholder, setCurrentPlaceholder] = useState(placeholder ?? "Send a message...");
@@ -86,6 +91,9 @@ function PureMultimodalInput({
   const editorRef = useRef<LexicalEditor | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+
+  const deleteAttachment = useMutation(orpc.attachments.delete.mutationOptions());
 
   const submitForm = useCallback(() => {
     handleSubmit();
@@ -111,56 +119,51 @@ function PureMultimodalInput({
   }, [handleSubmit, setAttachments, setMessage, type]);
 
   const uploadFile = async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    if (chatId) {
-      formData.append("chatId", chatId);
-    }
-
     try {
-      const response = await fetch("/api/attachments", {
-        method: "POST",
-        body: formData,
+      const attachmentId = nanoid();
+      const extension = file.name.split(".").pop();
+      const key = `attachments/${chatId}/${attachmentId}.${extension}`;
+
+      // Initialize progress
+      setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
+
+      const result = await upload(key, file, {
+        url: `${SERVER_URL}/attachments/upload`,
+        access: "private",
+        multipart: true,
+        partSize: 5 * 1024 * 1024, // 5 MiB parts
+        onUploadProgress: ({ percentage }) => {
+          setUploadProgress((prev) => ({ ...prev, [file.name]: percentage }));
+        },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const { id, name, key, contentType, size, url } = data as {
-          id: string;
-          name: string;
-          key: string;
-          contentType: string;
-          size: number;
-          url: string;
-        };
-
-        return {
-          id,
-          name,
-          key,
-          contentType,
-          size,
-          url,
-        };
-      }
-
-      const { error } = await response.json();
-
-      toast({
-        variant: "destructive",
-        title: "Something went wrong!",
-        description: error,
+      // Clear progress after upload completes
+      setUploadProgress((prev) => {
+        const next = { ...prev };
+        delete next[file.name];
+        return next;
       });
 
-      return undefined;
-    } catch {
-      toast({
-        variant: "destructive",
-        title: "Something went wrong!",
-        description: "Failed to upload file, please try again!",
+      return {
+        id: attachmentId,
+        name: file.name,
+        key,
+        contentType: file.type,
+        size: file.size,
+        url: result.data?.url,
+      };
+    } catch (error) {
+      // Clear progress on error
+      setUploadProgress((prev) => {
+        const next = { ...prev };
+        delete next[file.name];
+        return next;
       });
 
+      toast.error("Something went wrong!", {
+        description:
+          error instanceof Error ? error.message : "Failed to upload file, please try again!",
+      });
       return undefined;
     }
   };
@@ -329,7 +332,7 @@ function PureMultimodalInput({
       {(attachments.length > 0 || uploadQueue.length > 0) && (
         <div
           className={cn(
-            "scrollbar-thin scrollbar-thumb-rounded-full scrollbar-thumb-muted-foreground scrollbar-track-transparent flex flex-row items-center gap-1 overflow-x-auto border-b p-1.5",
+            "scrollbar-thumb-rounded-full scrollbar-thin flex flex-row items-center gap-1 overflow-x-auto border-b p-1.5 scrollbar-thumb-muted-foreground scrollbar-track-transparent",
             attachmentsClassName,
           )}
         >
@@ -338,13 +341,10 @@ function PureMultimodalInput({
               key={attachment.id}
               attachment={attachment}
               onDelete={() => {
-                if (!attachment.name) return;
-                fetch("/api/attachments", {
-                  method: "DELETE",
-                  body: JSON.stringify({ filename: attachment.name }),
-                });
+                if (!attachment.key) return;
+                deleteAttachment.mutate({ filename: attachment.key });
                 setAttachments((currentAttachments) =>
-                  currentAttachments.filter((a) => a.name !== attachment.name),
+                  currentAttachments.filter((a) => a.key !== attachment.key),
                 );
               }}
             />
@@ -362,15 +362,16 @@ function PureMultimodalInput({
                 contentType: "",
               }}
               isUploading={true}
+              uploadProgress={uploadProgress[filename] ?? 0}
             />
           ))}
         </div>
       )}
 
-      {status && (
+      {status !== "idle" && (
         <div className="flex items-center gap-2 border-b bg-muted px-2 py-1 text-xs">
-          <LogoIcon className="size-4" />
-          <span className="inline-flex w-fit animate-shine bg-size-[200%_100%] bg-[linear-gradient(90deg,var(--color-muted-foreground)_0%,var(--color-muted-foreground)_40%,var(--color-foreground)_50%,var(--color-muted-foreground)_60%,var(--color-muted-foreground)_100%)] bg-clip-text text-transparent">
+          <WeldrLogo className="size-4" />
+          <span className="inline-flex w-fit animate-shine bg-[linear-gradient(90deg,var(--color-muted-foreground)_0%,var(--color-muted-foreground)_40%,var(--color-foreground)_50%,var(--color-muted-foreground)_60%,var(--color-muted-foreground)_100%)] bg-size-[200%_100%] bg-clip-text text-transparent">
             {status.charAt(0).toUpperCase() + status.slice(1)}
             ...
           </span>
@@ -391,7 +392,7 @@ function PureMultimodalInput({
           onSubmit={submitForm}
           references={references}
           typeaheadPosition={"bottom"}
-          disabled={!!status}
+          disabled={status !== "idle"}
           onFocus={onFocus}
         />
       )}
@@ -405,20 +406,20 @@ function PureMultimodalInput({
           className={cn(
             "max-h-[calc(75dvh)] min-h-[128px] resize-none overflow-y-auto rounded-lg border-none bg-input/30 transition-colors duration-200 focus-visible:ring-0",
             {
-              "bg-muted/30 opacity-70": !!status,
+              "bg-muted/30 opacity-70": status !== "idle",
             },
             textareaClassName,
           )}
           rows={2}
           autoFocus
-          disabled={!!status}
+          disabled={status !== "idle"}
           onFocus={onFocus}
           onKeyDown={(event) => {
             if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
               event.preventDefault();
-              if (status) {
-                toast({
-                  description: "Please wait for the model to finish its response!",
+              if (status !== "idle") {
+                toast.error("Something went wrong!", {
+                  description: "Something went wrong, please try again!",
                 });
               } else {
                 submitForm();
@@ -430,7 +431,7 @@ function PureMultimodalInput({
 
       <div className="flex w-full flex-row justify-between gap-1 border-t p-1">
         <div className="flex flex-row">
-          <AttachmentsButton fileInputRef={fileInputRef} status={status} />
+          <AttachmentsButton fileInputRef={fileInputRef} status={status} session={session} />
           {/* TODO: Add voice input */}
           <Button
             type="button"
@@ -452,6 +453,7 @@ function PureMultimodalInput({
           submitForm={submitForm}
           uploadQueue={uploadQueue}
           status={status}
+          session={session}
         />
       </div>
     </form>
@@ -469,11 +471,12 @@ export const MultimodalInput = memo(PureMultimodalInput, (prevProps, nextProps) 
 function PureAttachmentsButton({
   fileInputRef,
   status,
+  session,
 }: {
-  fileInputRef: React.MutableRefObject<HTMLInputElement | null>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   status: TStatus;
+  session: Session | null;
 }) {
-  const { data: session } = authClient.useSession();
   const { setAuthDialogOpen } = useUIStore();
 
   return (
@@ -491,7 +494,7 @@ function PureAttachmentsButton({
 
         fileInputRef.current?.click();
       }}
-      disabled={!!status}
+      disabled={status !== "idle"}
     >
       <PlusIcon className="size-3.5" />
     </Button>
@@ -505,17 +508,17 @@ type SendButtonProps = {
   message: UserMessage["content"] | string;
   uploadQueue: string[];
   status: TStatus;
+  session: Session | null;
 };
 
-function PureSendButton({ submitForm, message, uploadQueue, status }: SendButtonProps) {
-  const { data: session } = authClient.useSession();
+function PureSendButton({ submitForm, message, uploadQueue, status, session }: SendButtonProps) {
   const { setAuthDialogOpen } = useUIStore();
 
   const isDisabled =
     (typeof message === "string" && message.length === 0) ||
     (Array.isArray(message) && message.length === 0) ||
     uploadQueue.length > 0 ||
-    !!status;
+    status !== "idle";
 
   return (
     <Button
@@ -528,7 +531,7 @@ function PureSendButton({ submitForm, message, uploadQueue, status }: SendButton
           return;
         }
 
-        if (status) {
+        if (status !== "idle") {
           return;
         }
 

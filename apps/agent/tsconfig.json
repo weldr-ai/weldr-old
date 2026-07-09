@@ -8,6 +8,6 @@
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo"
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "tsdown.config.ts"],
   "exclude": ["node_modules", "dist", "src/core/integrations/**/data/**"]
 }

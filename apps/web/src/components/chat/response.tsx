@@ -1,5 +1,3 @@
-"use client";
-
 import hardenReactMarkdown from "harden-react-markdown";
 import React, { type ComponentProps, type HTMLAttributes, memo } from "react";
 import ReactMarkdown, { type Options } from "react-markdown";
@@ -204,32 +202,32 @@ const components: Options["components"] = {
     </a>
   ),
   h1: ({ children, className, ...props }) => (
-    <h1 className={cn("mt-6 mb-2 font-semibold text-3xl", className)} {...props}>
+    <h1 className={cn("mt-6 mb-2 text-3xl font-semibold", className)} {...props}>
       {processChildren(children)}
     </h1>
   ),
   h2: ({ children, className, ...props }) => (
-    <h2 className={cn("mt-6 mb-2 font-semibold text-2xl", className)} {...props}>
+    <h2 className={cn("mt-6 mb-2 text-2xl font-semibold", className)} {...props}>
       {processChildren(children)}
     </h2>
   ),
   h3: ({ children, className, ...props }) => (
-    <h3 className={cn("mt-6 mb-2 font-semibold text-xl", className)} {...props}>
+    <h3 className={cn("mt-6 mb-2 text-xl font-semibold", className)} {...props}>
       {processChildren(children)}
     </h3>
   ),
   h4: ({ children, className, ...props }) => (
-    <h4 className={cn("mt-6 mb-2 font-semibold text-lg", className)} {...props}>
+    <h4 className={cn("mt-6 mb-2 text-lg font-semibold", className)} {...props}>
       {processChildren(children)}
     </h4>
   ),
   h5: ({ children, className, ...props }) => (
-    <h5 className={cn("mt-6 mb-2 font-semibold text-base", className)} {...props}>
+    <h5 className={cn("mt-6 mb-2 text-base font-semibold", className)} {...props}>
       {processChildren(children)}
     </h5>
   ),
   h6: ({ children, className, ...props }) => (
-    <h6 className={cn("mt-6 mb-2 font-semibold text-sm", className)} {...props}>
+    <h6 className={cn("mt-6 mb-2 text-sm font-semibold", className)} {...props}>
       {processChildren(children)}
     </h6>
   ),
@@ -251,12 +249,12 @@ const components: Options["components"] = {
     </tbody>
   ),
   tr: ({ children, className, ...props }) => (
-    <tr className={cn("border-border border-b", className)} {...props}>
+    <tr className={cn("border-b border-border", className)} {...props}>
       {processChildren(children)}
     </tr>
   ),
   th: ({ children, className, ...props }) => (
-    <th className={cn("px-4 py-2 text-left font-semibold text-sm", className)} {...props}>
+    <th className={cn("px-4 py-2 text-left text-sm font-semibold", className)} {...props}>
       {processChildren(children)}
     </th>
   ),
@@ -268,7 +266,7 @@ const components: Options["components"] = {
   blockquote: ({ children, className, ...props }) => (
     <blockquote
       className={cn(
-        "my-4 border-muted-foreground/30 border-l-4 pl-4 text-muted-foreground italic",
+        "my-4 border-l-4 border-muted-foreground/30 pl-4 text-muted-foreground italic",
         className,
       )}
       {...props}

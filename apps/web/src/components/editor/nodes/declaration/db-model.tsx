@@ -18,7 +18,7 @@ import { ScrollArea } from "@weldr/ui/components/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@weldr/ui/components/tooltip";
 import { cn } from "@weldr/ui/lib/utils";
 
-import { orpc } from "@/lib/orpc/client";
+import { orpc } from "@/lib/orpc";
 import type { CanvasNodeProps } from "@/types";
 import { Status } from "../components/status";
 
@@ -142,7 +142,7 @@ export const DbModelNode = memo(
                     <Status progress={declaration.progress} />
                   )}
                   <Table2Icon className="size-3.5 text-primary" />
-                  <span className="font-semibold text-xs">{specs.name}</span>
+                  <span className="text-xs font-semibold">{specs.name}</span>
                 </div>
                 <Badge variant="secondary">{specs.columns.length} cols</Badge>
               </div>
@@ -165,7 +165,7 @@ export const DbModelNode = memo(
                       <span className="truncate font-mono text-xs">{column.name}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-muted-foreground text-xs">{column.type}</span>
+                      <span className="text-xs text-muted-foreground">{column.type}</span>
                       {!column.required ? (
                         <DiamondIcon className="size-2 text-muted-foreground" />
                       ) : (
@@ -175,7 +175,7 @@ export const DbModelNode = memo(
                   </div>
                 ))}
                 {hiddenColumnsCount > 0 && (
-                  <div className="mt-0.5 flex items-center justify-center text-muted-foreground text-xs">
+                  <div className="mt-0.5 flex items-center justify-center text-xs text-muted-foreground">
                     <ChevronRightIcon className="mr-1 size-2.5" />
                     {hiddenColumnsCount} more
                   </div>
@@ -190,7 +190,7 @@ export const DbModelNode = memo(
                 <div className="flex w-full items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Table2Icon className="size-4 text-primary" />
-                    <span className="font-semibold text-primary text-sm">{specs.name}</span>
+                    <span className="text-sm font-semibold text-primary">{specs.name}</span>
                   </div>
                   <div className="flex gap-1">
                     <Badge variant="secondary">{specs.columns.length} cols</Badge>
@@ -209,7 +209,7 @@ export const DbModelNode = memo(
                 <div className="space-y-4 p-4">
                   {/* Columns */}
                   <div>
-                    <h4 className="mb-1 flex items-center gap-1 font-medium text-muted-foreground text-xs">
+                    <h4 className="mb-1 flex items-center gap-1 text-xs font-medium text-muted-foreground">
                       <DatabaseIcon className="size-3.5" />
                       Columns
                     </h4>
@@ -242,7 +242,7 @@ export const DbModelNode = memo(
                               ) : (
                                 <div className="w-3 flex-shrink-0" />
                               )}
-                              <span className="font-medium font-mono">{column.name}</span>
+                              <span className="font-mono font-medium">{column.name}</span>
                             </div>
                             <span className="text-muted-foreground">{column.type}</span>
                           </div>
@@ -276,7 +276,7 @@ export const DbModelNode = memo(
                   {/* Relationships */}
                   {specs.relationships && specs.relationships.length > 0 && (
                     <div>
-                      <h4 className="mb-1 flex items-center gap-2 font-medium text-muted-foreground text-xs">
+                      <h4 className="mb-1 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                         <Link2Icon className="size-3.5" />
                         Relationships
                       </h4>
@@ -305,7 +305,7 @@ export const DbModelNode = memo(
                   {/* Indexes */}
                   {specs.indexes && specs.indexes.length > 0 && (
                     <div>
-                      <h4 className="mb-1 flex items-center gap-1 font-medium text-muted-foreground text-xs">
+                      <h4 className="mb-1 flex items-center gap-1 text-xs font-medium text-muted-foreground">
                         <HashIcon className="size-3.5" />
                         Indexes
                       </h4>
@@ -317,7 +317,7 @@ export const DbModelNode = memo(
                           >
                             <div className="flex min-w-0 flex-1 items-center gap-2">
                               <HashIcon className="size-3 text-purple-500" />
-                              <span className="font-medium font-mono">{index.name}</span>
+                              <span className="font-mono font-medium">{index.name}</span>
                               <span className="text-muted-foreground">
                                 ({index.columns.join(", ")})
                               </span>

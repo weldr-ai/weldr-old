@@ -31,7 +31,6 @@ import type { openApiEndpointSpecSchema } from "../validators/openapi";
 import type { packageSchema } from "../validators/packages";
 import type { projectSchema } from "../validators/projects";
 import type { snapshotSchema } from "../validators/snapshots";
-import type { themeDataSchema, themeSchema } from "../validators/themes";
 import type { DeclarationMetadata, DeclarationProgress } from "./declarations";
 
 export type DataType = z.infer<typeof dataTypeSchema>;
@@ -59,18 +58,7 @@ export type Package = z.infer<typeof packageSchema>;
 export type NodeType = z.infer<typeof nodeTypeSchema>;
 export type Node = z.infer<typeof nodeSchema>;
 
-export type Theme = z.infer<typeof themeSchema>;
-export type ThemeData = z.infer<typeof themeDataSchema>;
-export type ThemeMode = keyof Theme;
-
-export type TStatus =
-  | "thinking"
-  | "responding"
-  | "waiting"
-  | "planning"
-  | "coding"
-  | "finalizing"
-  | null;
+export type TStatus = "thinking" | "responding" | "finalizing" | "idle";
 
 export type TextStreamableValue = {
   id: string;
@@ -194,3 +182,25 @@ export type IntegrationEnvironmentVariableMapping = z.infer<
 >;
 export type IntegrationInstallationStatus = z.infer<typeof integrationInstallationStatusSchema>;
 export type IntegrationInstallation = z.infer<typeof integrationInstallationSchema>;
+
+// UI Message types
+export type {
+  AddIntegrationsInput,
+  AddIntegrationsOutput,
+  BranchUpdateDataPart,
+  NodeDataPart,
+  OrchestratorDataPart,
+  ProjectUpdateDataPart,
+  QueryRelatedDeclarationsInput,
+  QueryRelatedDeclarationsOutput,
+  SearchCodebaseInput,
+  SearchCodebaseOutput,
+  SpawnAgentsInput,
+  SpawnAgentsOutput,
+  StatusDataPart,
+  SubAgentDataPart,
+  WeldrDataParts,
+  WeldrMessageMetadata,
+  WeldrUIMessage,
+  WeldrUITools,
+} from "../validators/ui-message";

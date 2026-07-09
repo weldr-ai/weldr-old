@@ -102,7 +102,6 @@ A **user management and subscription system**:
 
 - Node.js 22+
 - Bun
-- Redis (for agent communication)
 - PostgreSQL (via @weldr/db package)
 
 ### Environment Variables

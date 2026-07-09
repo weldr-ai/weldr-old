@@ -10,8 +10,6 @@
     "./base.json": "./base.json",
     "./bun.json": "./bun.json",
     "./library.json": "./library.json",
-    "./next.json": "./next.json",
-    "./node.json": "./node.json",
     "./react-library.json": "./react-library.json",
     "./tanstack-start.json": "./tanstack-start.json"
   }

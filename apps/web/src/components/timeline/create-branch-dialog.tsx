@@ -1,9 +1,8 @@
-"use client";
-
 import { useMutation } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { Loader2Icon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useMemo } from "react";
+import { toast } from "sonner";
 import { adjectives, animals, colors, uniqueNamesGenerator } from "unique-names-generator";
 
 import {
@@ -16,9 +15,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@weldr/ui/components/alert-dialog";
-import { toast } from "@weldr/ui/hooks/use-toast";
 
-import { orpc } from "@/lib/orpc/client";
+import { orpc } from "@/lib/orpc";
 
 interface CreateBranchDialogProps {
   open: boolean;
@@ -37,7 +35,7 @@ export function CreateBranchDialog({
   snapshotNumber,
   branchType,
 }: CreateBranchDialogProps) {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const generatedName = useMemo(() => {
     const randomName = uniqueNamesGenerator({
@@ -53,16 +51,13 @@ export function CreateBranchDialog({
     orpc.branches.create.mutationOptions({
       onSuccess: (branch) => {
         onOpenChange(false);
-        // Navigate to the new branch
-        router.push(`/projects/${projectId}/branches/${branch.id}`);
+        navigate({
+          to: "/projects/$projectId/branches/$branchId",
+          params: { projectId, branchId: branch.id },
+        });
       },
       onError: (error) => {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-          duration: 2000,
-        });
+        toast.error(error.message);
       },
     }),
   );
@@ -80,11 +75,11 @@ export function CreateBranchDialog({
         </AlertDialogHeader>
 
         <div className="space-y-1.5 rounded-lg border bg-muted/50 px-3 py-2">
-          <p className="text-muted-foreground text-xs">Temporary name</p>
+          <p className="text-xs text-muted-foreground">Temporary name</p>
           <code className="block rounded bg-background px-2 py-1 font-mono text-xs">
             {generatedName}
           </code>
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             AI will suggest a better name when you start.
           </p>
         </div>

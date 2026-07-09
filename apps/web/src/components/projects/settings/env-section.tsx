@@ -1,9 +1,7 @@
-"use client";
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2Icon } from "lucide-react";
-import { useParams } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import type { RouterOutputs } from "@weldr/api";
 import { Button } from "@weldr/ui/components/button";
@@ -14,18 +12,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@weldr/ui/components/card";
-import { toast } from "@weldr/ui/hooks/use-toast";
 
 import { CreateEnvironmentVariableDialog } from "@/components/create-environment-variable-dialog";
 import { DeleteAlertDialog } from "@/components/delete-alert-dialog";
-import { orpc } from "@/lib/orpc/client";
+import { orpc } from "@/lib/orpc";
 
 export function EnvSection({
+  projectId,
   environmentVariables,
 }: {
+  projectId: string;
   environmentVariables: RouterOutputs["environmentVariables"]["list"];
 }) {
-  const { projectId } = useParams<{ projectId: string }>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const queryClient = useQueryClient();
@@ -40,12 +38,7 @@ export function EnvSection({
       },
       onError: (error) => {
         console.error(error);
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-          duration: 2000,
-        });
+        toast.error(error.message);
       },
     }),
   );
@@ -55,7 +48,7 @@ export function EnvSection({
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Environment Variables</span>
-          <CreateEnvironmentVariableDialog />
+          <CreateEnvironmentVariableDialog projectId={projectId} />
         </CardTitle>
         <CardDescription>Manage your project environment variables</CardDescription>
       </CardHeader>

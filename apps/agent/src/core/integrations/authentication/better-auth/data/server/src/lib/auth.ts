@@ -14,7 +14,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  trustedOrigins: process.env.CORS_HOST?.split(",") ?? [],
+  trustedOrigins: process.env.CORS_ORIGIN?.split(",") ?? [],
   plugins: [reactStartCookies(), openAPI()],
   advanced: {
     database: {

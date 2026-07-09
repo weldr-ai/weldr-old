@@ -1,6 +1,6 @@
 import type { Integration, IntegrationCategoryKey, IntegrationKey } from "@weldr/shared/types";
 
-import type { ExecutionContext } from "@/session";
+import type { ChatContext } from "@/ai/agent/types";
 import { authenticationIntegrationCategory } from "../authentication";
 import { backendIntegrationCategory } from "../backend";
 import { databaseIntegrationCategory } from "../database";
@@ -56,7 +56,7 @@ class IntegrationRegistry {
     context,
   }: {
     integration: Integration;
-    context: ExecutionContext;
+    context: ChatContext;
   }): Promise<void> {
     const integrationDefinition = this.getIntegration(integration.key);
 

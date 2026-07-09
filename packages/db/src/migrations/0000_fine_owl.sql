@@ -279,6 +279,32 @@ CREATE TABLE "projects" (
 	CONSTRAINT "projects_subdomain_unique" UNIQUE("subdomain")
 );
 --> statement-breakpoint
+CREATE TABLE "snapshot_declarations" (
+	"snapshot_id" text NOT NULL,
+	"declaration_id" text NOT NULL,
+	CONSTRAINT "snapshot_declarations_snapshot_id_declaration_id_pk" PRIMARY KEY("snapshot_id","declaration_id")
+);
+--> statement-breakpoint
+CREATE TABLE "snapshot_parents" (
+	"snapshot_id" text NOT NULL,
+	"parent_id" text NOT NULL,
+	CONSTRAINT "snapshot_parents_snapshot_id_parent_id_pk" PRIMARY KEY("snapshot_id","parent_id")
+);
+--> statement-breakpoint
+CREATE TABLE "snapshots" (
+	"id" text PRIMARY KEY NOT NULL,
+	"project_id" text NOT NULL,
+	"user_id" text NOT NULL,
+	"commit_sha" text,
+	"title" text,
+	"description" text,
+	"input_tokens" integer DEFAULT 0 NOT NULL,
+	"output_tokens" integer DEFAULT 0 NOT NULL,
+	"total_cost" double precision DEFAULT 0 NOT NULL,
+	"created_by" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "themes" (
 	"id" text PRIMARY KEY NOT NULL,
 	"data" jsonb NOT NULL,
@@ -327,6 +353,13 @@ ALTER TABLE "integrations" ADD CONSTRAINT "integrations_integration_template_id_
 ALTER TABLE "nodes" ADD CONSTRAINT "nodes_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "nodes" ADD CONSTRAINT "nodes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "projects" ADD CONSTRAINT "projects_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "snapshot_declarations" ADD CONSTRAINT "snapshot_declarations_snapshot_id_snapshots_id_fk" FOREIGN KEY ("snapshot_id") REFERENCES "public"."snapshots"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "snapshot_declarations" ADD CONSTRAINT "snapshot_declarations_declaration_id_declarations_id_fk" FOREIGN KEY ("declaration_id") REFERENCES "public"."declarations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "snapshot_parents" ADD CONSTRAINT "snapshot_parents_snapshot_id_snapshots_id_fk" FOREIGN KEY ("snapshot_id") REFERENCES "public"."snapshots"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "snapshot_parents" ADD CONSTRAINT "snapshot_parents_parent_id_snapshots_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."snapshots"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "snapshots" ADD CONSTRAINT "snapshots_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "snapshots" ADD CONSTRAINT "snapshots_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "snapshots" ADD CONSTRAINT "snapshots_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "themes" ADD CONSTRAINT "themes_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "themes" ADD CONSTRAINT "themes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "branches_project_idx" ON "branches" USING btree ("project_id");--> statement-breakpoint
@@ -351,4 +384,8 @@ CREATE INDEX "integration_installations_integration_idx" ON "integration_install
 CREATE INDEX "integration_installations_status_idx" ON "integration_installations" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "integrations_created_at_idx" ON "integrations" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "nodes_created_at_idx" ON "nodes" USING btree ("created_at");--> statement-breakpoint
-CREATE INDEX "projects_created_at_idx" ON "projects" USING btree ("created_at");
+CREATE INDEX "projects_created_at_idx" ON "projects" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "snapshot_parents_parent_idx" ON "snapshot_parents" USING btree ("parent_id");--> statement-breakpoint
+CREATE INDEX "snapshots_project_idx" ON "snapshots" USING btree ("project_id");--> statement-breakpoint
+CREATE INDEX "snapshots_created_at_idx" ON "snapshots" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "snapshots_commit_sha_idx" ON "snapshots" USING btree ("commit_sha");

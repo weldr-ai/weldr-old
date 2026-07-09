@@ -1,6 +1,5 @@
-"use client";
-
 import { useQueryClient } from "@tanstack/react-query";
+import { useParams, useSearch } from "@tanstack/react-router";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -12,7 +11,6 @@ import {
   ShieldXIcon,
   SmartphoneIcon,
 } from "lucide-react";
-import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Badge } from "@weldr/ui/components/badge";
@@ -21,7 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@weldr/ui/comp
 import { ToggleGroup, ToggleGroupItem } from "@weldr/ui/components/toggle-group";
 import { cn } from "@weldr/ui/lib/utils";
 
-import { orpc } from "@/lib/orpc/client";
+import { orpc } from "@/lib/orpc";
 import { getPreviewUrl } from "@/lib/preview-url";
 
 interface SitePreviewDialogProps {
@@ -60,12 +58,11 @@ export function SitePreviewDialog({
   const [isLoading, setIsLoading] = useState(true);
   const queryClient = useQueryClient();
 
-  const { projectId, branchId } = useParams<{
+  const { projectId, branchId } = useParams({ strict: false }) as {
     projectId: string;
     branchId?: string;
-  }>();
-  const searchParams = useSearchParams();
-  const snapshotId = searchParams.get("snapshotId") ?? undefined;
+  };
+  const { snapshotId } = useSearch({ strict: false }) as { snapshotId?: string };
 
   const branch = queryClient.getQueryData(
     orpc.branches.getByIdOrMain.queryKey({
@@ -102,7 +99,7 @@ export function SitePreviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="flex min-h-[calc(100vh-50px)] min-w-[calc(100vw-50px)] flex-col gap-0 p-0"
-        withCloseButton={false}
+        showCloseButton={false}
       >
         <DialogHeader className="flex flex-row items-center justify-between gap-1 border-b py-1.5 pr-1.5 pl-3">
           {browserHeader ? (
@@ -154,10 +151,10 @@ export function SitePreviewDialog({
               <ExternalLinkIcon className="size-3.5" />
             </a>
             <ToggleGroup
-              type="single"
+              multiple={false}
               className="border"
-              value={isMobile ? "mobile" : "desktop"}
-              onValueChange={(value) => setIsMobile(value === "mobile")}
+              value={isMobile ? ["mobile"] : ["desktop"]}
+              onValueChange={(value) => setIsMobile(value.includes("mobile"))}
             >
               <ToggleGroupItem value="desktop" className="size-7">
                 <MonitorIcon className="size-3.5" />

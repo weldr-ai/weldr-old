@@ -5,6 +5,7 @@ import { db } from "@weldr/db";
 import { nanoid } from "@weldr/shared/nanoid";
 
 export const auth = betterAuth({
+  trustedOrigins: process.env.CORS_ORIGIN?.split(",") ?? [],
   database: drizzleAdapter(db, {
     provider: "pg",
     usePlural: true,

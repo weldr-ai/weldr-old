@@ -1,7 +1,7 @@
 import type { Tool } from "ai";
 import type { z } from "zod";
 
-import type { SessionMachineContext } from "@/session/types";
+import type { ChatContext } from "@/ai/agent/types";
 
 type ToolConfig<TInput extends z.ZodSchema, TOutput extends z.ZodSchema> = {
   name: string;
@@ -10,7 +10,7 @@ type ToolConfig<TInput extends z.ZodSchema, TOutput extends z.ZodSchema> = {
   outputSchema: TOutput;
   execute?: (params: {
     input: z.infer<TInput>;
-    context: SessionMachineContext;
+    context: ChatContext;
   }) => Promise<z.infer<TOutput>> | undefined;
 };
 
@@ -21,8 +21,8 @@ type ToolConfig<TInput extends z.ZodSchema, TOutput extends z.ZodSchema> = {
  */
 export function createTool<TInput extends z.ZodSchema, TOutput extends z.ZodSchema>(
   config: ToolConfig<TInput, TOutput>,
-) {
-  const aiSDKTool = (context: SessionMachineContext): Tool => ({
+): (context: ChatContext) => Tool<TInput, TOutput> {
+  const aiSDKTool = (context: ChatContext): Tool => ({
     description: config.description,
     inputSchema: config.inputSchema,
     outputSchema: config.outputSchema,

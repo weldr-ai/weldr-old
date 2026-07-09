@@ -13,8 +13,6 @@
   ],
   "scripts": {
     "build": "turbo build",
-    "check": "biome check",
-    "check:fix": "biome check --diagnostic-level=warn --write",
     "clean": "turbo clean && rm -rf node_modules .turbo",
     "db:check": "bun run --cwd packages/db check",
     "db:generate": "bun run --cwd packages/db generate",
@@ -38,13 +36,10 @@
     "@turbo/gen": "^1.13.3",
     "@weldr/tsconfig": "workspace:*",
     "eslint-plugin-perfectionist": "^5.3.1",
-    "oxfmt": "^0.23.0",
+    "oxfmt": "0.24.0",
     "oxlint": "^1.38.0",
     "turbo": "^2.6.0",
     "typescript": "^5.9.3"
-  },
-  "overrides": {
-    "@tanstack/query-core": "5.90.19"
   },
   "engines": {
     "node": ">=22"

@@ -6,7 +6,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { Loader2Icon } from "lucide-react";
-import { ThemeProvider } from "next-themes";
+import { ThemeProvider } from "better-themes";
 
 import { ErrorBoundary } from "@repo/web/components/error-boundary";
 import { NotFound } from "@repo/web/components/not-found";
@@ -74,7 +74,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>

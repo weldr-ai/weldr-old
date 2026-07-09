@@ -1,7 +1,8 @@
+import type { Subscription } from "@better-auth/stripe";
+import { Link } from "@tanstack/react-router";
 import { CheckIcon } from "lucide-react";
-import Link from "next/link";
 
-import type { Session, Subscription } from "@weldr/auth";
+import type { Session } from "@weldr/auth";
 import { Badge } from "@weldr/ui/components/badge";
 import { buttonVariants } from "@weldr/ui/components/button";
 import {
@@ -29,14 +30,14 @@ export function SubscriptionPlans({
       <Card className="w-full max-w-sm gap-4">
         <CardHeader>
           <CardTitle className="flex flex-col gap-2">
-            <span className="pb-1 font-medium text-sm">Free</span>
-            <span className="block font-semibold text-2xl">$0 / mo</span>
+            <span className="pb-1 text-sm font-medium">Free</span>
+            <span className="block text-2xl font-semibold">$0 / mo</span>
           </CardTitle>
           <CardDescription className="text-sm">For getting started</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Link
-            href="/auth/sign-up"
+            to="/auth/sign-up"
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full")}
           >
             Get Started
@@ -56,17 +57,17 @@ export function SubscriptionPlans({
         <CardHeader>
           <CardTitle className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
-              <span className="font-medium text-sm">Pro</span>
+              <span className="text-sm font-medium">Pro</span>
               <Badge variant="outline">Popular</Badge>
             </div>
-            <span className="block font-semibold text-2xl">$25 / mo</span>
+            <span className="block text-2xl font-semibold">$25 / mo</span>
           </CardTitle>
           <CardDescription className="text-sm">For more generations and projects</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {!session && !activeSubscription ? (
             <Link
-              href="/auth/sign-up"
+              to="/auth/sign-up"
               className={cn(buttonVariants({ variant: "default", size: "sm" }), "w-full")}
             >
               Get Started

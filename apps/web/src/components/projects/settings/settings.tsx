@@ -1,5 +1,3 @@
-"use client";
-
 import { SettingsIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -48,13 +46,17 @@ export function ProjectSettings({
   return (
     <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
       <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="icon" className="size-7 dark:bg-muted">
-              <SettingsIcon className="size-3.5" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
+        <TooltipTrigger
+          render={
+            <DialogTrigger
+              render={
+                <Button variant="outline" size="icon" className="size-7 dark:bg-muted">
+                  <SettingsIcon className="size-3.5" />
+                </Button>
+              }
+            />
+          }
+        />
         <TooltipContent className="border bg-background dark:bg-muted">
           <p>Project Settings</p>
         </TooltipContent>
@@ -86,6 +88,7 @@ export function ProjectSettings({
               className="mt-0 h-[calc(100vh-134px)] overflow-hidden"
             >
               <IntegrationsSection
+                projectId={project.id}
                 integrationTemplates={integrationTemplates}
                 integrations={project.integrations}
                 environmentVariables={environmentVariables}
@@ -93,7 +96,7 @@ export function ProjectSettings({
             </TabsContent>
 
             <TabsContent value="env" className="mt-0">
-              <EnvSection environmentVariables={environmentVariables} />
+              <EnvSection projectId={project.id} environmentVariables={environmentVariables} />
             </TabsContent>
           </div>
         </Tabs>
